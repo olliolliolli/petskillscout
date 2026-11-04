@@ -1,0 +1,18 @@
+PetSkillScout - pet spell ID mapping notes
+
+Source references:
+- CMaNGOS playerbots, playerbot/PlayerbotFactory.cpp (Classic pet spell ranks)
+  https://github.com/cmangos/playerbots/blob/master/playerbot/PlayerbotFactory.cpp
+- ForeverDB spell 1310612 (Trickster's Dance, actual pet spell)
+  https://foreverdb.net/spell/1310612
+- ForeverDB Hunter spellbook (additional Forever-specific pet abilities)
+  https://wowfwiki.com/wiki/Hunter_spellbook
+
+Explicit IDs included: Bite, Claw, Growl, Cower, Dash, Dive, Prowl,
+Thunderstomp, classic Screech (shown as Demoralizing Screech),
+Trickster's Dance. Other pet abilities, including new Forever family
+abilities and passive skills, are read from the client's pet spellbook
+and GetSpellInfo where available. Their unverified spell IDs are not
+invented. The action bar alone does not expose passive spells.
+
+WoW Forever in-game validation is still required.

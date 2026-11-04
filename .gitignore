@@ -1,0 +1,4 @@
+/dist/
+*.zip
+att-src/
+.DS_Store

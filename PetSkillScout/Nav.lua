@@ -1,0 +1,426 @@
+-- Navigation helpers: player position, a TomTom-style direction arrow and
+-- minimap icons for nearby rares, tracked beasts and the arrow target.
+-- Nothing here moves the character; it only shows directions.
+local PSS = PetSkillScout
+PSS.Nav = {}
+local Nav = PSS.Nav
+local sizeCache = {}
+
+local function safe(fn, ...)
+  if type(fn) ~= "function" then return nil end
+  local ok, a, b, c = pcall(fn, ...)
+  if ok then return a, b, c end
+end
+
+-- Zone map (UIMapType.Zone) that contains the player, plus position 0..1.
+function Nav:PlayerPos()
+  if not (C_Map and C_Map.GetBestMapForUnit) then return nil end
+  local mapID = safe(C_Map.GetBestMapForUnit, "player")
+  local guard = 0
+  while mapID and guard < 6 do
+    local info = C_Map.GetMapInfo and safe(C_Map.GetMapInfo, mapID)
+    if not info or info.mapType == 3 or (info.mapType or 0) < 3 then break end
+    mapID, guard = info.parentMapID, guard + 1
+  end
+  if not mapID then return nil end
+  local pos = safe(C_Map.GetPlayerMapPosition, mapID, "player")
+  if not pos then return nil end
+  local x, y = safe(pos.GetXY, pos)
+  if not x or (x == 0 and y == 0) then return nil end
+  return mapID, x, y
+end
+
+-- Zone size in yards (nil when the client has no API for it).
+function Nav:MapSize(mapID)
+  local cached = sizeCache[mapID]
+  if cached == false then return nil end
+  if cached ~= nil then return cached[1], cached[2] end
+  local w, h = safe(C_Map and C_Map.GetMapWorldSize, mapID)
+  -- Classic clients: measure the map corners in world yards instead.
+  if not (w and w > 0) and C_Map and C_Map.GetWorldPosFromMapPos and CreateVector2D then
+    local _, p0 = safe(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(0, 0))
+    local _, p1 = safe(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(1, 0))
+    local _, p2 = safe(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(0, 1))
+    if p0 and p1 and p2 and p0.GetXY then
+      local x0, y0 = p0:GetXY()
+      local x1, y1 = p1:GetXY()
+      local x2, y2 = p2:GetXY()
+      w = math.sqrt((x1 - x0) ^ 2 + (y1 - y0) ^ 2)
+      h = math.sqrt((x2 - x0) ^ 2 + (y2 - y0) ^ 2)
+    end
+  end
+  sizeCache[mapID] = (w and w > 0 and h and h > 0) and {w, h} or false
+  return w, h
+end
+
+-- Offset to a point (percent coordinates) in yards east/south. Without a size
+-- API, zone maps are 3:2, so percent units are scaled to keep the angle right.
+function Nav:Offset(mapID, px, py, tx, ty)
+  local w, h = self:MapSize(mapID)
+  if w then return (tx / 100 - px) * w, (ty / 100 - py) * h, true end
+  return (tx / 100 - px) * 150, (ty / 100 - py) * 100, false
+end
+
+function Nav:Nearest(target, mapID, px, py)
+  local best, bx, by, bd
+  for _, p in ipairs(target.points or {}) do
+    local dx, dy = self:Offset(mapID, px, py, p[1], p[2])
+    local d = dx * dx + dy * dy
+    if not best or d < best then best, bx, by, bd = d, dx, dy, math.sqrt(d) end
+  end
+  return bx, by, bd
+end
+
+-- World position (continent ID, yards) of a zone-map point; x, y are 0..1.
+function Nav:World(mapID, x, y)
+  if not (mapID and C_Map and C_Map.GetWorldPosFromMapPos and CreateVector2D) then return nil end
+  local cont, pos = safe(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(x, y))
+  if not (cont and pos and pos.GetXY) then return nil end
+  local wx, wy = safe(pos.GetXY, pos)
+  if not wx then return nil end
+  return cont, wx, wy
+end
+
+-- Distance in yards from the player to a point given in zone percent (0..100).
+-- Returns yards (nil when unknown) and whether the point is on another continent.
+function Nav:DistanceTo(mapID, tx, ty, from)
+  local pm, px, py
+  if from then pm, px, py = from[1], from[2], from[3] else pm, px, py = self:PlayerPos() end
+  if not (pm and mapID and tx and ty) then return nil end
+  if pm == mapID then
+    local dx, dy = self:Offset(mapID, px, py, tx, ty)
+    return math.sqrt(dx * dx + dy * dy), false
+  end
+  local c1, x1, y1 = self:World(pm, px, py)
+  local c2, x2, y2 = self:World(mapID, tx / 100, ty / 100)
+  if not (c1 and c2) then return nil end
+  if c1 ~= c2 then return nil, true end
+  return math.sqrt((x2 - x1) ^ 2 + (y2 - y1) ^ 2), false
+end
+
+-- "320 yd", "1.4 km"-style short distance text in yards.
+function Nav:DistanceText(yards)
+  if not yards then return nil end
+  if yards >= 2000 then return string.format("%.1fk yd", yards / 1000) end
+  return string.format("%d yd", math.floor(yards + 0.5))
+end
+
+-- Targets ------------------------------------------------------------------
+
+function Nav:TargetFromBeast(b)
+  if not (b and b.mapID) then return nil end
+  local points = b.spawnPoints or (b.x and {{b.x, b.y}})
+  if not points or #points == 0 then return nil end
+  return {name = b.name, mapID = b.mapID, points = points, npcID = b.npcID, zone = b.zone}
+end
+
+function Nav:TargetFromAtlas(npcID)
+  local a = PSS.Atlas and PSS.Atlas:Get(npcID)
+  if not a then return nil end
+  local mapID, points, zone = a.mapID, a.spawnPoints, a.zone
+  -- Prefer the complete spawn list from Database.lua when available.
+  for _, b in ipairs(PSS.Beasts or {}) do
+    if b.npcID == npcID and b.mapID and b.spawnPoints then
+      mapID, points, zone = b.mapID, b.spawnPoints, b.zone
+      break
+    end
+  end
+  if not (mapID and points and #points > 0) then return nil end
+  return {name = a.name, mapID = mapID, points = points, npcID = npcID, zone = zone}
+end
+
+-- Arrow --------------------------------------------------------------------
+local arrow
+local COMPASS = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"}
+
+local function CreateArrow()
+  if arrow then return arrow end
+  arrow = CreateFrame("Button", "PetSkillScoutArrow", UIParent)
+  arrow:SetSize(64, 64)
+  arrow:SetFrameStrata("HIGH")
+  arrow:SetClampedToScreen(true)
+  arrow:SetMovable(true)
+  arrow:EnableMouse(true)
+  arrow:RegisterForDrag("LeftButton")
+  arrow:RegisterForClicks("RightButtonUp")
+  local pos = PetSkillScoutDB and PetSkillScoutDB.arrowPos
+  if pos and pos.x then arrow:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+  else arrow:SetPoint("TOP", UIParent, "TOP", 0, -140) end
+  arrow.tex = arrow:CreateTexture(nil, "ARTWORK")
+  arrow.tex:SetTexture("Interface\\Minimap\\MinimapArrow")
+  arrow.tex:SetSize(48, 48)
+  arrow.tex:SetPoint("CENTER")
+  arrow.name = arrow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  arrow.name:SetPoint("TOP", arrow, "BOTTOM", 0, 2)
+  arrow.dist = arrow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  arrow.dist:SetPoint("TOP", arrow.name, "BOTTOM", 0, -2)
+  arrow:SetScript("OnDragStart", function(self) self:StartMoving() end)
+  arrow:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local x, y = self:GetCenter()
+    if PetSkillScoutDB and x then PetSkillScoutDB.arrowPos = {x = x, y = y} end
+  end)
+  arrow:SetScript("OnClick", function() Nav:ClearTarget() end)
+  arrow:SetScript("OnEnter", function(self)
+    if not GameTooltip then return end
+    GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+    GameTooltip:AddLine(PSS:Safe(Nav.target and Nav.target.name or "PetSkillScout"))
+    GameTooltip:AddLine(PSS:Safe(PSS:L("arrowHint")), 0.7, 0.7, 0.7)
+    GameTooltip:Show()
+  end)
+  arrow:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+  local elapsedSince = 0
+  arrow:SetScript("OnUpdate", function(self, elapsed)
+    elapsedSince = elapsedSince + (elapsed or 0)
+    if elapsedSince < 0.05 then return end
+    elapsedSince = 0
+    Nav:UpdateArrow()
+  end)
+  arrow:Hide()
+  return arrow
+end
+
+function Nav:SetTarget(target)
+  if not target then
+    PSS:Print(PSS:L("arrowNoCoords"))
+    return
+  end
+  self.target = target
+  self.arrivedAt = nil
+  CreateArrow()
+  arrow.name:SetText(target.name or "?")
+  arrow:Show()
+  if PSS.Minimap then PSS.Minimap:Refresh() end
+end
+
+function Nav:ClearTarget()
+  self.target = nil
+  if arrow then arrow:Hide() end
+  if PSS.Minimap then PSS.Minimap:Refresh() end
+end
+
+function Nav:UpdateArrow()
+  local t = self.target
+  if not t then arrow:Hide() return end
+  local mapID, px, py = self:PlayerPos()
+  if not mapID then
+    arrow.tex:Hide()
+    arrow.dist:SetText(PSS:L("arrowNoPosition"))
+    return
+  end
+  if mapID ~= t.mapID then
+    -- Different zone: point the player to the zone instead of a bearing.
+    arrow.tex:Hide()
+    local info = C_Map.GetMapInfo and safe(C_Map.GetMapInfo, t.mapID)
+    arrow.dist:SetText(string.format(PSS:L("arrowGoTo"), info and info.name or t.zone or "?"))
+    return
+  end
+  local dx, dy, dist = self:Nearest(t, mapID, px, py)
+  if not dx then return end
+  local _, _, yards = self:Offset(mapID, 0, 0, 0, 0)
+  if yards then
+    if dist < 12 then
+      self.arrivedAt = self.arrivedAt or GetTime()
+      arrow.tex:Hide()
+      arrow.dist:SetText("|cff7ee0a3" .. PSS:L("arrowArrived") .. "|r")
+      if GetTime() - self.arrivedAt > 6 then self:ClearTarget() end
+      return
+    end
+    self.arrivedAt = nil
+    arrow.dist:SetText(string.format("%d yd", math.floor(dist + 0.5)))
+  else
+    arrow.dist:SetText("")
+  end
+  -- Bearing measured like GetPlayerFacing: 0 = north, counter-clockwise.
+  local bearing = math.atan2(-dx, -dy)
+  local facing = GetPlayerFacing and GetPlayerFacing()
+  if not facing or not arrow.tex.SetRotation then
+    local idx = math.floor(((bearing % (2 * math.pi)) / (math.pi / 4)) + 0.5) % 8 + 1
+    arrow.tex:Hide()
+    arrow.dist:SetText((arrow.dist:GetText() or "") .. "  " .. COMPASS[idx])
+    return
+  end
+  local rel = (bearing - facing) % (2 * math.pi)
+  arrow.tex:Show()
+  arrow.tex:SetRotation(rel)
+  -- Green when facing the target, yellow to red as the angle grows.
+  local off = math.abs(rel > math.pi and rel - 2 * math.pi or rel) / math.pi
+  arrow.tex:SetVertexColor(math.min(1, off * 2), math.min(1, 2 - off * 2), 0.2)
+end
+
+-- Minimap icons --------------------------------------------------------------
+PSS.Minimap = {}
+local MM = PSS.Minimap
+local pins = {}
+local OUTDOOR = {466 + 2/3, 400, 333 + 1/3, 266 + 2/3, 200, 133 + 1/3}
+local INDOOR = {300, 240, 180, 120, 80, 50}
+local indoors = false
+local mmDirty, mmElapsed = true, 0
+
+function MM:Refresh() mmDirty = true end
+
+local function Enabled()
+  return not PetSkillScoutDB or PetSkillScoutDB.minimapPins ~= false
+end
+
+local function DetectIndoors()
+  if not (Minimap and Minimap.GetZoom and GetCVar) then return end
+  local zoom = Minimap:GetZoom()
+  if GetCVar("minimapZoom") == GetCVar("minimapInsideZoom") then
+    Minimap:SetZoom(zoom < 2 and zoom + 1 or zoom - 1)
+  end
+  indoors = tonumber(GetCVar("minimapZoom")) ~= Minimap:GetZoom()
+  Minimap:SetZoom(zoom)
+end
+
+local function Pin(i)
+  local p = pins[i]
+  if not p then
+    p = CreateFrame("Button", nil, Minimap)
+    p:SetSize(14, 14)
+    p:SetFrameStrata(Minimap:GetFrameStrata())
+    p:SetFrameLevel(Minimap:GetFrameLevel() + 20)
+    p.ring = p:CreateTexture(nil, "BACKGROUND")
+    p.ring:SetPoint("TOPLEFT", -1.5, 1.5)
+    p.ring:SetPoint("BOTTOMRIGHT", 1.5, -1.5)
+    p.ring:SetTexture("Interface\\Buttons\\WHITE8X8")
+    p.icon = p:CreateTexture(nil, "ARTWORK")
+    p.icon:SetAllPoints(p)
+    p.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    p:SetScript("OnEnter", function(self)
+      if not GameTooltip then return end
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      GameTooltip:AddLine(PSS:Safe(self.label or "?"), 1, 0.82, 0.25)
+      if self.sub then GameTooltip:AddLine(PSS:Safe(self.sub), 0.8, 0.8, 0.8) end
+      if self.dist then GameTooltip:AddLine(PSS:Safe(string.format("%d yd", math.floor(self.dist + 0.5))), 1, 1, 1) end
+      GameTooltip:AddLine(PSS:Safe(PSS:L("minimapHint")), 0.6, 0.6, 0.6)
+      GameTooltip:Show()
+    end)
+    p:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+    p:SetScript("OnClick", function(self) if self.target then Nav:SetTarget(self.target) end end)
+    pins[i] = p
+  end
+  return p
+end
+
+-- Collects { target, icon, ring color, label, sub } for the player's zone.
+local function Candidates(mapID)
+  local list = {}
+  local R = PSS.RarePets
+  if R then
+    if not R.entries or #R.entries == 0 then R:Build() end
+    for _, e in ipairs(R.entries) do
+      if e.beast.mapID == mapID and not R:IsCollected(e) then
+        local t = Nav:TargetFromBeast(e.beast)
+        if t then
+          table.insert(list, {target = t, icon = PSS.FamilyIcon and PSS.FamilyIcon(e.family),
+            color = {0.71, 0.57, 0.96}, label = e.name, sub = PSS:L("rarePets")})
+        end
+      end
+    end
+  end
+  local tracked = PetSkillScoutDB and PetSkillScoutDB.tracked or {}
+  for _, b in ipairs(PSS.Beasts or {}) do
+    if tracked[b.id] and b.mapID == mapID then
+      local t = Nav:TargetFromBeast(b)
+      if t then
+        table.insert(list, {target = t, icon = "Interface\\Icons\\Ability_Hunter_BeastTaming",
+          color = {0.47, 0.79, 0.51}, label = b.name, sub = (PSS:NameAbility(b.ability) .. " " .. tostring(b.rank))})
+      end
+    end
+  end
+  if PSS.Atlas and next(tracked) then
+    PSS.Atlas:Build()
+    for _, rec in ipairs(PSS.Atlas.list) do
+      if tracked[rec.id] and rec.mapID == mapID then
+        local t = Nav:TargetFromAtlas(rec.npcID)
+        if t then
+          table.insert(list, {target = t, icon = "Interface\\Icons\\Ability_Hunter_BeastTaming",
+            color = {0.47, 0.79, 0.51}, label = rec.name, sub = PSS.Atlas:TeachesText(rec) or PSS:NameFamily(rec.family)})
+        end
+      end
+    end
+  end
+  if PSS.Route and #PSS.Route:Goals() > 0 then
+    local ok, stops = pcall(PSS.Route.Stops, PSS.Route)
+    for _, stop in ipairs(ok and stops or {}) do
+      if stop.beast and not stop.done and stop.beast.mapID == mapID then
+        local t = PSS.Route:Target(stop)
+        if t then
+          table.insert(list, {target = t, icon = PSS.FamilyIcon and PSS.FamilyIcon(stop.beast.family),
+            color = {0.95, 0.77, 0.30}, label = stop.beast.name, sub = PSS:L("tabRoute") .. ": " .. t.name})
+        end
+      end
+    end
+  end
+  if Nav.target and Nav.target.mapID == mapID then
+    table.insert(list, {target = Nav.target, icon = "Interface\\Icons\\Ability_Hunter_Pathfinding",
+      color = {0.95, 0.77, 0.30}, label = Nav.target.name, sub = PSS:L("arrowTarget"), edge = true})
+  end
+  return list
+end
+
+local cached = {mapID = nil, list = {}}
+local function UpdateMinimap()
+  if not Minimap or not Enabled() then
+    for _, p in ipairs(pins) do p:Hide() end
+    return
+  end
+  local mapID, px, py = Nav:PlayerPos()
+  if not mapID then for _, p in ipairs(pins) do p:Hide() end return end
+  if mmDirty or cached.mapID ~= mapID then
+    cached.mapID, cached.list = mapID, Candidates(mapID)
+    mmDirty = false
+  end
+  local zoom = (Minimap:GetZoom() or 0) + 1
+  local radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2
+  local scale = (Minimap:GetWidth() / 2) / radius
+  local facing = GetPlayerFacing and GetPlayerFacing() or 0
+  local rotate = GetCVar and GetCVar("rotateMinimap") == "1"
+  local used = 0
+  for _, c in ipairs(cached.list) do
+    local dx, dy, dist = Nav:Nearest(c.target, mapID, px, py)
+    if dx then
+      local ex, ny = dx, -dy
+      if rotate then
+        local cs, sn = math.cos(-facing), math.sin(-facing)
+        ex, ny = ex * cs - ny * sn, ex * sn + ny * cs
+      end
+      local onMap = dist <= radius * 0.95
+      if onMap or c.edge then
+        if not onMap then
+          local k = radius * 0.95 / dist
+          ex, ny = ex * k, ny * k
+        end
+        used = used + 1
+        local p = Pin(used)
+        p.icon:SetTexture(c.icon)
+        p.ring:SetVertexColor(c.color[1], c.color[2], c.color[3], 1)
+        p:SetAlpha(onMap and 1 or 0.6)
+        p.label, p.sub, p.dist, p.target = c.label, c.sub, math.floor(dist), c.target
+        p:ClearAllPoints()
+        p:SetPoint("CENTER", Minimap, "CENTER", ex * scale, ny * scale)
+        p:Show()
+      end
+    end
+  end
+  for i = used + 1, #pins do pins[i]:Hide() end
+end
+
+local driver = CreateFrame("Frame")
+MM._driver = driver
+driver:RegisterEvent("PLAYER_ENTERING_WORLD")
+driver:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+driver:RegisterEvent("ZONE_CHANGED_INDOORS")
+pcall(driver.RegisterEvent, driver, "MINIMAP_UPDATE_ZOOM")
+driver:SetScript("OnEvent", function()
+  pcall(DetectIndoors)
+  mmDirty = true
+end)
+driver:SetScript("OnUpdate", function(_, elapsed)
+  mmElapsed = mmElapsed + (elapsed or 0)
+  if mmElapsed < 0.1 then return end
+  mmElapsed = 0
+  local ok, err = pcall(UpdateMinimap)
+  if not ok then MM._lastError = tostring(err) end
+end)

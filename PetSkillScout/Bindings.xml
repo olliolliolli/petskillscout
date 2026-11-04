@@ -1,0 +1,6 @@
+<Bindings>
+  <Binding name="CLICK PetSkillScoutPetStay:LeftButton" header="PETSKILLSCOUT" category="ADDONS">
+  </Binding>
+  <Binding name="CLICK PetSkillScoutPetFollow:LeftButton" category="ADDONS">
+  </Binding>
+</Bindings>

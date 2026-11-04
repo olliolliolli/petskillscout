@@ -1,0 +1,245 @@
+-- Hidden addon messages between PetSkillScout users: guild, group and the realm
+-- network (a hidden chat channel every PetSkillScout user joins). Nothing here
+-- writes to visible chat; received data is only stored and displayed.
+--   S~npc~rare~map~x~y        rare seen alive
+--   K~npc~rare~age~how        rare died / was tamed (age in seconds)
+--   V~npc~map~x~y~kinds~name  ammo vendor
+--   H~ver~score~skins~rares~families~guild   hello / ranking (Net.lua)
+--   Q~rare~op~age             taming queue (Queue.lua)
+--   R~pet / C~...             pet card request / reply by whisper (PetLink.lua)
+local PSS = PetSkillScout
+PSS.Sync = {handlers = {}}
+local S = PSS.Sync
+local PREFIX = "PSSRare1"
+local SEP = "~"
+S.PREFIX, S.SEP = PREFIX, SEP
+local lastSent, lastAny, lastNotified = {}, -1e9, {}
+
+local function Enabled() return not PetSkillScoutDB or PetSkillScoutDB.syncEnabled ~= false end
+local function Now() return GetTime and GetTime() or 0 end
+S.Enabled = Enabled
+
+local registered = false
+local function Register()
+  if registered then return true end
+  local fn = (C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix) or RegisterAddonMessagePrefix
+  if type(fn) == "function" and pcall(fn, PREFIX) then registered = true end
+  return registered
+end
+S.Register = Register
+
+-- Sending with a small token bucket so bursts never hit the server throttle.
+local queue, tokens, lastRefill = {}, 8, nil
+local function RawSend(msg, dist, target)
+  local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
+  if type(fn) == "function" then pcall(fn, PREFIX, msg, dist, target) end
+end
+local function Refill()
+  local now = Now()
+  if lastRefill then tokens = math.min(8, tokens + (now - lastRefill)) end
+  lastRefill = now
+end
+function S:Send(msg, dist, target)
+  if type(msg) ~= "string" or #msg > 250 or not Register() then return end
+  Refill()
+  if tokens >= 1 and #queue == 0 then
+    tokens = tokens - 1
+    RawSend(msg, dist, target)
+  elseif #queue < 40 then
+    table.insert(queue, {msg, dist, target})
+  end
+end
+
+-- Distributions for a broadcast. net = also send to the realm network.
+local function Channels(net)
+  local out = {}
+  if IsInGuild and IsInGuild() then table.insert(out, {"GUILD"}) end
+  if IsInRaid and IsInRaid() then
+    table.insert(out, {"RAID"})
+  elseif (IsInGroup and IsInGroup()) or (GetNumPartyMembers and (GetNumPartyMembers() or 0) > 0) then
+    table.insert(out, {"PARTY"})
+  end
+  if net and PSS.Net then
+    local id = PSS.Net:ChannelID()
+    if id then table.insert(out, {"CHANNEL", id}) end
+  end
+  return out
+end
+S.Channels = Channels
+
+function S:SendAll(msg, net)
+  if type(msg) ~= "string" or #msg > 250 then return false end
+  local channels = Channels(net)
+  for _, c in ipairs(channels) do self:Send(msg, c[1], c[2]) end
+  return #channels > 0
+end
+local function SendAll(msg) return S:SendAll(msg, true) end
+
+-- Called when this player sees a rare (RarePets:RecordSeen).
+function S:Broadcast(entry, rec)
+  if not (Enabled() and entry and rec and Register()) then return end
+  local now = Now()
+  if lastSent[entry.id] and now - lastSent[entry.id] < 120 then return end
+  if now - lastAny < 2 then return end
+  local channels = Channels(true)
+  if #channels == 0 then return end
+  lastSent[entry.id], lastAny = now, now
+  local npc = entry.beast and tonumber(entry.beast.npcID) or 0
+  local msg = table.concat({"S", tostring(npc), entry.id, tostring(rec.mapID or 0),
+    rec.x and string.format("%.1f", rec.x) or "", rec.y and string.format("%.1f", rec.y) or ""}, SEP)
+  if #msg > 250 then return end
+  for _, c in ipairs(channels) do self:Send(msg, c[1], c[2]) end
+  if PetSkillScoutDB then PetSkillScoutDB.reportsSent = (PetSkillScoutDB.reportsSent or 0) + 1 end
+end
+
+-- Rare died / was tamed: "K~npc~id~ageSeconds~how". Age, not a timestamp, so
+-- clients with different clocks agree.
+function S:BroadcastKill(entry, rec)
+  if not (Enabled() and entry and rec and rec.gone and Register()) then return end
+  local npc = entry.beast and tonumber(entry.beast.npcID) or 0
+  local age = math.max(0, (time and time() or rec.gone) - rec.gone)
+  SendAll(table.concat({"K", tostring(npc), entry.id, tostring(math.floor(age)), rec.how or "kill"}, SEP))
+end
+
+-- Ammo vendor learned: "V~npc~map~x~y~kinds~name".
+function S:BroadcastVendor(npc, rec)
+  if not (Enabled() and npc and rec and rec.m and Register()) then return end
+  local name = tostring(rec.n or "?"):gsub(SEP, ""):sub(1, 40)
+  SendAll(table.concat({"V", tostring(npc), tostring(rec.m), string.format("%.1f", rec.x), string.format("%.1f", rec.y),
+    rec.k or "", name}, SEP))
+end
+
+local function FindEntry(npc, id)
+  local R = PSS.RarePets
+  if not R then return nil end
+  if not R.entries or #R.entries == 0 then R:Build() end
+  if npc and R.byNpcID[npc] then return R.byNpcID[npc] end
+  for _, e in ipairs(R.entries) do if e.id == id then return e end end
+end
+S.FindEntry = FindEntry
+
+local function Coord(v)
+  v = tonumber(v)
+  if v and v >= 0 and v <= 100 then return v end
+end
+S.Coord = Coord
+
+-- "Hunter saw it 5 min ago (34.5, 56.1)"
+function S:Last(entry)
+  local store = entry and PetSkillScoutDB and PetSkillScoutDB.rareShared
+  return store and store[entry.id]
+end
+
+function S:Text(entry)
+  local rec = self:Last(entry)
+  if not (rec and rec.t and rec.who) then return nil end
+  local age = math.max(0, (time and time() or rec.t) - rec.t)
+  local text
+  if age < 60 then
+    text = string.format(PSS:L("syncSeenByNow"), rec.who)
+  else
+    local unit
+    if age < 3600 then unit = string.format(PSS:L("unitMin"), math.floor(age / 60))
+    elseif age < 86400 then unit = string.format(PSS:L("unitHour"), math.floor(age / 3600))
+    else unit = string.format(PSS:L("unitDay"), math.floor(age / 86400)) end
+    text = string.format(PSS:L("syncSeenBy"), rec.who, unit)
+  end
+  if rec.x and rec.y then text = text .. string.format(" (%.1f, %.1f)", rec.x, rec.y) end
+  return text
+end
+
+local function Notify(entry, rec, dist)
+  local mode = PetSkillScoutDB and PetSkillScoutDB.syncNotify or "wanted"
+  if mode == "off" then return end
+  -- The realm network is busy: only wanted rares are announced from it.
+  if dist == "CHANNEL" then mode = "wanted" end
+  local R = PSS.RarePets
+  if R:IsCollected(entry) then return end
+  local wanted = R:IsWanted(entry)
+  if mode == "wanted" and not wanted then return end
+  local now = Now()
+  if lastNotified[entry.id] and now - lastNotified[entry.id] < 300 then return end
+  lastNotified[entry.id] = now
+  local where = entry.zone or "?"
+  if rec.x and rec.y then where = where .. string.format(" %.1f, %.1f", rec.x, rec.y) end
+  PSS:Print(string.format(PSS:L("syncSpotted"), rec.who, entry.name, where))
+  if wanted and RaidNotice_AddMessage and RaidWarningFrame then
+    pcall(RaidNotice_AddMessage, RaidWarningFrame, PSS:Safe(PSS:L("rareWarning") .. entry.name .. " (" .. rec.who .. ")"),
+      ChatTypeInfo and ChatTypeInfo.RAID_WARNING)
+  end
+end
+
+-- Senders above 30 messages a minute are ignored for that minute.
+local rate = {}
+local function Flooding(who)
+  local now = Now()
+  local r = rate[who]
+  if not r or now - r.t > 60 then r = {t = now, n = 0}; rate[who] = r end
+  r.n = r.n + 1
+  return r.n > 30
+end
+
+function S:Receive(msg, channel, sender)
+  if not (PetSkillScoutDB and Enabled()) or type(msg) ~= "string" or #msg > 250 or type(sender) ~= "string" then return end
+  local who = Ambiguate and Ambiguate(sender, "short") or sender:match("^[^-]+") or sender
+  who = (who:gsub("[^%w\128-\255]", "")):sub(1, 24)
+  local me = UnitName and UnitName("player")
+  if who == "" or who == me then return end
+  if Flooding(who) then return end
+  local parts = {strsplit(SEP, msg)}
+  local kind = parts[1]
+  if PSS.Net and PSS.Net.Seen then PSS.Net:Seen(who, channel) end
+  local handler = self.handlers[kind]
+  if handler then
+    pcall(handler, parts, who, channel, sender)
+    return
+  end
+  local _, npc, id, map, x, y, extra = unpack(parts)
+  if kind == "V" then
+    -- V~npc~mapID~x~y~kinds~name: shifted into id, map, x, y, extra here.
+    local vnpc, vmap, vx, vy = tonumber(npc), tonumber(id), Coord(map), Coord(x)
+    if PSS.Ammo and vnpc and vmap and vx and vy then
+      local kinds = tostring(y or ""):gsub("[^ab]", "")
+      PSS.Ammo:Learn(vnpc, {n = tostring(extra or "?"):sub(1, 40), m = vmap, x = vx, y = vy,
+        k = kinds ~= "" and kinds or nil}, who)
+    end
+    return
+  end
+  if kind == "K" then
+    local entry = FindEntry(tonumber(npc), id)
+    local age = tonumber(map)
+    if entry and age and age >= 0 and age < 86400 and PSS.RareTimer then
+      local how = (x == "tame" or x == "corpse") and x or "kill"
+      PSS.RareTimer:MarkGone(entry, how, who, (time and time() or 0) - age, true)
+    end
+    return
+  end
+  if kind ~= "S" or not id then return end
+  local entry = FindEntry(tonumber(npc), id)
+  if not entry then return end
+  if PSS.RareTimer then PSS.RareTimer:SeenAlive(entry) end
+  local rec = {who = who, t = time and time() or 0, mapID = tonumber(map), x = Coord(x), y = Coord(y), ch = channel}
+  PetSkillScoutDB.rareShared = PetSkillScoutDB.rareShared or {}
+  PetSkillScoutDB.rareShared[entry.id] = rec
+  if PSS.RareMap then PSS.RareMap:Refresh() end
+  if PSS.UI and PSS.UI.view == "rares" and PSS.UI.UpdateRares then PSS.UI:UpdateRares() end
+  Notify(entry, rec, channel)
+end
+
+S.frame = CreateFrame("Frame")
+pcall(S.frame.RegisterEvent, S.frame, "CHAT_MSG_ADDON")
+pcall(S.frame.RegisterEvent, S.frame, "PLAYER_LOGIN")
+S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
+  if event == "PLAYER_LOGIN" then Register() return end
+  if prefix == PREFIX then S:Receive(msg, channel, sender) end
+end)
+S.frame:SetScript("OnUpdate", function()
+  if #queue == 0 then return end
+  Refill()
+  while tokens >= 1 and #queue > 0 do
+    local m = table.remove(queue, 1)
+    tokens = tokens - 1
+    RawSend(m[1], m[2], m[3])
+  end
+end)
+Register()
