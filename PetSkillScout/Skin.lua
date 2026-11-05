@@ -657,13 +657,20 @@ local poiEvents = CreateFrame("Frame")
 for _, e in ipairs({"SUPER_TRACKING_CHANGED", "QUEST_LOG_UPDATE", "QUEST_WATCH_LIST_CHANGED"}) do
   pcall(poiEvents.RegisterEvent, poiEvents, e)
 end
-poiEvents:SetScript("OnEvent", function() if S.active then pcall(SkinTrackerBlocks) end end)
+poiEvents:SetScript("OnEvent", function()
+  if S.active then PSS:Soon("tracker-poi", function() if S.active then pcall(SkinTrackerBlocks) end end, 0.2) end
+end)
 
 local trackerHooked = false
 local function HookTracker()
   if trackerHooked or not hooksecurefunc then return end
   trackerHooked = true
-  local function again() if S.active then pcall(SkinTracker); pcall(SkinTrackerBlocks) end end
+  -- Every tracker section calls Update, often several times per frame, and
+  -- restyling it marks the tracker for another layout: one pass per burst.
+  local function again()
+    if not S.active then return end
+    PSS:Soon("tracker", function() if S.active then pcall(SkinTracker); pcall(SkinTrackerBlocks) end end, 0.2)
+  end
   local otf = G("ObjectiveTrackerFrame")
   if otf then
     for _, m in ipairs({"Update", "Layout"}) do

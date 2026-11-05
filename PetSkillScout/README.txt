@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.9
+- CPU: the quest tracker theme restyled the whole tracker every time any of its sections updated
+  (more than ten sections, several times per frame) - about 5 ms of every second. It now restyles
+  once per burst of updates.
+
 2.9.8
 - /pss cpu now also times every hook on Blizzard functions and scripts (tooltips, bags, chat,
   buffs, action buttons, quest tracker) and the chat filter, so nothing the addon runs is missed.

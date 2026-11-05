@@ -350,6 +350,11 @@ do
   ST.shooting, ST.last, ST.speed = false, nil, nil
   f.text.SetText = orig
 end
+-- 2.9.9: tracker section updates are restyled once per burst.
+do
+  local src = io.open(dir .. "/Skin.lua"):read("*a")
+  if not src:find('PSS:Soon("tracker"', 1, true) then fails = fails + 1; print("FAIL tracker restyle not coalesced") end
+end
 -- Secure buttons run on the client's click phase (both registered).
 do
   local old = GetCVarBool
