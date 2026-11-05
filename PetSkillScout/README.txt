@@ -1,4 +1,4 @@
-PetSkillScout 2.7.1 - WoW: Forever (Interface 16001)
+PetSkillScout 2.8.0 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -22,6 +22,7 @@ SLASH COMMANDS
 /pss ammo         ammo count + arrow to the nearest place to buy ammo
 /pss collection   open the Collection (looks, achievements, ranking)
 /pss quests       open the hunter Quests tab
+/pss net          open the Network tab (hunters online, live feed)
 /pss passport     open your pet's passport card
 /pss share        put your pet card into the chat input (you send it)
 /pss queue        join / leave the taming queue of the rare near you
@@ -205,6 +206,22 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.8.0
+- New Network tab (header network chip, or /pss net): everything the hunter
+  network shares, live.
+  * Online now: you and every hunter seen in the last 30 minutes, with the
+    addon version (old versions marked) and when they were last heard;
+    guild members in green.
+  * Live feed, newest first: who joined, rare pets seen, tamed or killed,
+    taming queues, ammo vendors and quests learned in game. Filters: All /
+    Quests / Rares / Hunters / Other, and My events on or off. Mouse wheel
+    scrolls.
+  * Your share: messages sent and received, quests learned (confirmed and
+    your own).
+  Nothing extra is sent for the tab: it shows what arrives anyway. The
+  feed lives for the session; the counters are saved.
+- /pss net opens the Network tab.
+
 2.7.1
 - Hunter network in the window header: a gold "Connect" chip next to the
   character chip while you are not connected (click: the connect button

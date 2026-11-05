@@ -82,6 +82,37 @@ PSS.Sync:Receive("P", "CHANNEL", "New-Realm")
 MOCK.RunTimers()
 ok(#sent >= 2, "pull answered with records: " .. #sent)
 
+-- Network tab: online list, live feed, filters, counters.
+local F = PSS.NetFeed
+F.events = {}
+local recv0 = F:Stats().recv or 0
+PSS.Sync:Receive("H~2.7.1~120~10~3~5~Guild", "CHANNEL", "Mira-Realm")
+local rare = PSS.RarePets.entries and PSS.RarePets.entries[1]
+if not rare then PSS.RarePets:Build(); rare = PSS.RarePets.entries[1] end
+PSS.Sync:Receive("S~" .. tostring(rare.npcID or 0) .. "~" .. tostring(rare.id) .. "~1429~40~50", "CHANNEL", "Mira-Realm")
+PSS.Sync:Receive("O~990010~88~1438~10~10~A~~Lost Necklace", "CHANNEL", "Mira-Realm")
+ok(#F.events == 3, "feed got join, rare and quest: " .. #F.events)
+ok(F.events[1].kind == "quest" and F.events[1].a == "Lost Necklace", "newest first")
+ok(#F:List("quest", true) == 1 and #F:List("rare", true) == 1 and #F:List("hunter", true) == 1, "filters")
+ok((F:Stats().recv or 0) - recv0 == 3, "received counter")
+local online = F:Online()
+local seenMira = false
+for _, h in ipairs(online) do if h.name == "Mira" and h.v == "2.7.1" then seenMira = true end end
+ok(seenMira, "Mira is online with her version")
+-- Own quest records count as sent and show as mine.
+local sent0 = F:Stats().sent or 0
+PSS.Sync.SendAll = nil  -- back to the real one (no channels in tests: nothing sent)
+GetQuestID = function() return 990011 end
+GetTitleText = function() return "Mine Quest" end
+F:OnSent("O~990011~4242~1438~5~5~A~~Mine Quest")
+ok((F:Stats().sent or 0) == sent0 + 1 and F.events[1].mine, "own record counted and marked as mine")
+ok(#F:List("quest", false) == 1, "hide my own events")
+-- The tab draws without errors.
+local UI = PSS.UI
+UI:Create()
+local okDraw, err = pcall(UI.ShowView, UI, "network")
+ok(okDraw, "network tab draws: " .. tostring(err))
+ok(UI.netFeedRows[1].text:GetText():find("Mine Quest") ~= nil, "feed row text: " .. tostring(UI.netFeedRows[1].text:GetText()))
 UnitGUID, UnitName, PSS.Nav.PlayerPos = oldGUID, oldName, oldPos
 print("passed " .. pass .. ", failed " .. fail)
 os.exit(fail == 0 and 0 or 1)

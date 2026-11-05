@@ -828,13 +828,13 @@ function UI:Create()
   self.netChip:SetScript("OnClick", function(b)
     local N = PSS.Net
     if not N then return end
-    if N:ChannelID() then
-      UI:ShowView("collection")
-    elseif InCombatLockdown and InCombatLockdown() then
+    UI:ShowView("network")
+    if N:ChannelID() then return end
+    if InCombatLockdown and InCombatLockdown() then
       PSS:Print(L("netChipCombat"))
     else
       N:ShowConnect(true, b)
-      if C_Timer and C_Timer.After then C_Timer.After(4, function() UI:RefreshNetChip() end) end
+      if C_Timer and C_Timer.After then C_Timer.After(4, function() UI:RefreshNetChip(); UI:Refresh() end) end
     end
   end)
   SetTip(self.netChip, function()
@@ -870,6 +870,7 @@ function UI:Create()
   self:BuildCollection()
   self:BuildGear()
   self:BuildQuests()
+  self:BuildNetwork()
   self:BuildSettings()
   self:ApplyScale()
   self:ApplyTheme()
@@ -973,7 +974,7 @@ function UI:RefreshNetChip()
     c.text:SetText(string.format(L("netChipOnline"), N:OnlineCount()))
     c.text:SetTextColor(C.cream[1], C.cream[2], C.cream[3])
     c.dot:SetVertexColor(0.40, 0.87, 0.47, 1)
-    SetEdgeColor(c.edges, C.border)
+    SetEdgeColor(c.edges, self.view == "network" and C.gold or C.border)
   else
     c.text:SetText(L("netChipConnect"))
     c.text:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
@@ -995,6 +996,7 @@ function UI:RefreshView()
   elseif self.view == "collection" then self:UpdateCollection()
   elseif self.view == "gear" then self:UpdateGear()
   elseif self.view == "quests" then self:UpdateQuests()
+  elseif self.view == "network" then self:UpdateNetwork()
   elseif self.view == "settings" then self:RefreshSettings() end
 end
 
@@ -2403,6 +2405,142 @@ local function QuestTooltip(row)
   GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
   if r.e then HunterTooltip(row, r) else QuestRowTooltip(r.id, r.rate) end
   GameTooltip:Show()
+end
+
+---------------------------------------------------------------------------
+-- Network tab: hunters online and the live feed of the hunter network.
+---------------------------------------------------------------------------
+local NET_ROWS, NET_ROW_H = 18, 28
+local ON_ROWS, ON_ROW_H = 17, 30
+function UI:BuildNetwork()
+  local p = CreateFrame("Frame", nil, self.body)
+  p:SetAllPoints(self.body)
+  self.views.network = p
+  self.netState = self.netState or {filter = "all", mine = true, offset = 0}
+  local st = self.netState
+
+  -- Left: hunters online.
+  local left = CreateFrame("Frame", nil, p)
+  left:SetPoint("TOPLEFT", p, "TOPLEFT", 0, 0)
+  left:SetSize(330, BODY_H - 30)
+  Panel(left, C.surface)
+  self.netOnHead = Label(left, "", 14, C.gold, 300, "LEFT", true)
+  self.netOnHead:SetPoint("TOPLEFT", left, "TOPLEFT", 12, -12)
+  self.netStatus = Label(left, "", 11, C.muted, 300, "LEFT", true)
+  self.netStatus:SetPoint("TOPLEFT", left, "TOPLEFT", 12, -34)
+  self.netOnRows = {}
+  for i = 1, ON_ROWS do
+    local row = CreateFrame("Frame", nil, left)
+    row:SetSize(306, ON_ROW_H - 2)
+    row:SetPoint("TOPLEFT", left, "TOPLEFT", 12, -56 - (i - 1) * ON_ROW_H)
+    row.name = Label(row, "", 13, C.cream, 150, "LEFT", true)
+    row.name:SetPoint("LEFT", row, "LEFT", 0, 0)
+    row.info = Label(row, "", 10, C.muted, 150, "RIGHT", true)
+    row.info:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    self.netOnRows[i] = row
+  end
+
+  -- Right: filters + feed.
+  local x0 = 346
+  self.netFilters = {}
+  for i, f in ipairs({"all", "quest", "rare", "hunter", "other"}) do
+    local b = MakeButton(p, "", 108, 30, function() st.filter = f; st.offset = 0; UI:UpdateNetwork() end, {size = 12})
+    b:SetPoint("TOPLEFT", p, "TOPLEFT", x0 + (i - 1) * 112, 0)
+    b.filter = f
+    self.netFilters[i] = b
+  end
+  self.netMine = MakeButton(p, "", 150, 30, function() st.mine = not st.mine; st.offset = 0; UI:UpdateNetwork() end, {size = 12})
+  self.netMine:SetPoint("TOPRIGHT", p, "TOPRIGHT", 0, 0)
+  local feed = CreateFrame("Frame", nil, p)
+  feed:SetPoint("TOPLEFT", p, "TOPLEFT", x0, -40)
+  feed:SetSize(BODY_W - x0, NET_ROWS * NET_ROW_H + 8)
+  Panel(feed, C.surface)
+  feed:EnableMouseWheel(true)
+  feed:SetScript("OnMouseWheel", function(_, delta)
+    st.offset = math.max(0, (st.offset or 0) - delta * 3)
+    UI:UpdateNetwork()
+  end)
+  self.netFeedRows = {}
+  for i = 1, NET_ROWS do
+    local row = CreateFrame("Frame", nil, feed)
+    row:SetSize(BODY_W - x0 - 24, NET_ROW_H - 2)
+    row:SetPoint("TOPLEFT", feed, "TOPLEFT", 12, -6 - (i - 1) * NET_ROW_H)
+    row.time = Label(row, "", 11, C.muted, 46, "LEFT", true)
+    row.time:SetPoint("LEFT", row, "LEFT", 0, 0)
+    row.text = Label(row, "", 12, C.cream, BODY_W - x0 - 90, "LEFT", true)
+    row.text:SetPoint("LEFT", row, "LEFT", 52, 0)
+    self.netFeedRows[i] = row
+  end
+  self.netEmpty = Label(feed, "", 12, C.muted, BODY_W - x0 - 40, "LEFT")
+  self.netEmpty:SetPoint("TOPLEFT", feed, "TOPLEFT", 14, -14)
+  self.netStats = Label(p, "", 11, C.muted, BODY_W - x0, "LEFT", true)
+  self.netStats:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", x0, 4)
+end
+
+local function Ago(t)
+  local s = math.max(0, (time and time() or 0) - (t or 0))
+  if s < 60 then return L("netNow") end
+  return string.format(L("netMin"), math.floor(s / 60))
+end
+
+function UI:NetEventText(e)
+  local who = "|cff" .. string.format("%02x%02x%02x", C.gold[1] * 255, C.gold[2] * 255, C.gold[3] * 255) .. PSS:Safe(e.who or "?") .. "|r"
+  local a, b = PSS:Safe(tostring(e.a or "?")), PSS:Safe(tostring(e.b or "?"))
+  return string.format(L("nf_" .. e.kind), who, a, b)
+end
+
+function UI:UpdateNetwork()
+  if not self.netOnRows then return end
+  local F, N = PSS.NetFeed, PSS.Net
+  local st = self.netState
+  local on = N and N:ChannelID()
+  -- Hunters online (you first).
+  local list = F and F:Online() or {}
+  local me = UnitName and UnitName("player") or "?"
+  table.insert(list, 1, {name = me, t = time and time() or 0, v = PSS.version, me = true})
+  self.netOnHead:SetText(string.format(L("netOnlineHead"), #list))
+  self.netStatus:SetText(on and L("netStatusOn") or L("netStatusOff"))
+  self.netStatus:SetTextColor(on and 0.45 or 0.95, on and 0.85 or 0.45, on and 0.5 or 0.4)
+  for i, row in ipairs(self.netOnRows) do
+    local h = list[i]
+    if i == ON_ROWS and #list > ON_ROWS then
+      row.name:SetText(string.format(L("netMore"), #list - ON_ROWS + 1)); row.info:SetText(""); row:Show()
+    elseif h then
+      row.name:SetText(PSS:Safe(h.name) .. (h.me and (" (" .. L("netYou") .. ")") or ""))
+      if h.guild then row.name:SetTextColor(C.green[1], C.green[2], C.green[3])
+      else row.name:SetTextColor(C.cream[1], C.cream[2], C.cream[3]) end
+      local old = N and N.Newer and h.v and N.Newer(PSS.version or "0", h.v)
+      local info = (h.v and ("v" .. PSS:Safe(h.v)) or "?") .. (old and (" |cffff7a7a" .. L("netVerOld") .. "|r") or "")
+      if not h.me then info = info .. "  ·  " .. Ago(h.t) end
+      row.info:SetText(info)
+      row:Show()
+    else
+      row:Hide()
+    end
+  end
+  -- Feed.
+  for _, b in ipairs(self.netFilters) do
+    b:SetText(L("nf_f_" .. b.filter)); SetActive(b, st.filter == b.filter)
+  end
+  self.netMine:SetText(L("nf_mine")); SetActive(self.netMine, st.mine)
+  local events = F and F:List(st.filter, st.mine) or {}
+  st.offset = math.min(st.offset or 0, math.max(0, #events - NET_ROWS))
+  for i, row in ipairs(self.netFeedRows) do
+    local e = events[i + st.offset]
+    if e then
+      row.time:SetText(date and date("%H:%M", e.t) or "")
+      row.text:SetText(self:NetEventText(e))
+      row:Show()
+    else
+      row:Hide()
+    end
+  end
+  Show(self.netEmpty, #events == 0)
+  self.netEmpty:SetText(on and L("netFeedEmpty") or L("netFeedOffline"))
+  local stats = F and F:Stats() or {sent = 0, recv = 0}
+  local n, ok, mine = 0, 0, 0
+  if F then n, ok, mine = F:QuestCounts() end
+  self.netStats:SetText(string.format(L("netStatsLine"), stats.sent or 0, stats.recv or 0, n, ok, mine))
 end
 
 function UI:BuildQuests()

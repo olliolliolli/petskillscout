@@ -5,7 +5,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.7.1"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.8.0"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -170,6 +170,8 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if PSS.UI and PSS.UI.ShowPassport then PSS.UI:Create(); PSS.UI:ShowPassport() end
     elseif msg == "share" then
         if PSS.PetLink then PSS.PetLink:Share() end
+    elseif msg == "net" or msg == "network" then
+        if PSS.UI and PSS.UI.Open then PSS.UI:Open("network") end
     elseif msg == "quests" or msg == "quest" then
         if PSS.UI and PSS.UI.Open then PSS.UI:Open("quests") end
     elseif msg == "collection" or msg == "looks" then

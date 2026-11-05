@@ -71,6 +71,7 @@ function S:SendAll(msg, net)
   if type(msg) ~= "string" or #msg > 250 then return false end
   local channels = Channels(net)
   for _, c in ipairs(channels) do self:Send(msg, c[1], c[2]) end
+  if #channels > 0 and PSS.NetFeed then pcall(PSS.NetFeed.OnSent, PSS.NetFeed, msg) end
   return #channels > 0
 end
 local function SendAll(msg) return S:SendAll(msg, true) end
@@ -189,6 +190,7 @@ function S:Receive(msg, channel, sender)
   local parts = {strsplit(SEP, msg)}
   local kind = parts[1]
   if PSS.Net and PSS.Net.Seen then PSS.Net:Seen(who, channel) end
+  if PSS.NetFeed then pcall(PSS.NetFeed.OnMessage, PSS.NetFeed, parts, who) end
   local handler = self.handlers[kind]
   if handler then
     pcall(handler, parts, who, channel, sender)

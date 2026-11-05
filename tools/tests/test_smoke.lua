@@ -10,7 +10,7 @@ UI:Create()
 local fails = 0
 for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es"}) do
   PetSkillScoutDB.language = lang
-  for _, v in ipairs({"beasts", "rares", "pet", "route", "collection", "gear", "quests", "settings"}) do
+  for _, v in ipairs({"beasts", "rares", "pet", "route", "collection", "gear", "quests", "network", "settings"}) do
     local ok, err = pcall(UI.ShowView, UI, v)
     if not ok then fails = fails + 1; print("FAIL", lang, v, err) end
   end
