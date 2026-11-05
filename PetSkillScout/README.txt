@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.11
+- Quests: optional auto turn-in (Settings > Quests, off by default). Finished quests are handed
+  in at the NPC; when there is a choice of rewards the window stays open for you. Shift skips.
+
 3.0.10
 - Network: hunters seen joining the channel who have not sent their data yet show
   "no data yet (older version?)" instead of "?".

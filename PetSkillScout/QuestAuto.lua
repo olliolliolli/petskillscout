@@ -103,6 +103,52 @@ function QA:OnDetail()
   end
 end
 
+-- Auto turn-in (own option, off by default) ----------------------------------
+-- Finished quests are handed in at the NPC. When the quest offers a choice of
+-- rewards the window stays open: the reward is always picked by the player.
+-- Hold Shift at the NPC to skip.
+function QA:TurnInOn() return DB().questTurnIn == true end
+local function SkipTurnIn() return not QA:TurnInOn() or (IsShiftKeyDown and IsShiftKeyDown()) or false end
+
+function QA:TurnInGossip()
+  if SkipTurnIn() then return end
+  local G = C_GossipInfo
+  if not (G and G.GetActiveQuests and G.SelectActiveQuest) then return end
+  for _, q in ipairs(Call(G.GetActiveQuests) or {}) do
+    local id = Plain(q.questID)
+    if id and Plain(q.isComplete) and Try("t" .. id) then
+      Call(G.SelectActiveQuest, id)
+      return id
+    end
+  end
+end
+
+function QA:TurnInGreeting()
+  if SkipTurnIn() then return end
+  local n = tonumber(Plain(Call(GetNumActiveQuests))) or 0
+  for i = 1, n do
+    local _, complete = Call(GetActiveTitle, i)
+    local id = Plain(Call(GetActiveQuestID, i))
+    if Plain(complete) and Try("t" .. tostring(id or i)) then
+      Call(SelectActiveQuest, i)
+      return id or true
+    end
+  end
+end
+
+function QA:OnProgress()
+  if SkipTurnIn() then return end
+  if Plain(Call(IsQuestCompletable)) then Call(CompleteQuest); return true end
+end
+
+function QA:OnComplete()
+  if SkipTurnIn() then return end
+  local choices = tonumber(Plain(Call(GetNumQuestChoices))) or 0
+  if choices > 1 then return end -- you choose the reward
+  Call(GetQuestReward, choices == 1 and 1 or nil)
+  return true
+end
+
 -- Rating line under the quest window ----------------------------------------
 function QA:ShowRating(id)
   if not (QuestFrame and self:MarksOn()) then return end
@@ -275,7 +321,8 @@ end
 
 local ev = CreateFrame("Frame")
 QA.frame = ev
-for _, e in ipairs({"PLAYER_LOGIN", "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL", "QUEST_LOG_UPDATE"}) do
+for _, e in ipairs({"PLAYER_LOGIN", "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL", "QUEST_LOG_UPDATE",
+    "QUEST_PROGRESS", "QUEST_COMPLETE"}) do
   pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event)
@@ -284,10 +331,14 @@ ev:SetScript("OnEvent", function(_, event)
   elseif event == "GOSSIP_SHOW" then
     QA:HookUI()
     After(function() pcall(QA.MarkGossip, QA) end)
-    QA:OnGossip()
+    if not QA:TurnInGossip() then QA:OnGossip() end
   elseif event == "QUEST_GREETING" then
     After(function() pcall(QA.MarkGreeting, QA) end)
-    QA:OnGreeting()
+    if not QA:TurnInGreeting() then QA:OnGreeting() end
+  elseif event == "QUEST_PROGRESS" then
+    QA:OnProgress()
+  elseif event == "QUEST_COMPLETE" then
+    QA:OnComplete()
   elseif event == "QUEST_DETAIL" then
     QA:OnDetail()
   elseif event == "QUEST_LOG_UPDATE" then

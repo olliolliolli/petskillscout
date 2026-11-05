@@ -4237,6 +4237,7 @@ local SETTINGS = {
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questAuto", label="optQuestAuto", hint="optQuestAutoHint", kind="choice", default="off",
       options={{"off","qAutoOff"},{"worth","qAutoWorth"},{"all","qAutoAll"}}},
+    {key="questTurnIn", label="optQuestTurnIn", hint="optQuestTurnInHint", kind="toggle", default=false},
   }},
   {id="map", title="setMap", sub="setMapSub", rows={
     {key="rareMapPins", label="rareMapPins", hint="optMapPinsHint", kind="toggle", default=true, apply=RefreshRareMap},
