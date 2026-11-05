@@ -2039,14 +2039,17 @@ function UI:BuildGear()
     -- Where the reward quest starts: arrow to the quest giver + world map on its zone.
     row.where = IconButton(row, "Interface\\Icons\\INV_Misc_Map_01", 22, function(b)
       local id, r = b.questID, b.quest
-      if not (id and r and r.m and r.x) then return end
+      if not (id and r and r.m and r.x) then
+        if b.qname then PSS:Print(string.format(L("gearQuestUnknown"), b.qname)) end
+        return
+      end
       local W = PSS.QuestWorth
       local giver = W and W:NPCName(r.g)
       if PSS.Nav then PSS.Nav:SetTarget({name = giver or r.n, mapID = r.m, points = {{r.x, r.y}}}) end
       UI:OpenQuestMap(nil, r.m)
     end, function(b)
       local r = b.quest
-      if not r then return "" end
+      if not (r and r.m and r.x) then return string.format(L("gearQuestUnknown"), b.qname or "?") end
       local W = PSS.QuestWorth
       local zone = r.m and C_Map and C_Map.GetMapInfo and select(2, pcall(C_Map.GetMapInfo, r.m))
       zone = type(zone) == "table" and zone.name or "?"
@@ -2167,7 +2170,12 @@ function UI:UpdateGear()
       local qid, qr, qchain
       if not keep then qid, qr, qchain = G:QuestFor(rec) end
       row.where.questID, row.where.quest, row.where.chain = qid, qr, qchain
-      Show(row.where, qr and qr.m and qr.x and true or false)
+      row.where.qname = (not keep) and G:QuestSourceName(rec) or nil
+      local known = qr and qr.m and qr.x and true or false
+      -- Every quest reward gets the button; grey when the giver is not in the database.
+      Show(row.where, known or row.where.qname ~= nil)
+      row.where.icon:SetDesaturated(not known)
+      row.where:SetAlpha(known and 1 or 0.55)
       -- Gain in attack power.
       local delta = math.floor(e.pick.score - eq + 0.5)
       if e.wearing then
@@ -2195,7 +2203,7 @@ function UI:UpdateGear()
       row.name:SetTextColor(C.muted[1], C.muted[2], C.muted[3])
       row.sub:SetText(eqName and string.format(L("gearEquipped"), eqName) or "")
       row.src:SetText(""); row.src2:SetText(""); row.gain:SetText(""); row.diff:SetText("")
-      row.where.questID, row.where.quest = nil, nil
+      row.where.questID, row.where.quest, row.where.qname = nil, nil, nil
       Show(row.where, false)
       Show(row.bar, false)
       row:SetAlpha(0.7)

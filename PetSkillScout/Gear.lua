@@ -356,6 +356,10 @@ end
 -- quest name (gear data has no quest IDs). Prefers your faction and a quest
 -- with a known quest giver position.
 local questByName
+-- Name of the first quest source of an item (nil when it is not a quest reward).
+function G:QuestSourceName(rec)
+  for _, x in ipairs(self:Sources(rec)) do if x.t == "q" then return x.n end end
+end
 function G:QuestFor(rec)
   local s
   for _, x in ipairs(self:Sources(rec)) do if x.t == "q" then s = x; break end end
