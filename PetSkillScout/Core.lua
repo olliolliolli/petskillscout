@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.0.6"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.0.7"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -248,6 +248,22 @@ SLASH_PETSKILLSCOUT1 = "/petskills"
 SLASH_PETSKILLSCOUT2 = "/pss"
 SlashCmdList.PETSKILLSCOUT = function(msg)
     msg = (msg or ""):lower()
+    if msg == "chatdebug" then
+        -- Chat windows: index, name, docked, shown, tab position (for bug reports).
+        for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
+            local cf, tab = _G["ChatFrame" .. i], _G["ChatFrame" .. i .. "Tab"]
+            local ok, name, _, _, _, _, _, shown, _, docked = pcall(GetChatWindowInfo, i)
+            if ok and name and name ~= "" then
+                local p, rel, rp, x, y
+                if tab and tab.GetPoint then p, rel, rp, x, y = tab:GetPoint(1) end
+                PSS:Print(string.format("%d %s docked=%s(%s) shown=%s tab=%s %s %s %.0f %.0f", i, tostring(name),
+                    tostring(docked), tostring(cf and cf.isDocked), tostring(shown), tostring(p),
+                    tostring(rel and rel.GetName and rel:GetName()), tostring(rp), x or 0, y or 0))
+            end
+        end
+        PSS:Print("PetSkillScout " .. tostring(PSS.version))
+        return
+    end
     if msg == "stableslots" then
         if PSS.Stable then PSS.Stable:InspectSlots() end
     elseif msg == "stabledebug" then

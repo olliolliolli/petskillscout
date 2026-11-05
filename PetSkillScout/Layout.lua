@@ -889,6 +889,14 @@ function PlaceCombatTab()
   if not dock then return end
   local right = {}
   local net = PSS.NetChat and PSS.NetChat.Frame and PSS.NetChat:Frame()
+  -- Our network window may have been left as a loose window (its tab then
+  -- floats over the chat): put it into the dock first.
+  if net and not net.isDocked and net ~= G("ChatFrame2") and type(FCF_DockFrame) == "function" then
+    local n = type(dock.DOCKED_CHAT_FRAMES) == "table" and #dock.DOCKED_CHAT_FRAMES or 1
+    combatBusy = true
+    pcall(FCF_DockFrame, net, n + 1, false)
+    combatBusy = false
+  end
   if net and net.isDocked and net ~= G("ChatFrame2") then right[#right + 1] = net end
   local combat = G("ChatFrame2")
   if combat and combat.isDocked then right[#right + 1] = combat end
@@ -1004,6 +1012,7 @@ function LY:PlaceChat()
   HookChat()
   pcall(self.StyleTabs, self)
   pcall(PlaceCombatTab)
+  PSS:Soon("chat-redock", RedockLoose, 1)
   for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local eb = G("ChatFrame" .. i .. "EditBox")
     if eb then
