@@ -918,7 +918,12 @@ function PlaceCombatTab()
   for k = #right, 1, -1 do
     local tab = G(right[k]:GetName() .. "Tab")
     if tab then
+      -- Docked tabs live in the dock's clipped scroll strip; out at the right
+      -- edge they were cut off (invisible). Parent them to the dock itself.
+      if tab.GetParent and tab:GetParent() ~= dock then pcall(tab.SetParent, tab, dock) end
+      if tab.SetFrameLevel and dock.GetFrameLevel then pcall(tab.SetFrameLevel, tab, dock:GetFrameLevel() + 5) end
       if tab.Show then pcall(tab.Show, tab) end
+      if tab.SetAlpha then pcall(tab.SetAlpha, tab, 1) end
       pcall(tab.ClearAllPoints, tab)
       pcall(tab.SetPoint, tab, "BOTTOMRIGHT", dock, "BOTTOMRIGHT", -x, 0)
       local w = tab.GetWidth and tab:GetWidth() or 0
