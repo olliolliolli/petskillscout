@@ -79,12 +79,14 @@ function ST:Build()
   f:Hide()
   self.bar = f
   f:SetScript("OnUpdate", function(_, e) ST:OnUpdate(e) end)
+  f:SetScript("OnSizeChanged", function(s) s.pssW, s.pssFill, s.pssAim = nil, nil, nil end)
   return f
 end
 
 function ST:Colours()
   local f = self.bar
   if not f then return end
+  f.pssState, f.pssW = nil, nil
   local e = Col("edge") or {0.3, 0.3, 0.35}
   for _, t in ipairs(f.edge) do t:SetVertexColor(e[1], e[2], e[3], 1) end
 end
@@ -120,23 +122,36 @@ function ST:OnUpdate()
     return
   end
   local p = math.min(1, elapsed / speed)
-  local w = f:GetWidth() or 200
-  f.fill:SetWidth(math.max(1, w * p))
-  f.aim:SetWidth(w * math.min(1, self.AIM / speed))
+  local w = f.pssW or f:GetWidth() or 200
+  f.pssW = w
+  -- The bar moves every frame; text and colours only change when they differ.
+  local fw = math.max(1, math.floor(w * p + 0.5))
+  if fw ~= f.pssFill then f.pssFill = fw; f.fill:SetWidth(fw) end
+  local aw = w * math.min(1, self.AIM / speed)
+  if aw ~= f.pssAim then f.pssAim = aw; f.aim:SetWidth(aw) end
   local remain = math.max(0, speed - elapsed)
-  f.time:SetText(string.format("%.1f", remain))
+  local tenths = math.floor(remain * 10 + 0.5)
+  if tenths ~= f.pssTenths then f.pssTenths = tenths; f.time:SetText(string.format("%.1f", tenths / 10)) end
   local aiming = remain <= self.AIM and self.shooting
-  local moving = (Plain(Call(GetUnitSpeed, "player")) or 0) > 0
-  local acc = Col("accent") or {0.85, 0.7, 0.43}
-  if aiming and moving then
+  local state
+  if aiming then
+    local moving = (Plain(Call(GetUnitSpeed, "player")) or 0) > 0
+    state = moving and "move" or "aim"
+  else
+    state = self.shooting and "shoot" or "off"
+  end
+  if state == f.pssState then return end
+  f.pssState = state
+  if state == "move" then
     f.fill:SetVertexColor(1, 0.3, 0.3, 1)
     f.text:SetText("|cffff5555" .. L("shotStand") .. "|r")
-  elseif aiming then
+  elseif state == "aim" then
     f.fill:SetVertexColor(1, 0.85, 0.3, 1)
     f.text:SetText(L("shotAim"))
   else
+    local acc = Col("accent") or {0.85, 0.7, 0.43}
     f.fill:SetVertexColor(acc[1], acc[2], acc[3], 1)
-    f.text:SetText(self.shooting and "" or L("shotOff"))
+    f.text:SetText(state == "shoot" and "" or L("shotOff"))
   end
 end
 

@@ -336,6 +336,20 @@ do
   end
   if #busy > 0 then fails = fails + 1; print("FAIL per-frame handlers left: " .. table.concat(busy, ", ")) end
 end
+-- 2.9.7: the Auto Shot bar does not rewrite its text every frame.
+do
+  local ST = PSS.ShotTimer
+  local f = ST:Build()
+  local sets = 0
+  local orig = f.text.SetText
+  f.text.SetText = function(self, t) sets = sets + 1; return orig(self, t) end
+  ST.shooting, ST.last, ST.speed = true, GetTime() - 0.1, 3
+  f.pssState = nil
+  for _ = 1, 30 do ST:OnUpdate() end
+  if sets ~= 1 then fails = fails + 1; print("FAIL shot bar text set " .. sets .. " times for one state") end
+  ST.shooting, ST.last, ST.speed = false, nil, nil
+  f.text.SetText = orig
+end
 -- Secure buttons run on the client's click phase (both registered).
 do
   local old = GetCVarBool

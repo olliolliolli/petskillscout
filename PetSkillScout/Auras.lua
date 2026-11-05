@@ -440,7 +440,7 @@ end
 A.frame:SetScript("OnEvent", function(_, event, unit)
   if not A.on then return end
   if event == "PLAYER_REGEN_ENABLED" then
-    pcall(A.Place, A); pcall(A.StyleAll, A); pcall(A.Arrange, A)
+    PSS:Soon("auras-regen", function() pcall(A.Place, A); pcall(A.StyleAll, A); pcall(A.Arrange, A) end, 0.5)
   elseif event == "PLAYER_TARGET_CHANGED" or unit == "target" then
     pcall(A.UpdateTarget, A)
   elseif unit == "player" then

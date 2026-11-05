@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.7
+- CPU: the Auto Shot bar only changes its text and colour when they differ (the bar itself still
+  moves every frame); minimap icons skip the update while you stand still; the buff pass after
+  combat runs once.
+
 2.9.6
 - CPU (from /pss cpu in game): 20 frame handlers that ran on every rendered frame only to count
   time now run on timers (0.1-5 s steps): minimap icons, network, message queue, pet card

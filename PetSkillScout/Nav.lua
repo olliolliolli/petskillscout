@@ -384,8 +384,17 @@ local function UpdateMinimap()
   if mmDirty or cached.mapID ~= mapID then
     cached.mapID, cached.list = mapID, Candidates(mapID)
     mmDirty = false
+    cached.fresh = true
   end
   local zoom = (Minimap:GetZoom() or 0) + 1
+  local facingNow = GetPlayerFacing and GetPlayerFacing() or 0
+  local rotNow = GetCVar and GetCVar("rotateMinimap") == "1"
+  -- Standing still with the same zoom: the icons are already right.
+  local st = cached.state
+  if st and not cached.fresh and st.px == px and st.py == py and st.zoom == zoom and st.mapID == mapID
+     and (not rotNow or st.facing == facingNow) and st.n == #cached.list then return end
+  cached.state = {px = px, py = py, zoom = zoom, mapID = mapID, facing = facingNow, n = #cached.list}
+  cached.fresh = false
   local radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2
   local scale = (Minimap:GetWidth() / 2) / radius
   local facing = GetPlayerFacing and GetPlayerFacing() or 0
