@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Auto Shot timer for hunters. A bar runs from one Auto Shot to the next;
 -- the last 0.5 s (the aiming part of Auto Shot) is marked: moving there
 -- delays the shot, so the bar turns red and says "Stand still" when you move

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Live feed of the hunter network (Network tab): who is online and what
 -- they share right now. Built from the hidden addon messages that arrive
 -- anyway (Sync.lua); nothing extra is sent. Events are kept for this session

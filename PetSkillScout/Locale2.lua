@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- 1.5.0 strings: skill route, ammo, rare respawn timers.
 local PSS = PetSkillScout
 local NEW = {

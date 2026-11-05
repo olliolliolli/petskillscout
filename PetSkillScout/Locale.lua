@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- UI translations. Database keys remain English for stable filtering.
 local PSS = PetSkillScout
 PSS.Locale = {

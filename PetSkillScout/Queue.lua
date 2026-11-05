@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Taming queue at rare spawns: hunters with PetSkillScout who wait for the same
 -- rare see who came first and whose turn it is. You join automatically when you
 -- are near the spawn area of a rare you marked as wanted (or with the Join

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet cards in chat. "Share" puts "[PetSkillScout: Wolfie] Wolf 60, Bite 8..."
 -- into your chat input; you send it yourself like any message. Other players
 -- with PetSkillScout see the bracket as a link: clicking it asks your client for

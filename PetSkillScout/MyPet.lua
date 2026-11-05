@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Active hunter pet inspection. Uses the pet spellbook; never guesses missing ranks.
 local PSS = PetSkillScout
 PSS.MyPet = { spells = {} }

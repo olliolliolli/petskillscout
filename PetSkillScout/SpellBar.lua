@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Your action bars (Settings > Hunter, on by default): when you learn a new
 -- rank of a spell, every button with an older rank gets the new one; a
 -- newly learned active spell goes into the first free slot of the main bar

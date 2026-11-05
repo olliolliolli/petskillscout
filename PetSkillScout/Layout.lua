@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- ElvUI-style interface layout (part of the game skin, Settings > Interface).
 -- Builds new pieces instead of only recolouring Blizzard ones:
 --   * unit frames: player, target, target of target, pet (flat bars, class /

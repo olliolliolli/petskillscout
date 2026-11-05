@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Rare respawn timers. When a rare dies (combat log or its corpse is seen) or is
 -- tamed, the time is stored; the next live sighting closes the interval. The
 -- intervals seen so far give the respawn window shown in the Rares tab. Kills

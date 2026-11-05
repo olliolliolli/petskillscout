@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Atlas of every tameable beast (AtlasData.lua): decoding, lookups and filters.
 local PSS = PetSkillScout
 PSS.Atlas = { list = {}, byNpc = {}, built = false }

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- 2.6.0 strings: quest ratings (worth it / not worth), map pins, auto-accept.
 local PSS = PetSkillScout
 local NEW = {

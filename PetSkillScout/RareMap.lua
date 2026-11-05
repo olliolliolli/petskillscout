@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Rare pets on the world map (RareScanner style).
 -- * Every rare with known spawns gets one icon on its zone map.
 -- * Clicking an icon shows its spawn area: all spawn points plus an outline.

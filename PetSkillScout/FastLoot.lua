@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Fast loot (Settings > Hunter, off by default): when the game auto-loots
 -- (auto loot on, or the auto-loot key held), every slot is taken at once and
 -- the loot window stays invisible, so there is no opening animation. If

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Quest givers on the world map: one "!" per quest giver with quests you can
 -- pick up now (PSS.QuestDB, AllTheThings Forever data, MIT).
 -- Purple = worth it (experience per minute or a gear upgrade), yellow =

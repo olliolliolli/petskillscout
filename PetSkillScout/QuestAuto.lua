@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Quest ratings where you meet quests, and optional auto-accept.
 -- * NPC dialogs (gossip and greeting lists): the "!" of quests worth doing
 --   turns purple, quests not worth the time turn grey with a short mark.

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- 3D creature viewer adapted from the PlayerModel approach used by HunterPetAtlas.
 -- Uses the client's creature database (NPC IDs); no external model files are bundled.
 local PSS = PetSkillScout

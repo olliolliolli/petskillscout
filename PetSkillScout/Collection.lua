@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Look collection ("skins"), families and the pet log (where and when each pet
 -- joined you). Looks are collected from your active pet, your stable and the
 -- rares you tamed. Data: SkinData.lua.

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Data policy:
 -- "community" means third-party Forever database / guide; see README for limitations.
 -- No coordinate has been fabricated. Unknown coordinates are nil and cannot create a map pin.

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- PetSkillScout launcher: draggable icon, default bottom-right.
 local ADDON, PSS = ...
 local launcher

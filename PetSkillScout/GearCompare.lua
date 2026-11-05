@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- "Is this an upgrade for me?" for any item link, plus the places that use
 -- it: the item tooltip line, quest rewards, group loot rolls and the arrows
 -- on bag items. Scores come from PSS.Gear (spec weights, live Forever stats).

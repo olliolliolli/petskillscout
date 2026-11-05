@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- WoW Forever stable inspection with diagnostics. Never invent pet records.
 local PSS=PetSkillScout
 PSS.Stable={selected=1,status='Not scanned',stableOpen=false}

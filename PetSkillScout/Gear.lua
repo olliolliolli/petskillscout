@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Gear advisor for hunters (WoW Forever): best items per slot for a spec,
 -- upgrades for the current level, where to get them and the gain over what
 -- is equipped now.

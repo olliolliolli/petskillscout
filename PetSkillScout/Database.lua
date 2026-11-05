@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Curated source-backed records. Coordinates are deliberately nil unless an exact point was verified.
 -- "zone-level only" records can be searched but will not produce map pins or waypoint requests.
 local PSS = PetSkillScout

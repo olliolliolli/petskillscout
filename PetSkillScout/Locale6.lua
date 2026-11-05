@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- 2.5.0 strings: Quests tab (useful hunter quests) and quest reminders.
 local PSS = PetSkillScout
 local NEW = {

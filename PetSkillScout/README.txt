@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.11
+- LICENSE.txt: PetSkillScout is (c) DarthRev1, all rights reserved; copying, changing or
+  republishing the code needs written permission. Third-party data (AllTheThings,
+  wow-classic-items) keeps its MIT licence. Every source file now carries the copyright line.
+
 2.9.10
 - Theme: the addon's minimap button no longer drops onto the minimap for ~10 s after login; with
   the square minimap it is always placed in the addon button bar.

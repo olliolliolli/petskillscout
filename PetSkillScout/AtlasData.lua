@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Every tameable beast in WoW Forever (648), with family, levels, rarity and
 -- attack speed. Source: mmonster WoW Forever world map (Forever beta client data,
 -- checked 2026-10-04). Spawn points stay in the site's packed continent-map form

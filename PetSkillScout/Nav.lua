@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Navigation helpers: player position, a TomTom-style direction arrow and
 -- minimap icons for nearby rares, tracked beasts and the arrow target.
 -- Nothing here moves the character; it only shows directions.

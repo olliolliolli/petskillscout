@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- RU interface strings (generated from the English keys; keep every key and %-specifier).
 local PSS = PetSkillScout
 PSS.Locale.ru = PSS.Locale.ru or {}

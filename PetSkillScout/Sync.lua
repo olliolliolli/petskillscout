@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Hidden addon messages between PetSkillScout users: guild, group and the realm
 -- network (a hidden chat channel every PetSkillScout user joins). Nothing here
 -- writes to visible chat; received data is only stored and displayed.

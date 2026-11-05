@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Rare pet alert pop-up with a 3D portrait (RareScanner style), shown at the
 -- bottom of the screen when the radar spots a rare. Not a secure frame, so it
 -- can appear in combat; left-click shows the spawn area on the map.

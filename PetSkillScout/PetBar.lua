@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet action bar (Settings > Hunter, on by default): when the pet learns a
 -- new rank, the button of the old rank is replaced by the new one; a newly
 -- learned active skill goes into a free ability slot (4-7). Only done out of

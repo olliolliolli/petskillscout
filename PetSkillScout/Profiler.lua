@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- /pss cpu: one-minute CPU check inside the game. The OnUpdate and OnEvent
 -- handlers of PetSkillScout's own frames (found by their source file) and
 -- the delayed passes (PSS:Soon) are timed with debugprofilestop; after 60 s

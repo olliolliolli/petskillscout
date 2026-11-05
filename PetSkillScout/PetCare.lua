@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet care: happiness, diet, best food in your bags, a Feed button and a
 -- reminder when the pet stops being happy. The Feed button is a secure macro
 -- button that YOU click ("/cast Feed Pet" + "/use bag slot"); nothing is automated.

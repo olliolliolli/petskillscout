@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Game interface skin (optional, off by default), in the spirit of ElvUI:
 -- the Blizzard art of windows, tooltips, chat, minimap, unit frames and
 -- (separate toggle) action bars is faded out and replaced with flat panels

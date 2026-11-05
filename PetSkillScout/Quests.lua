@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Hunter quests (Quests tab): which useful quest chains this character can
 -- do now, which are done, and a reminder when a new one becomes available.
 -- Data: PSS.QuestData. Everything about progress is read from the game:

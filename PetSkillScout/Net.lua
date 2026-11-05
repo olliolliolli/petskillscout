@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Realm network: every PetSkillScout user joins a hidden chat channel, so rare
 -- sightings, kills, taming queues and ranking data reach all hunters with the
 -- addon on the realm, not only the guild. The channel is removed from every chat

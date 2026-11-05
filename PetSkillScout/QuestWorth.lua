@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Is a quest worth your time? Experience per minute and gear for any quest
 -- of WoW Forever, from PSS.QuestDB (AllTheThings, MIT) plus what the game tells.
 --   XP: exact from the client when known (quest dialog, quest log, turn-in),

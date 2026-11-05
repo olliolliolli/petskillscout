@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Hunter achievements and the score used for guild / realm rankings.
 -- Everything is computed from what the addon already records; unlocking an
 -- achievement only shows a message.

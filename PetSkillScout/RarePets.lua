@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Rare Beast Radar + Rare Pet Collection. Nameplate detection plus target/mouseover fallback.
 local PSS = PetSkillScout
 PSS.RarePets = { entries = {}, byName = {}, byNpcID = {}, lastAlert = {} }

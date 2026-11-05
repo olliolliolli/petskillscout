@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Rare pet spawn points (zone map percentages) for rares that are not in Database.lua.
 -- Source: mmonster WoW Forever world map (Forever beta client data, checked 2026-10-04),
 -- converted from continent-map coordinates with a per-zone fit calibrated on the

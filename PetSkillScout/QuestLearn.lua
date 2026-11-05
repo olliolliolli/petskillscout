@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Quest givers and rewards learned in game (Settings > Quests, on by default).
 -- When you open a quest at an NPC, quests the AllTheThings database does not
 -- know (or knows without a quest giver position or with other rewards) are

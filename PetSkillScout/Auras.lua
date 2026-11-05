@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Buffs and debuffs in the interface theme (part of the "units" layout).
 --   * Player: the Blizzard buff and debuff frames are kept (right-click to
 --     cancel a buff stays a Blizzard action) but moved above the player

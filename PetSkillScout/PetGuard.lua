@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet guard for dungeons: helps you stop the pet from running through the
 -- whole instance after you jump down somewhere.
 -- * Warning when you drop from a height in a dungeon with your pet following.

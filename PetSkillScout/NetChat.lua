@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Hunter network chat tab (Settings > Hunter network, on by default): a chat
 -- window of its own where every network event appears live, the same lines
 -- as in the Network tab. The window is made once (out of combat) with the

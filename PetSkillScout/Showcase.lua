@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Realm showcase: which hunters on the realm have which pet look. With the
 -- hello message every client also sends the looks it has collected (144 bits
 -- in 24 characters) and the look of its active pet. Clicking an owner asks for

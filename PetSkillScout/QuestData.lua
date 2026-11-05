@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Hunter quests worth doing in WoW Forever: quest chains whose rewards are
 -- strong for a hunter (ranged weapons, quivers / ammo pouches).
 -- Quest giver, position, minimum level and faction come from PSS.QuestDB

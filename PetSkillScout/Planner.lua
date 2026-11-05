@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Training point planner: which skill ranks fit into the pet's training points
 -- and 4 skill slots, with presets for solo, dungeons and PvP. Only a plan: the
 -- skills are still taught at Beast Training by the player.

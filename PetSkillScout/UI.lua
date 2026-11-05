@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- PetSkillScout main window (1.4.0 layout).
 -- One layout for every theme; themes only change colours and textures:
 --   journal  - Hunter's Journal (dark green, gold)

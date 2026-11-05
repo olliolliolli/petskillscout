@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Extra lines in the unit tooltip of tameable beasts (hunters only):
 -- tameable / family / attack speed, taming level, rare, skills it teaches
 -- (and whether the active pet already knows them), last rare sighting.

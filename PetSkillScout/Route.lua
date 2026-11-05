@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Skill route: the player picks skill ranks to learn ("Bite 6", "Dash 2"), the
 -- addon picks a teaching beast for each one (tameable at the player's level,
 -- reachable for the faction, with known spawn points) and orders the stops by

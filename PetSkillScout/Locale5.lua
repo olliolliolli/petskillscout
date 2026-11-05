@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- 2.3.0 strings: Gear tab (hunter equipment advisor for WoW Forever).
 local PSS = PetSkillScout
 local NEW = {
