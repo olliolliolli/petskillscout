@@ -159,5 +159,23 @@ do
   if not tostring(UI.netChip.text:GetText()):find("12") then fails = fails + 1; print("FAIL net chip online count", UI.netChip.text:GetText()) end
   N.ChannelID, N.OnlineCount, N.ShowConnect = oldID, oldCount, oldShow
 end
+-- Header: tabs, network chip and character chip never overlap (every language,
+-- offline "Connect" is the widest chip).
+do
+  local N = PSS.Net
+  local oldID = N.ChannelID
+  N.ChannelID = function() return nil end
+  for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es"}) do
+    PetSkillScoutDB.language = lang
+    UI:RefreshHeader()
+    local last = UI.tabs[#UI.tabs]
+    local pt = last.points[#last.points]
+    local tabRight = pt[4] + last:GetWidth()
+    local chipsLeft = 1000 - UI.chip:GetWidth() - 6 - UI.netChip:GetWidth()
+    if tabRight > chipsLeft then fails = fails + 1; print("FAIL header overlap", lang, tabRight, chipsLeft) end
+  end
+  PetSkillScoutDB.language = "en"
+  N.ChannelID = oldID
+end
 print("smoke: " .. (fails == 0 and "ok" or (fails .. " failures")))
 os.exit(fails == 0 and 0 or 1)

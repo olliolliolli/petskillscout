@@ -1,4 +1,4 @@
-PetSkillScout 2.8.0 - WoW: Forever (Interface 16001)
+PetSkillScout 2.8.1 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.8.1
+- Window header: the network chip covered the last tab and cut the
+  character chip. The tabs now leave room for both chips (their font
+  steps down in long languages), and the character chip drops the
+  coordinates when only the zone name fits.
+
 2.8.0
 - New Network tab (header network chip, or /pss net): everything the hunter
   network shares, live.

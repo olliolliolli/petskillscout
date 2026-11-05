@@ -925,7 +925,11 @@ function UI:RefreshHeader()
   -- Tabs sized to their text; the character chip gets the room that is left.
   -- Seven tabs in long languages do not fit at 14 pt: step the font down
   -- until they leave room for the chip (its right edge is at x = 1000).
-  local TAB_RIGHT = 1000 - 10 - 150
+  -- The network chip sits between the tabs and the character chip: keep its
+  -- width out of the tabs' room too.
+  local netW = self:RefreshNetChip() or 0
+  local netRoom = netW > 0 and (netW + 6) or 0
+  local TAB_RIGHT = 1000 - 10 - 150 - netRoom
   local widths, x
   for size = 14, 10, -1 do
     widths, x = {}, 204
@@ -951,10 +955,12 @@ function UI:RefreshHeader()
   local p = PSS.player
   local where = p.zone or "?"
   if p.x and p.y then where = where .. string.format("  %.1f, %.1f", p.x * 100, p.y * 100) end
-  local netW = self:RefreshNetChip() or 0
-  local room = math.max(120, 1000 - x - 10 - 24 - netW - 6)
+  local room = math.max(120, 1000 - x - 10 - 24 - netRoom)
   self.chipText:SetWidth(0)
   self.chipText:SetText(string.format("%s %d  ·  %s", L("level"), math.floor(p.level or 1), where))
+  if (self.chipText:GetStringWidth() or 0) > room and p.zone then
+    self.chipText:SetText(string.format("%s %d  ·  %s", L("level"), math.floor(p.level or 1), p.zone))
+  end
   local width = math.min(room, math.floor(self.chipText:GetStringWidth() or 200))
   self.chipText:SetWidth(width)
   self.chip:SetWidth(width + 24)
