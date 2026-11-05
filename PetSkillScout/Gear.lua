@@ -352,6 +352,44 @@ function G:DiffParts(new, old, slot, max)
 end
 
 -- The main source as two short lines: who / what, and kind · place · chance.
+-- Quest behind the first quest source of an item: QuestDB entry matched by the
+-- quest name (gear data has no quest IDs). Prefers your faction and a quest
+-- with a known quest giver position.
+local questByName
+function G:QuestFor(rec)
+  local s
+  for _, x in ipairs(self:Sources(rec)) do if x.t == "q" then s = x; break end end
+  if not (s and s.n and PSS.QuestDB) then return nil end
+  if not questByName then
+    questByName = {}
+    for id, r in pairs(PSS.QuestDB) do
+      if r.n then
+        -- Chains are stored as "Name (2/7)": index them under the plain name.
+        local k = r.n:gsub("%s*%(%d+/%d+%)$", ""):lower()
+        questByName[k] = questByName[k] or {}
+        table.insert(questByName[k], id)
+      end
+    end
+    for _, ids in pairs(questByName) do table.sort(ids) end
+  end
+  local fac = Faction()
+  local best, bestScore
+  for _, id in ipairs(questByName[s.n:lower()] or {}) do
+    local r = PSS.QuestDB[id]
+    local score = 0
+    if r.s and fac and r.s ~= fac then score = score - 10 end
+    if r.m and r.x then score = score + 2 end
+    -- A chain starts at its first step: that is where you go.
+    local step, total = (r.n or ""):match("%((%d+)/(%d+)%)$")
+    if step == "1" then score = score + 1 end
+    if not bestScore or score > bestScore then best, bestScore = id, score end
+  end
+  if not best or bestScore < 0 then return nil end
+  local r = PSS.QuestDB[best]
+  local _, total = (r.n or ""):match("%((%d+)/(%d+)%)$")
+  return best, r, tonumber(total)
+end
+
 function G:SourceShort(rec)
   local s = self:Sources(rec)[1]
   if not s then return nil end

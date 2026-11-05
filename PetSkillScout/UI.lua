@@ -2036,6 +2036,28 @@ function UI:BuildGear()
       UI:UpdateGear()
     end, function(b) return b.tip or L("gearOther") end)
     row.alt:SetPoint("RIGHT", row, "RIGHT", -6, 0)
+    -- Where the reward quest starts: arrow to the quest giver + world map on its zone.
+    row.where = IconButton(row, "Interface\\Icons\\INV_Misc_Map_01", 22, function(b)
+      local id, r = b.questID, b.quest
+      if not (id and r and r.m and r.x) then return end
+      local W = PSS.QuestWorth
+      local giver = W and W:NPCName(r.g)
+      if PSS.Nav then PSS.Nav:SetTarget({name = giver or r.n, mapID = r.m, points = {{r.x, r.y}}}) end
+      UI:OpenQuestMap(nil, r.m)
+    end, function(b)
+      local r = b.quest
+      if not r then return "" end
+      local W = PSS.QuestWorth
+      local zone = r.m and C_Map and C_Map.GetMapInfo and select(2, pcall(C_Map.GetMapInfo, r.m))
+      zone = type(zone) == "table" and zone.name or "?"
+      local lines = {string.format(L("gearQuestFrom"), (W and W:NPCName(r.g)) or L("qwGiverUnknown"))}
+      lines[#lines + 1] = string.format("%s  %.1f, %.1f", zone, r.x or 0, r.y or 0)
+      if r.l then lines[#lines + 1] = string.format(L("qFrom"), r.l) end
+      if b.chain and b.chain > 1 then lines[#lines + 1] = string.format(L("gearQuestChain"), b.chain) end
+      lines[#lines + 1] = L("gearQuestWhereHint")
+      return table.concat(lines, "\n")
+    end)
+    row.where:SetPoint("RIGHT", row.alt, "LEFT", -4, 0)
     row:SetScript("OnEnter", GearTooltip)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)
     row:SetScript("OnClick", function(r)
@@ -2142,6 +2164,10 @@ function UI:UpdateGear()
         row.src:SetText(title or "")
         row.src2:SetText(detail or "")
       end
+      local qid, qr, qchain
+      if not keep then qid, qr, qchain = G:QuestFor(rec) end
+      row.where.questID, row.where.quest, row.where.chain = qid, qr, qchain
+      Show(row.where, qr and qr.m and qr.x and true or false)
       -- Gain in attack power.
       local delta = math.floor(e.pick.score - eq + 0.5)
       if e.wearing then
@@ -2169,6 +2195,8 @@ function UI:UpdateGear()
       row.name:SetTextColor(C.muted[1], C.muted[2], C.muted[3])
       row.sub:SetText(eqName and string.format(L("gearEquipped"), eqName) or "")
       row.src:SetText(""); row.src2:SetText(""); row.gain:SetText(""); row.diff:SetText("")
+      row.where.questID, row.where.quest = nil, nil
+      Show(row.where, false)
       Show(row.bar, false)
       row:SetAlpha(0.7)
     end

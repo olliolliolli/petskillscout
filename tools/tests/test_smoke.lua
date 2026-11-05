@@ -100,5 +100,29 @@ do
   PetSkillScoutDB.fastLoot = nil
   GetNumLootItems, LootSlot, C_AddOns = oldNum, oldSlot, oldAdd
 end
+-- Gear tab: quest rewards point to the quest giver (QuestDB matched by quest name).
+do
+  local G = PSS.Gear
+  PSS.player = PSS.player or {}
+  PSS.player.faction = "Alliance"
+  local tried, found = 0, 0
+  for _, rec in ipairs(PSS.GearData) do
+    for _, src in ipairs(rec.src or {}) do
+      if src.t == "q" and (not src.f or src.f == "A") then
+        tried = tried + 1
+        local id, r = G:QuestFor(rec)
+        if id then
+          found = found + 1
+          if r.n:gsub("%s*%(%d+/%d+%)$", ""):lower() ~= src.n:lower() then fails = fails + 1; print("FAIL quest name mismatch", src.n, r.n) end
+          if r.s == "H" then fails = fails + 1; print("FAIL horde quest for alliance", r.n) end
+        end
+        break
+      end
+    end
+  end
+  print("gear quest sources", tried, "matched", found)
+  if found < tried * 0.5 then fails = fails + 1; print("FAIL too few gear quests matched") end
+  UI:ShowView("gear")
+end
 print("smoke: " .. (fails == 0 and "ok" or (fails .. " failures")))
 os.exit(fails == 0 and 0 or 1)

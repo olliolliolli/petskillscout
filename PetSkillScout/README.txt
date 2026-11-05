@@ -1,4 +1,4 @@
-PetSkillScout 2.6.8 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.9 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -204,6 +204,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.9
+- Gear tab: items from a quest get a map button. Hover: the quest giver,
+  zone and coordinates, the level and, for a chain, how many quests it
+  has (the button leads to its first step). Click: arrow to the quest
+  giver and the world map on its zone. Quest givers come from the
+  AllTheThings quest database; quests it does not list have no button.
+
 2.6.8
 - Fox: Trickster's Dance now shows what it does (+50% dodge chance and 30%
   faster attacks for 12 sec, 3 min cooldown). The numbers come from player
