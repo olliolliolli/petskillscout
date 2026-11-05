@@ -56,5 +56,25 @@ do
   if got then fails = fails + 1; print("FAIL chat font changed without the theme font") end
   FCF_GetChatWindowInfo = oldInfo
 end
+-- Micro menu / bags strips must not add anything to the game's layout frames
+-- (their Layout() runs in combat: ADDON_ACTION_BLOCKED on SetSize / SetPoint).
+do
+  local LY, S = PSS.Layout, PSS.Skin
+  local made = {}
+  for _, n in ipairs({"MicroMenuContainer", "BagsBar"}) do
+    local f = CreateFrame("Frame", n)
+    made[n] = 0
+    getmetatable(f).m_CreateTexture = function() made[n] = made[n] + 1; return MOCK.newObj("Texture") end
+  end
+  local wasActive, wasChat = S.active, LY.applied.chat
+  S.active, LY.applied.chat = true, true
+  local ok, err = pcall(LY.SkinMenus, LY)
+  if not ok then fails = fails + 1; print("FAIL SkinMenus", err) end
+  for n, c in pairs(made) do
+    if c > 0 then fails = fails + 1; print("FAIL textures created on " .. n, c) end
+    if not LY.strips[n] then fails = fails + 1; print("FAIL no strip behind " .. n) end
+  end
+  S.active, LY.applied.chat = wasActive, wasChat
+end
 print("smoke: " .. (fails == 0 and "ok" or (fails .. " failures")))
 os.exit(fails == 0 and 0 or 1)

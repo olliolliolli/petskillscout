@@ -24,6 +24,7 @@ local hider = CreateFrame("Frame")
 hider:Hide()
 LY.hider = hider
 LY.applied = {}
+LY.strips = {}
 
 local function L(k) return PSS:L(k) end
 local function G(n) local v = _G[n]; return type(v) == "table" and v or nil end
@@ -848,6 +849,35 @@ local function HookChat()
   end
 end
 
+-- Chat text inside the top box (info 22 + input 24 + two gaps below it).
+local fitting = false
+function LY:FitChatFrame()
+  local cf = G("ChatFrame1")
+  if not (cf and leftPanel and self.applied.chat) or fitting then return end
+  local w, h = self:ChatSize()
+  fitting = true
+  pcall(cf.ClearAllPoints, cf)
+  pcall(cf.SetPoint, cf, "BOTTOMLEFT", leftPanel.box or leftPanel, "BOTTOMLEFT", 8, 6)
+  pcall(cf.SetSize, cf, w - 16, h - 54 - 12)
+  if cf.SetClampRectInsets then pcall(cf.SetClampRectInsets, cf, 0, 0, 0, 0) end
+  fitting = false
+end
+
+-- The game (Edit Mode, saved chat window size) can put its own size back
+-- later, and the text then runs above the panel. Re-fit after any change.
+local chatSizeHooked = false
+function LY:HookChatFrameSize(cf)
+  if chatSizeHooked or not hooksecurefunc then return end
+  chatSizeHooked = true
+  local function again()
+    if fitting then return end
+    if C_Timer and C_Timer.After then C_Timer.After(0, function() LY:FitChatFrame() end) else LY:FitChatFrame() end
+  end
+  for _, m in ipairs({"SetSize", "SetHeight", "SetWidth", "SetPoint"}) do
+    if type(cf[m]) == "function" then pcall(hooksecurefunc, cf, m, again) end
+  end
+end
+
 function LY:PlaceChat()
   if not leftPanel or InCombat() then return end
   local cf = G("ChatFrame1")
@@ -859,12 +889,9 @@ function LY:PlaceChat()
       pcall(leftPanel.row.SetWidth, leftPanel.row, w)
       for i = 1, 3 do if dts[i] then pcall(ReflowDT, dts[i]) end end
     end
-    -- Chat text inside the top box (info 22 + input 24 + two gaps below it).
-    pcall(cf.ClearAllPoints, cf)
-    pcall(cf.SetPoint, cf, "BOTTOMLEFT", leftPanel.box or leftPanel, "BOTTOMLEFT", 8, 6)
-    pcall(cf.SetSize, cf, w - 16, h - 54 - 12)
-    if cf.SetClampRectInsets then pcall(cf.SetClampRectInsets, cf, 0, 0, 0, 0) end
+    self:FitChatFrame()
     if FCF_SavePositionAndDimensions then pcall(FCF_SavePositionAndDimensions, cf) end
+    self:HookChatFrameSize(cf)
   end
   ParkChatButtons()
   PlaceDock()
@@ -1043,12 +1070,22 @@ function LY:SkinMenus()
   for _, n in ipairs({"MicroMenuContainer", "BagsBar"}) do
     local f = G(n)
     if f and f.GetRegions then
-      if not menuSkinned[f] then BD(f, "panel", {-3, 3, 3, -3}); menuSkinned[f] = true end
-      local ours = {}
-      local bd = S.BackdropOf and S:BackdropOf(f)
-      if bd then for _, k in ipairs({"bg", "t", "b", "l", "r"}) do ours[bd[k]] = true end end
+      -- The strip is a separate frame behind the row. Nothing is created on the
+      -- game's frame itself: its Layout() runs in combat and would read our
+      -- textures, which makes the game block SetSize / SetPoint.
+      local strip = self.strips[n]
+      if not strip then
+        strip = CreateFrame("Frame", nil, UIParent)
+        strip:SetPoint("TOPLEFT", f, "TOPLEFT", -3, 3)
+        strip:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 3, -3)
+        BD(strip, "panel")
+        self.strips[n] = strip
+      end
+      pcall(strip.SetFrameStrata, strip, f:GetFrameStrata())
+      pcall(strip.SetFrameLevel, strip, math.max(0, (f:GetFrameLevel() or 1) - 1))
+      strip:Show()
       for _, r in ipairs({f:GetRegions()}) do
-        if r.GetObjectType and r:GetObjectType() == "Texture" and not ours[r] then S.Fade(r) end
+        if r.GetObjectType and r:GetObjectType() == "Texture" then S.Fade(r) end
       end
     end
   end

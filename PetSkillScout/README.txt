@@ -1,4 +1,4 @@
-PetSkillScout 2.6.5 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.6 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -204,6 +204,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.6
+- Full interface theme: chat text could run above the chat panel when the
+  game put back its own chat window size; the chat window is now fitted
+  into the panel again after every such change.
+- Fixed "PetSkillScout: blocked: MicroMenuContainer:SetPointBase() /
+  SetSize()" in combat: the flat strips behind the micro menu and the bags
+  are now separate frames; nothing is added to the game's own frames.
+
 2.6.5
 - Chat text was too big with the interface font (Noto Sans is larger than
   the game's font at the same size): chat windows are now drawn about 28%
