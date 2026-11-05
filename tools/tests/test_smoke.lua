@@ -142,5 +142,22 @@ do
   end
   LY.Want = oldWant
 end
+-- Header network chip: "Connect" when offline, online count when connected.
+do
+  local N = PSS.Net
+  local oldID, oldCount, oldShow = N.ChannelID, N.OnlineCount, N.ShowConnect
+  local shownAt
+  N.ShowConnect = function(_, force, anchor) shownAt = anchor; return true end
+  N.ChannelID = function() return nil end
+  UI:RefreshHeader()
+  if UI.netChip.text:GetText() ~= PSS:L("netChipConnect") then fails = fails + 1; print("FAIL net chip offline text", UI.netChip.text:GetText()) end
+  UI.netChip:GetScript("OnClick")(UI.netChip)
+  if shownAt ~= UI.netChip then fails = fails + 1; print("FAIL connect prompt not opened at the chip") end
+  N.ChannelID = function() return 5 end
+  N.OnlineCount = function() return 12 end
+  UI:RefreshHeader()
+  if not tostring(UI.netChip.text:GetText()):find("12") then fails = fails + 1; print("FAIL net chip online count", UI.netChip.text:GetText()) end
+  N.ChannelID, N.OnlineCount, N.ShowConnect = oldID, oldCount, oldShow
+end
 print("smoke: " .. (fails == 0 and "ok" or (fails .. " failures")))
 os.exit(fails == 0 and 0 or 1)

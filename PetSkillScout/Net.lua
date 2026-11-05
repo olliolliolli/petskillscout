@@ -107,11 +107,18 @@ local function MakeConnect()
 end
 
 -- Shows the one-click connect prompt (never in combat).
-function N:ShowConnect(force)
+function N:ShowConnect(force, anchor)
   if not Enabled() or self:ChannelID() then return false end
   if self.dismissed and not force then return false end
   local b = MakeConnect()
   if not b or InCombat() then return false end
+  b:ClearAllPoints()
+  if anchor then
+    -- Right under the button that asked for it (e.g. the header network chip).
+    b:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -6)
+  else
+    b:SetPoint("TOP", UIParent, "TOP", 0, -140)
+  end
   b.title:SetText(PSS:Safe(PSS:L("netConnectTitle")))
   b.sub:SetText(PSS:Safe(PSS:L("netConnectSub")))
   b:Show()

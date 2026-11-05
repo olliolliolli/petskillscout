@@ -1,4 +1,4 @@
-PetSkillScout 2.7.0 - WoW: Forever (Interface 16001)
+PetSkillScout 2.7.1 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -205,6 +205,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.7.1
+- Hunter network in the window header: a gold "Connect" chip next to the
+  character chip while you are not connected (click: the connect button
+  opens right under it), and a green dot with the number of hunters online
+  once you are (click: realm ranking). No need to look in Settings.
+
 2.7.0
 - Unknown quests are learned in game (Settings > Quests > Learn unknown
   quests, on by default). When you open a quest at an NPC and the quest

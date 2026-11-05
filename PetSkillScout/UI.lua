@@ -809,10 +809,47 @@ function UI:Create()
   end, {icon="Interface\\Icons\\INV_Misc_Gear_01", iconSize=22})
   self.gearButton:SetPoint("RIGHT", self.closeButton, "LEFT", -8, 0)
   SetTip(self.gearButton, function() return L("settings") end)
+  -- Network chip: hunters online, or a bright "Connect" when not connected.
+  -- Joining a channel needs a secure click, so the chip opens the existing
+  -- connect prompt right under itself (nothing protected lives in this window).
+  self.netChip = CreateFrame("Button", nil, header)
+  self.netChip:SetHeight(26)
+  local netBg = Solid(self.netChip, "BACKGROUND", C.deep)
+  netBg:SetAllPoints(self.netChip)
+  self.netChip.edges = Border(self.netChip, C.border)
+  self.netChip.dot = self.netChip:CreateTexture(nil, "ARTWORK")
+  self.netChip.dot:SetTexture(WHITE)
+  self.netChip.dot:SetSize(8, 8)
+  self.netChip.dot:SetPoint("LEFT", self.netChip, "LEFT", 9, 0)
+  self.netChip.text = Label(self.netChip, "", 11, C.cream, nil, "LEFT", true)
+  self.netChip.text:SetPoint("LEFT", self.netChip.dot, "RIGHT", 6, 0)
+  local netHl = Solid(self.netChip, "HIGHLIGHT", C.gold, 0.15)
+  netHl:SetAllPoints(self.netChip)
+  self.netChip:SetScript("OnClick", function(b)
+    local N = PSS.Net
+    if not N then return end
+    if N:ChannelID() then
+      UI:ShowView("collection")
+    elseif InCombatLockdown and InCombatLockdown() then
+      PSS:Print(L("netChipCombat"))
+    else
+      N:ShowConnect(true, b)
+      if C_Timer and C_Timer.After then C_Timer.After(4, function() UI:RefreshNetChip() end) end
+    end
+  end)
+  SetTip(self.netChip, function()
+    local N = PSS.Net
+    if not N then return "" end
+    if N:ChannelID() then
+      return string.format(L("netInfo"), N:OnlineCount(), L("netConnected")) .. "\n" .. L("netChipOnHint")
+    end
+    return L("netConnectTitle") .. "\n" .. L("netConnectSub")
+  end)
   -- Character chip (click: refresh position / zone).
   self.chip = CreateFrame("Button", nil, header)
   self.chip:SetHeight(26)
   self.chip:SetPoint("RIGHT", self.gearButton, "LEFT", -10, 0)
+  self.netChip:SetPoint("RIGHT", self.chip, "LEFT", -6, 0)
   local chipBg = Solid(self.chip, "BACKGROUND", C.deep)
   chipBg:SetAllPoints(self.chip)
   Border(self.chip, C.border)
@@ -913,12 +950,39 @@ function UI:RefreshHeader()
   local p = PSS.player
   local where = p.zone or "?"
   if p.x and p.y then where = where .. string.format("  %.1f, %.1f", p.x * 100, p.y * 100) end
-  local room = math.max(120, 1000 - x - 10 - 24)
+  local netW = self:RefreshNetChip() or 0
+  local room = math.max(120, 1000 - x - 10 - 24 - netW - 6)
   self.chipText:SetWidth(0)
   self.chipText:SetText(string.format("%s %d  ·  %s", L("level"), math.floor(p.level or 1), where))
   local width = math.min(room, math.floor(self.chipText:GetStringWidth() or 200))
   self.chipText:SetWidth(width)
   self.chip:SetWidth(width + 24)
+end
+
+-- Header network chip: green dot + online count, or a gold "Connect".
+function UI:RefreshNetChip()
+  local c = self.netChip
+  if not c then return 0 end
+  local N = PSS.Net
+  local on = N and N:ChannelID()
+  local enabled = not PetSkillScoutDB or PetSkillScoutDB.netEnabled ~= false
+  if not N or not enabled then c:Hide(); return 0 end
+  c:Show()
+  c.text:SetWidth(0)
+  if on then
+    c.text:SetText(string.format(L("netChipOnline"), N:OnlineCount()))
+    c.text:SetTextColor(C.cream[1], C.cream[2], C.cream[3])
+    c.dot:SetVertexColor(0.40, 0.87, 0.47, 1)
+    SetEdgeColor(c.edges, C.border)
+  else
+    c.text:SetText(L("netChipConnect"))
+    c.text:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
+    c.dot:SetVertexColor(0.95, 0.40, 0.35, 1)
+    SetEdgeColor(c.edges, C.gold)
+  end
+  local w = math.floor((c.text:GetStringWidth() or 60) + 32)
+  c:SetWidth(w)
+  return w
 end
 
 function UI:RefreshView()
