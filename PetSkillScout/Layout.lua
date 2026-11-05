@@ -854,6 +854,7 @@ end
 -- (its text then overlaps the main chat). With the theme every window stays
 -- in the dock: after a drag, loose windows are docked back (order kept as the
 -- player dropped them) and the panel is re-fitted.
+local PlaceCombatTab
 local function RedockLoose()
   if InCombat() or not LY.applied.chat then return end
   if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then
@@ -873,13 +874,56 @@ local function RedockLoose()
   PlaceDock()
   pcall(LY.FitChatFrame, LY)
   pcall(LY.StyleTabs, LY)
+  pcall(PlaceCombatTab)
 end
 LY.RedockLoose = RedockLoose
+
+-- Right edge of the tab strip: Hunter Network, then Combat Log in the corner.
+-- They are kept last in the dock (so no other tab is chained to them) and
+-- anchored from the dock's right edge.
+local combatBusy = false
+function PlaceCombatTab()
+  if combatBusy or InCombat() or not LY.applied.chat then return end
+  if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then return end
+  local dock = G("GeneralDockManager")
+  if not dock then return end
+  local right = {}
+  local net = PSS.NetChat and PSS.NetChat.Frame and PSS.NetChat:Frame()
+  if net and net.isDocked and net ~= G("ChatFrame2") then right[#right + 1] = net end
+  local combat = G("ChatFrame2")
+  if combat and combat.isDocked then right[#right + 1] = combat end
+  if #right == 0 then return end
+  combatBusy = true
+  local list = type(dock.DOCKED_CHAT_FRAMES) == "table" and dock.DOCKED_CHAT_FRAMES
+  if list and type(FCF_DockFrame) == "function" then
+    for k, cf in ipairs(right) do
+      if list[#list - #right + k] ~= cf then
+        for _, f in ipairs(right) do pcall(FCF_DockFrame, f, #list + 1, false) end
+        break
+      end
+    end
+  end
+  local anchor
+  for k = #right, 1, -1 do
+    local tab = G(right[k]:GetName() .. "Tab")
+    if tab then
+      pcall(tab.ClearAllPoints, tab)
+      if anchor then pcall(tab.SetPoint, tab, "BOTTOMRIGHT", anchor, "BOTTOMLEFT", -2, 0)
+      else pcall(tab.SetPoint, tab, "BOTTOMRIGHT", dock, "BOTTOMRIGHT", 0, 0) end
+      anchor = tab
+    end
+  end
+  combatBusy = false
+end
+LY.PlaceCombatTab = PlaceCombatTab
 
 local chatHooked = false
 local function HookChat()
   if chatHooked or not hooksecurefunc then return end
   chatHooked = true
+  for _, fn in ipairs({"FCFDock_UpdateTabs", "FCF_DockUpdate"}) do
+    if type(_G[fn]) == "function" then PSS.HookSecure(fn, function() pcall(PlaceCombatTab) end) end
+  end
   for _, fn in ipairs({"FCF_StopDragging", "FCF_UnDockFrame"}) do
     if type(_G[fn]) == "function" then
       PSS.HookSecure(fn, function() PSS:Soon("chat-redock", RedockLoose, 0.2) end)
@@ -891,7 +935,7 @@ local function HookChat()
       PSS.HookSecure(fn, function()
         PSS:Soon("chattabs", function()
           if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then return end -- dragging a tab
-          PlaceDock(); pcall(LY.StyleTabs, LY)
+          PlaceDock(); pcall(LY.StyleTabs, LY); pcall(PlaceCombatTab)
         end)
       end)
     end
@@ -954,6 +998,7 @@ function LY:PlaceChat()
   PlaceDock()
   HookChat()
   pcall(self.StyleTabs, self)
+  pcall(PlaceCombatTab)
   for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local eb = G("ChatFrame" .. i .. "EditBox")
     if eb then
