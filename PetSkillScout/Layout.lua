@@ -756,7 +756,7 @@ local CHAT_PARK = {"ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameTo
 
 local function ParkChatButtons()
   for _, n in ipairs(CHAT_PARK) do Park(G(n)) end
-  for i = 1, (NUM_CHAT_WINDOWS or 10) do
+  for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local p = "ChatFrame" .. i
     local cf = G(p)
     Park(G(p .. "ButtonFrame"))
@@ -795,7 +795,7 @@ function LY:StyleTabs()
   local S = PSS.Skin
   if not (S and S.active) then return end
   local acc, muted = Col("accent"), {0.65, 0.68, 0.75}
-  for i = 1, (NUM_CHAT_WINDOWS or 10) do
+  for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local tab = G("ChatFrame" .. i .. "Tab")
     if tab then
       local selected = TabSelected(tab, i)
@@ -870,7 +870,7 @@ function LY:PlaceChat()
   PlaceDock()
   HookChat()
   pcall(self.StyleTabs, self)
-  for i = 1, (NUM_CHAT_WINDOWS or 10) do
+  for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local eb = G("ChatFrame" .. i .. "EditBox")
     if eb then
       -- Inside the input box between the chat and the info row.
@@ -1506,6 +1506,43 @@ local function ApplyFonts()
     end
   end
   LY.fontsChanged = n
+  LY:ChatFonts()
+end
+
+-- Noto Sans looks bigger than the game's Friz Quadrata at the same size, so the
+-- chat windows get a slightly smaller size. The size picked in the game (chat tab
+-- menu > Font Size) stays the base; only what is drawn is scaled.
+local CHAT_FONT_SCALE = 0.86
+LY.CHAT_FONT_SCALE = CHAT_FONT_SCALE
+function LY:ChatFontSize(base)
+  base = tonumber(base) or 14
+  return math.max(8, math.floor(base * CHAT_FONT_SCALE + 0.5))
+end
+local chatFontHooked = false
+function LY:ChatFonts()
+  if not self.applied.fonts or InCombat() then return end
+  for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
+    local cf = _G["ChatFrame" .. i]
+    if cf and cf.SetFont then
+      local base
+      if FCF_GetChatWindowInfo then
+        local ok, _, size = pcall(FCF_GetChatWindowInfo, i)
+        if ok then base = size end
+      end
+      if type(base) ~= "number" or base <= 0 then
+        local ok, _, size = pcall(cf.GetFont, cf)
+        base = ok and size or 14
+      end
+      local _, _, flags = cf:GetFont()
+      pcall(cf.SetFont, cf, FONT, self:ChatFontSize(base), flags or "")
+    end
+  end
+  if not chatFontHooked and hooksecurefunc and type(FCF_SetChatWindowFontSize) == "function" then
+    chatFontHooked = true
+    hooksecurefunc("FCF_SetChatWindowFontSize", function()
+      if C_Timer and C_Timer.After then C_Timer.After(0, function() LY:ChatFonts() end) else LY:ChatFonts() end
+    end)
+  end
 end
 
 ---------------------------------------------------------------------------
