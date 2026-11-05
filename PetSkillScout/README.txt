@@ -206,8 +206,8 @@ If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 CHANGELOG
 2.6.5
 - Chat text was too big with the interface font (Noto Sans is larger than
-  the game's font at the same size): chat windows are now drawn about 14%
-  smaller. The size you pick in the game (chat tab > Font Size) is still
+  the game's font at the same size): chat windows are now drawn about 28%
+  smaller (size 14 shows as 10). The size you pick in the game (chat tab > Font Size) is still
   the base and is followed when you change it.
 
 2.6.4

@@ -1512,7 +1512,7 @@ end
 -- Noto Sans looks bigger than the game's Friz Quadrata at the same size, so the
 -- chat windows get a slightly smaller size. The size picked in the game (chat tab
 -- menu > Font Size) stays the base; only what is drawn is scaled.
-local CHAT_FONT_SCALE = 0.86
+local CHAT_FONT_SCALE = 0.72
 LY.CHAT_FONT_SCALE = CHAT_FONT_SCALE
 function LY:ChatFontSize(base)
   base = tonumber(base) or 14
