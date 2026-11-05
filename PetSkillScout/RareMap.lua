@@ -274,6 +274,7 @@ function RM:Focus(entry)
 end
 
 local driver = CreateFrame("Frame")
+PSS:OnlyWithWorldMap(driver)
 RM._driver = driver
 driver:SetScript("OnUpdate", function(_, elapsed)
   elapsedSince = elapsedSince + (elapsed or 0)

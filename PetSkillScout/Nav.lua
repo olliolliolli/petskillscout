@@ -448,7 +448,7 @@ driver:SetScript("OnEvent", function()
 end)
 driver:SetScript("OnUpdate", function(_, elapsed)
   mmElapsed = mmElapsed + (elapsed or 0)
-  if mmElapsed < 0.1 then return end
+  if mmElapsed < 0.2 then return end
   mmElapsed = 0
   local ok, err = pcall(UpdateMinimap)
   if not ok then MM._lastError = tostring(err) end

@@ -239,6 +239,7 @@ local function UpdateTrackedPins()
 end
 
 local pinDriver = CreateFrame("Frame")
+PSS:OnlyWithWorldMap(pinDriver)
 PSS.Map._driver = pinDriver
 pinDriver:SetScript("OnUpdate", function(_, elapsed)
   mapRefreshElapsed = mapRefreshElapsed + (elapsed or 0)

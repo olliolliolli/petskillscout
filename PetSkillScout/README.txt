@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.3
+- Lower CPU: world map pin updates (beasts, rares, quests) stop while the map is closed; the
+  info bar scans bags, ammo and durability every 5 s instead of every second; minimap button
+  squaring every 10 s; unit frames no longer listen to the "frequent" health/power events and
+  their safety refresh runs every 3 s; minimap icons update 5 times a second instead of 10.
+
 2.9.2
 - Action bars (Settings > Hunter, on): out of combat, when you learn a new rank of a spell, every
   button with an older rank gets the new one; a newly learned spell goes into the first free slot

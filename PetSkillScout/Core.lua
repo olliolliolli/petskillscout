@@ -5,7 +5,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.2"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.3"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -48,6 +48,33 @@ function PSS:ClickRan(down)
     if ok and v ~= nil then keyDown = v and true or false end
   end
   return (down and true or false) == keyDown
+end
+
+-- Map pin drivers only need to run while the world map is open: a hidden
+-- frame gets no OnUpdate at all, so they cost nothing the rest of the time.
+local mapBound, mapHooked = {}, false
+local function HookWorldMap()
+  if mapHooked or not (WorldMapFrame and WorldMapFrame.HookScript) then return false end
+  mapHooked = true
+  WorldMapFrame:HookScript("OnShow", function() for _, f in ipairs(mapBound) do f:Show() end end)
+  WorldMapFrame:HookScript("OnHide", function() for _, f in ipairs(mapBound) do f:Hide() end end)
+  return true
+end
+function PSS:OnlyWithWorldMap(f)
+  mapBound[#mapBound + 1] = f
+  if HookWorldMap() or mapHooked then
+    if not WorldMapFrame:IsShown() then f:Hide() end
+  end
+end
+do
+  local w = CreateFrame("Frame")
+  w:RegisterEvent("PLAYER_ENTERING_WORLD")
+  w:SetScript("OnEvent", function(self)
+    if HookWorldMap() then
+      for _, f in ipairs(mapBound) do f:SetShown(WorldMapFrame:IsShown()) end
+      self:UnregisterAllEvents()
+    end
+  end)
 end
 
 local soonQueued = {}

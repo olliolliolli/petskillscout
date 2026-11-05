@@ -444,7 +444,7 @@ end
 
 local unitEvents = CreateFrame("Frame")
 LY.unitEvents = unitEvents
-local UNIT_EVENTS = {"UNIT_HEALTH", "UNIT_HEALTH_FREQUENT", "UNIT_MAXHEALTH", "UNIT_POWER_UPDATE", "UNIT_POWER_FREQUENT",
+local UNIT_EVENTS = {"UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_POWER_UPDATE",
   "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER", "UNIT_NAME_UPDATE", "UNIT_LEVEL", "UNIT_FACTION", "UNIT_HAPPINESS",
   "PLAYER_TARGET_CHANGED", "UNIT_PET", "UNIT_TARGET", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED",
   "PLAYER_UPDATE_RESTING", "PLAYER_ENTERING_WORLD", "UNIT_CLASSIFICATION_CHANGED", "UNIT_MODEL_CHANGED",
@@ -481,7 +481,7 @@ local function StartUnitEvents()
     if units.targettarget and units.targettarget:IsShown() then pcall(UpdateUnit, units.targettarget) end
     -- Safety net: some health/power changes have no event on this client.
     slow = slow + 1
-    if slow >= 3 then
+    if slow >= 10 then
       slow = 0
       for _, f in pairs(units) do pcall(UpdateUnit, f) end
     end
@@ -691,6 +691,9 @@ function LY:UpdateInfo()
   d[2].text:SetText(Label("fps", math.floor(fps + 0.5)) .. "  " .. Label("ms", ms))
   d[3].text:SetText(Money(Call(GetMoney)))
   -- right: ammo, bags, durability, pet
+  self.infoSlow = (self.infoSlow or 0) - 1
+  if self.infoSlow > 0 then return end
+  self.infoSlow = 5 -- bags, ammo, durability and pet mood change slowly
   local ammo = PSS.Ammo and PSS.Ammo:Count()
   d[4].text:SetText(Label(L("dtAmmo"), ammo and tostring(ammo) or "-"))
   local free, total = FreeSlots()
@@ -1437,7 +1440,7 @@ local function BuildMinimap()
   local tick = 0
   mmHolder:SetScript("OnUpdate", function(_, e)
     tick = tick + (e or 0)
-    if tick < 2 then return end
+    if tick < 10 then return end
     tick = 0
     pcall(LY.SquareMinimapButtons, LY)
   end)

@@ -115,6 +115,7 @@ end
 QP.Update = Update
 
 local driver = CreateFrame("Frame")
+PSS:OnlyWithWorldMap(driver)
 QP._driver = driver
 driver:SetScript("OnUpdate", function(_, elapsed)
   elapsedSince = elapsedSince + (elapsed or 0)

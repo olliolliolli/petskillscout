@@ -255,6 +255,26 @@ do
   if bars[2] ~= 5 then fails = fails + 1; print("FAIL action bars after combat") end
   GetSpellBookItemName, GetSpellBookItemInfo, IsPassiveSpell, HasAction, GetActionInfo, GetSpellInfo, GetSpellSubtext, PickupSpellBookItem, PlaceAction, ClearCursor, GetCursorInfo, C_SpellBook, C_Spell = unpack(saved)
 end
+-- 2.9.3: map pin drivers sleep while the world map is closed.
+do
+  local oldWM = WorldMapFrame
+  local wm = CreateFrame("Frame"); wm:Hide(); WorldMapFrame = wm
+  MOCK.Fire("PLAYER_ENTERING_WORLD", false, false) -- hooks the map
+  local d = CreateFrame("Frame")
+  PSS:OnlyWithWorldMap(d)
+  local onShow, onHide = wm and wm.scripts and wm.scripts.OnShow, wm and wm.scripts and wm.scripts.OnHide
+  if not (onShow and onHide) then fails = fails + 1; print("FAIL world map hooks missing")
+  else
+    onHide()
+    if d:IsShown() then fails = fails + 1; print("FAIL map driver sleeps with the map closed") end
+    onShow()
+    if not d:IsShown() then fails = fails + 1; print("FAIL map driver wakes with the map") end
+  end
+  if d:IsShown() == nil then end
+  local d2 = CreateFrame("Frame"); wm:Hide(); PSS:OnlyWithWorldMap(d2)
+  if d2:IsShown() then fails = fails + 1; print("FAIL late map driver sleeps too") end
+  WorldMapFrame = oldWM
+end
 -- Secure buttons run on the client's click phase (both registered).
 do
   local old = GetCVarBool
