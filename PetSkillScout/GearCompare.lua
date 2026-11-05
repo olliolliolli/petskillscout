@@ -150,9 +150,9 @@ end
 GC.OnItemTooltip = OnItemTooltip
 
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
-  pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, function(tt)
+  pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, PSS:Timed("item tooltip (gear)", function(tt)
     if tt == GameTooltip or tt == ItemRefTooltip then pcall(OnItemTooltip, tt) end
-  end)
+  end))
 else
   for _, tt in ipairs({GameTooltip, ItemRefTooltip}) do
     if tt and tt.HookScript then pcall(tt.HookScript, tt, "OnTooltipSetItem", function(t) pcall(OnItemTooltip, t) end) end

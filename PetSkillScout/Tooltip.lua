@@ -107,7 +107,7 @@ TT.OnUnit = OnUnit
 
 -- Modern clients use TooltipDataProcessor; older ones fire OnTooltipSetUnit.
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
-  TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnUnit)
+  TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, PSS:Timed("unit tooltip", OnUnit))
 elseif GameTooltip and GameTooltip.HookScript then
   pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetUnit", OnUnit)
 end

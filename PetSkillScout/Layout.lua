@@ -1119,7 +1119,7 @@ local function BuildChatHooks()
     hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tt) if LY.applied.chat then TooltipAnchor(tt) end end)
   end
   if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
-    pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, function(tt) pcall(TooltipQuality, tt) end)
+    pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, PSS:Timed("item tooltip (theme)", function(tt) pcall(TooltipQuality, tt) end))
   elseif GameTooltip and GameTooltip.HookScript then
     pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetItem", function(tt) pcall(TooltipQuality, tt) end)
   end

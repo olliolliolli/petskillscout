@@ -303,6 +303,31 @@ do
   if not made or #lines ~= 2 or not lines[1]:find("Ghostfang", 1, true) then fails = fails + 1; print("FAIL network chat tab gets events: " .. #lines) end
   FCF_OpenNewWindow, GetChatWindowInfo = oldOpen, oldInfo
 end
+-- 2.9.5: /pss cpu times our own frames and restores them.
+do
+  local clock = 0
+  local oldD, oldE = debugprofilestop, EnumerateFrames
+  debugprofilestop = function() clock = clock + 1; return clock end
+  local f1 = CreateFrame("Frame", "PetSkillScoutProbe")
+  local ran = 0
+  local orig = function() ran = ran + 1 end
+  f1:SetScript("OnUpdate", orig)
+  local other = CreateFrame("Frame", "SomeoneElse"); other:SetScript("OnUpdate", orig)
+  local list = {f1, other}
+  EnumerateFrames = function(prev) if not prev then return list[1] end for i, x in ipairs(list) do if x == prev then return list[i + 1] end end end
+  local printed = {}
+  local oldPrint = PSS.Print; PSS.Print = function(_, m) printed[#printed + 1] = m end
+  PSS.Profiler:Start()
+  if other:GetScript("OnUpdate") ~= orig then fails = fails + 1; print("FAIL profiler touched another addon's frame") end
+  f1:GetScript("OnUpdate")(f1, 0.016)
+  if ran ~= 1 then fails = fails + 1; print("FAIL profiled handler still runs") end
+  PSS.Profiler:Stop()
+  if f1:GetScript("OnUpdate") ~= orig then fails = fails + 1; print("FAIL profiler restores handlers") end
+  local found = false
+  for _, m in ipairs(printed) do if m:find("PetSkillScoutProbe", 1, true) then found = true end end
+  if not found then fails = fails + 1; print("FAIL profiler report lists the frame") end
+  PSS.Print = oldPrint; debugprofilestop, EnumerateFrames = oldD, oldE
+end
 -- Secure buttons run on the client's click phase (both registered).
 do
   local old = GetCVarBool

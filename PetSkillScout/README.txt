@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.5
+- /pss cpu: a one-minute CPU check in game. It times the addon's own frames, delayed passes and
+  tooltip hooks, then prints the 10 heaviest parts to chat (handlers are restored afterwards).
+
 2.9.4
 - Hunter network: Forever names are "First Last". Your own messages coming back under your full
   name no longer list you twice (the old duplicate is removed), and other hunters keep their

@@ -5,7 +5,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.4"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.5"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -77,11 +77,29 @@ do
   end)
 end
 
+-- fn, timed by /pss cpu while a check runs (free otherwise).
+function PSS:Timed(key, fn)
+  return function(...)
+    local P = PSS.Profiler
+    if not (P and P.cost and debugprofilestop) then return fn(...) end
+    local t = debugprofilestop()
+    fn(...)
+    P:Add(key, debugprofilestop() - t)
+  end
+end
+
 local soonQueued = {}
 function PSS:Soon(key, fn, delay)
   if soonQueued[key] then return end
   soonQueued[key] = true
-  local function run() soonQueued[key] = nil; pcall(fn) end
+  local function run()
+    soonQueued[key] = nil
+    local P = PSS.Profiler
+    if P and P.cost and debugprofilestop then
+      local t = debugprofilestop(); pcall(fn)
+      P:Add("pass " .. tostring(type(key) == "string" and key or "bag"), debugprofilestop() - t)
+    else pcall(fn) end
+  end
   if C_Timer and C_Timer.After then C_Timer.After(delay or 0.1, run) else run() end
 end
 
@@ -220,6 +238,8 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if PSS.UI and PSS.UI.ShowPassport then PSS.UI:Create(); PSS.UI:ShowPassport() end
     elseif msg == "share" then
         if PSS.PetLink then PSS.PetLink:Share() end
+    elseif msg == "cpu" then
+        if PSS.Profiler then PSS.Profiler:Start() end
     elseif msg == "net" or msg == "network" then
         if PSS.UI and PSS.UI.Open then PSS.UI:Open("network") end
     elseif msg == "quests" or msg == "quest" then
