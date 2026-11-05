@@ -1,4 +1,4 @@
-PetSkillScout 2.6.6 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.7 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -204,6 +204,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.7
+- Fast loot (Settings > Hunter, off by default): with auto loot every item
+  is taken at once and the loot window does not play its opening
+  animation. If something is left (full bags, a roll, a bind
+  confirmation) the window shows as usual. It switches itself off when
+  FasterLoot, SpeedyAutoLoot or a similar addon is loaded.
+
 2.6.6
 - Full interface theme: chat text could run above the chat panel when the
   game put back its own chat window size; the chat window is now fitted

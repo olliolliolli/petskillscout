@@ -3966,6 +3966,8 @@ local SETTINGS = {
   }},
   {id="hunter", title="setHunter", sub="setHunterSub", rows={
     {key="shotTimer", label="optShotTimer", hint="optShotTimerHint", kind="toggle", default=true},
+    {key="fastLoot", label="optFastLoot", hint="optFastLootHint", kind="toggle", default=false,
+      text=function() local o = PSS.FastLoot and PSS.FastLoot:Other(); if o then return string.format(PSS:L("optFastLootOther"), o) end end},
     {key="gearTooltip", label="optGearTooltip", hint="optGearTooltipHint", kind="toggle", default=true},
     {key="gearQuest", label="optGearQuest", hint="optGearQuestHint", kind="toggle", default=true},
     {key="gearRolls", label="optGearRolls", hint="optGearRollsHint", kind="toggle", default=true},

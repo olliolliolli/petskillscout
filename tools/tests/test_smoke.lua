@@ -76,5 +76,29 @@ do
   end
   S.active, LY.applied.chat = wasActive, wasChat
 end
+-- Fast loot: off by default, takes every slot with auto loot, steps aside for FasterLoot.
+do
+  local looted = {}
+  local oldNum, oldSlot, oldAdd = GetNumLootItems, LootSlot, C_AddOns
+  GetNumLootItems = function() return 3 end
+  LootSlot = function(i) looted[#looted + 1] = i end
+  local others = {}
+  C_AddOns = {IsAddOnLoaded = function(n) return others[n] or false end}
+  PSS.FastLoot.busy = false
+  MOCK.Fire("LOOT_READY", true)
+  if #looted ~= 0 then fails = fails + 1; print("FAIL fast loot on by default") end
+  PetSkillScoutDB.fastLoot = true
+  MOCK.Fire("LOOT_READY", true)
+  if #looted ~= 3 then fails = fails + 1; print("FAIL fast loot took", #looted) end
+  MOCK.Fire("LOOT_CLOSED")
+  looted = {}
+  MOCK.Fire("LOOT_READY", false)
+  if #looted ~= 0 then fails = fails + 1; print("FAIL fast loot without auto loot") end
+  others.FasterLoot = true
+  MOCK.Fire("LOOT_CLOSED"); MOCK.Fire("LOOT_READY", true)
+  if #looted ~= 0 or PSS.FastLoot:Other() ~= "FasterLoot" then fails = fails + 1; print("FAIL fast loot with FasterLoot") end
+  PetSkillScoutDB.fastLoot = nil
+  GetNumLootItems, LootSlot, C_AddOns = oldNum, oldSlot, oldAdd
+end
 print("smoke: " .. (fails == 0 and "ok" or (fails .. " failures")))
 os.exit(fails == 0 and 0 or 1)
