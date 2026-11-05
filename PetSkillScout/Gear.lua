@@ -388,7 +388,14 @@ function G:QuestFor(rec)
     if step == "1" then score = score + 1 end
     if not bestScore or score > bestScore then best, bestScore = id, score end
   end
-  if not best or bestScore < 0 then return nil end
+  if not best or bestScore < 0 or not (PSS.QuestDB[best].m and PSS.QuestDB[best].x) then
+    -- Not in the database (or no giver position there): quests learned in game.
+    local L = PSS.QuestLearn
+    local lid, lr
+    if L then lid, lr = L:ByTitle(s.n) end
+    if lid and lr.m and lr.x then return lid, lr end
+    if not best or bestScore < 0 then return nil end
+  end
   local r = PSS.QuestDB[best]
   local _, total = (r.n or ""):match("%((%d+)/(%d+)%)$")
   return best, r, tonumber(total)

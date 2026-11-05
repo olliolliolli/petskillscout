@@ -1,4 +1,4 @@
-PetSkillScout 2.6.11 - WoW: Forever (Interface 16001)
+PetSkillScout 2.7.0 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -170,8 +170,9 @@ DATA AND LIMITATIONS
 - Respawn windows come only from what you and your guild observed; there is
   no built-in respawn data. A window is an upper bound: the rare may have
   appeared earlier than it was seen.
-- Network data (sightings, queues, rankings) comes from other players and is
-  not verified. Everyone in the queue must have PetSkillScout to appear in it.
+- Network data (sightings, queues, rankings, learned quests) comes from other
+  players; learned quest givers count as confirmed only when two players agree.
+  Other network data is not verified. Everyone in the queue must have PetSkillScout to appear in it.
 - Pet looks: mmonster WoW Forever hunter pet data (Forever beta), 648 beasts in
   144 looks. A look is collected when a pet with it is your active pet, in your
   stable, or a rare you tamed.
@@ -204,6 +205,23 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.7.0
+- Unknown quests are learned in game (Settings > Quests > Learn unknown
+  quests, on by default). When you open a quest at an NPC and the quest
+  database does not know it, has no quest giver position for it or lists
+  other rewards, the addon notes the quest, its title, the quest giver,
+  the map position and the reward items. Rewards are also noted at turn-in.
+- Shared over the hunter network: records go to all hunters with the
+  addon on the realm, and new players ask for them after login. A quest
+  giver position counts as confirmed when two players reported the same
+  spot (or you saw it yourself); far-off reports do not move it.
+- Gear tab: quest rewards use these records when the database has no
+  quest giver: the map button works, the tooltip says how many players
+  found it or that it is not confirmed yet.
+- Confirmed records will be checked and added to the addon's own data at
+  the next data updates. Only quest data is sent; nothing goes to visible
+  chat.
+
 2.6.11
 - Gear tab: every quest reward now has the map button. When the quest is
   not in the AllTheThings database for Forever, the button is grey and

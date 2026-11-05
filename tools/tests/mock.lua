@@ -148,3 +148,17 @@ UISpecialFrames = {}
 setmetatable(_G, {__index = function(_, k)
   if type(k) == "string" and k:match("^%u%w*_%u") and not k:match("^C_") then return function() return nil end end
 end})
+-- WoW string helper: strsplit(sep, text) -> parts (plain separator).
+if not strsplit then
+  function strsplit(sep, text)
+    local out, start = {}, 1
+    text = tostring(text or "")
+    while true do
+      local i = text:find(sep, start, true)
+      if not i then out[#out + 1] = text:sub(start); break end
+      out[#out + 1] = text:sub(start, i - 1)
+      start = i + #sep
+    end
+    return unpack(out)
+  end
+end

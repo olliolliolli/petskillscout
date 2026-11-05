@@ -2,7 +2,7 @@
 ## Title: PetSkillScout
 ## Notes: Find hunter pet skill teaching beasts, rare pets and your pet's abilities in WoW: Forever
 ## Author: darthrev1
-## Version: 2.6.11
+## Version: 2.7.0
 ## SavedVariables: PetSkillScoutDB
 ## Category: Gameplay
 ## IconTexture: Interface\AddOns\PetSkillScout\Textures\PetSkillScoutLogo
@@ -52,6 +52,7 @@ Quests.lua
 QuestWorth.lua
 QuestPins.lua
 QuestAuto.lua
+QuestLearn.lua
 UI.lua
 Skin.lua
 Layout.lua

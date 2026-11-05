@@ -2044,7 +2044,7 @@ function UI:BuildGear()
         return
       end
       local W = PSS.QuestWorth
-      local giver = W and W:NPCName(r.g)
+      local giver = (W and W:NPCName(r.g)) or r.gn
       if PSS.Nav then PSS.Nav:SetTarget({name = giver or r.n, mapID = r.m, points = {{r.x, r.y}}}) end
       UI:OpenQuestMap(nil, r.m)
     end, function(b)
@@ -2053,10 +2053,13 @@ function UI:BuildGear()
       local W = PSS.QuestWorth
       local zone = r.m and C_Map and C_Map.GetMapInfo and select(2, pcall(C_Map.GetMapInfo, r.m))
       zone = type(zone) == "table" and zone.name or "?"
-      local lines = {string.format(L("gearQuestFrom"), (W and W:NPCName(r.g)) or L("qwGiverUnknown"))}
+      local lines = {string.format(L("gearQuestFrom"), (W and W:NPCName(r.g)) or r.gn or L("qwGiverUnknown"))}
       lines[#lines + 1] = string.format("%s  %.1f, %.1f", zone, r.x or 0, r.y or 0)
       if r.l then lines[#lines + 1] = string.format(L("qFrom"), r.l) end
       if b.chain and b.chain > 1 then lines[#lines + 1] = string.format(L("gearQuestChain"), b.chain) end
+      if r.learned then
+        lines[#lines + 1] = r.confirmed and string.format(L("gearQuestLearned"), r.reporters or 1) or L("gearQuestUnverified")
+      end
       lines[#lines + 1] = L("gearQuestWhereHint")
       return table.concat(lines, "\n")
     end)
@@ -2175,7 +2178,7 @@ function UI:UpdateGear()
       -- Every quest reward gets the button; grey when the giver is not in the database.
       Show(row.where, known or row.where.qname ~= nil)
       row.where.icon:SetDesaturated(not known)
-      row.where:SetAlpha(known and 1 or 0.55)
+      row.where:SetAlpha((known and not (qr.learned and not qr.confirmed)) and 1 or (known and 0.8 or 0.55))
       -- Gain in attack power.
       local delta = math.floor(e.pick.score - eq + 0.5)
       if e.wearing then
@@ -4019,6 +4022,7 @@ local SETTINGS = {
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questPinsSkip", label="optQuestPinsSkip", hint="optQuestPinsSkipHint", kind="toggle", default=false,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
+    {key="questLearn", label="optQuestLearn", hint="optQuestLearnHint", kind="toggle", default=true},
     {key="questMinimap", label="optQuestMinimap", hint="optQuestMinimapHint", kind="toggle", default=true,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questAuto", label="optQuestAuto", hint="optQuestAutoHint", kind="choice", default="off",
