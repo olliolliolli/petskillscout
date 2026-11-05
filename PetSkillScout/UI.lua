@@ -2517,7 +2517,7 @@ function UI:UpdateNetwork()
       if h.guild then row.name:SetTextColor(C.green[1], C.green[2], C.green[3])
       else row.name:SetTextColor(C.cream[1], C.cream[2], C.cream[3]) end
       local old = N and N.Newer and h.v and N.Newer(PSS.version or "0", h.v)
-      local info = (h.v and ("v" .. PSS:Safe(h.v)) or "?") .. (old and (" |cffff7a7a" .. L("netVerOld") .. "|r") or "")
+      local info = (h.v and ("v" .. PSS:Safe(h.v)) or ("|cff9a9a9a" .. L("netVerUnknown") .. "|r")) .. (old and (" |cffff7a7a" .. L("netVerOld") .. "|r") or "")
       if not h.me then info = info .. "  ·  " .. Ago(h.t) end
       row.info:SetText(info)
       row:Show()

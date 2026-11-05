@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.10
+- Network: hunters seen joining the channel who have not sent their data yet show
+  "no data yet (older version?)" instead of "?".
+
 3.0.9
 - Theme: the Hunter Network tab on the right was cut off by the tab strip (invisible); the
   right-side tabs are now drawn on the dock itself.
