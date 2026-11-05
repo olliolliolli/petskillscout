@@ -1683,8 +1683,18 @@ function LY:ChatFontSize(base)
   return math.max(8, math.floor(base * CHAT_FONT_SCALE + 0.5))
 end
 local chatFontHooked = false
+local chatFontBusy = false
+local chatFontFrames = setmetatable({}, {__mode = "k"})
+-- The game puts the saved chat font back a moment after login (and when the
+-- chat windows update); then the size looked wrong until it was picked again
+-- in the menu. Any font change on a chat window now re-applies ours.
+local function ChatFontAgain()
+  if chatFontBusy then return end
+  PSS:Soon("chatfonts", function() LY:ChatFonts() end, 0.1)
+end
 function LY:ChatFonts()
   if not self.applied.fonts or InCombat() then return end
+  chatFontBusy = true
   for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local cf = _G["ChatFrame" .. i]
     if cf and cf.SetFont then
@@ -1693,13 +1703,42 @@ function LY:ChatFonts()
         local ok, _, size = pcall(FCF_GetChatWindowInfo, i)
         if ok then base = size end
       end
-      if type(base) ~= "number" or base <= 0 then
-        local ok, _, size = pcall(cf.GetFont, cf)
-        base = ok and size or 14
+      if (type(base) ~= "number" or base <= 0) and GetChatWindowInfo then
+        local ok, _, size = pcall(GetChatWindowInfo, i)
+        if ok then base = size end
       end
+      if type(base) ~= "number" or base <= 0 then
+        -- Last resort: the current size, unless it is the one we drew
+        -- (scaling it again would shrink the text every time).
+        local ok, _, size = pcall(cf.GetFont, cf)
+        if ok and type(size) == "number" and cf.pssDrawn and math.abs(size - cf.pssDrawn) < 0.5 then
+          base = cf.pssBase or 14
+        else
+          base = ok and size or 14
+        end
+      end
+      cf.pssBase, cf.pssDrawn = base, self:ChatFontSize(base)
       local _, _, flags = cf:GetFont()
       pcall(cf.SetFont, cf, FONT, self:ChatFontSize(base), flags or "")
+      if not chatFontFrames[cf] then
+        chatFontFrames[cf] = true
+        for _, m in ipairs({"SetFont", "SetFontObject"}) do
+          if type(cf[m]) == "function" then pcall(PSS.HookSecure, cf, m, ChatFontAgain) end
+        end
+      end
     end
+  end
+  chatFontBusy = false
+  if not self.chatFontEvents and CreateFrame then
+    local f = CreateFrame("Frame")
+    for _, e in ipairs({"UPDATE_CHAT_WINDOWS", "UPDATE_FLOATING_CHAT_WINDOWS", "PLAYER_ENTERING_WORLD"}) do
+      pcall(f.RegisterEvent, f, e)
+    end
+    f:SetScript("OnEvent", function()
+      PSS:Soon("chatfonts", function() LY:ChatFonts() end, 0.5)
+      if C_Timer and C_Timer.After then C_Timer.After(3, function() LY:ChatFonts() end) end
+    end)
+    self.chatFontEvents = f
   end
   if not chatFontHooked and hooksecurefunc and type(FCF_SetChatWindowFontSize) == "function" then
     chatFontHooked = true

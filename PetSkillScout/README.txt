@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.8
+- Theme: the chat text size is right after login - the size the game puts back a moment
+  later is re-scaled at once (no need to pick the size again in the menu).
+
 3.0.7
 - Theme: a loose Hunter Network chat window (tab floating over the chat) is docked back at
   login and placed on the right next to Combat Log. /pss chatdebug lists the chat windows.
