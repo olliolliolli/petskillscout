@@ -1,4 +1,4 @@
-PetSkillScout 2.6.7 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.8 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -204,6 +204,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.8
+- Fox: Trickster's Dance now shows what it does (+50% dodge chance and 30%
+  faster attacks for 12 sec, 3 min cooldown). The numbers come from player
+  guides and are marked as not confirmed.
+
 2.6.7
 - Fast loot (Settings > Hunter, off by default): with auto loot every item
   is taken at once and the loot window does not play its opening

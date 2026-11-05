@@ -34,7 +34,8 @@ PSS.Abilities = {
   ["Dust Cloud"] = {label="Dust Cloud", kind="family", family="Tallstrider", learn="family", note="New Tallstrider family ability in Forever."},
   ["Tendon Rip"] = {label="Tendon Rip", kind="family", family="Hyena", learn="family", note="New Hyena family ability in Forever."},
   ["Mine!"] = {label="Mine!", kind="family", family="Bird of Prey", learn="family", note="New Bird of Prey family ability (family renamed from Owl)."},
-  ["Trickster's Dance"] = {label="Trickster's Dance", kind="family", family="Fox", learn="family", note="New Fox family ability."},
+  ["Trickster's Dance"] = {label="Trickster's Dance", kind="family", family="Fox", learn="family", note="New Fox family ability.",
+    effect="effTrickstersDance"}, -- effect from player guides (not confirmed by Blizzard or AllTheThings),
   Swipe = {label="Swipe", kind="family", family="Bear", learn="family", note="New Bear family ability in Forever."},
   ["Lava Breath"] = {label="Lava Breath", kind="family", family="Core Hound", learn="family", note="Core Hound family ability; no tameable Core Hounds are listed in the beta data."},
 }

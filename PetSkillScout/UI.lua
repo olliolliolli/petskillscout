@@ -573,6 +573,8 @@ function PSS:RankInfoText(ability, rank)
   local learn = self.Abilities[ability] and self.Abilities[ability].learn
   if learn == "family" then table.insert(parts, self:L("learnFamily"))
   elseif learn == "trainer" then table.insert(parts, self:L("learnTrainer")) end
+  local effect = self.Abilities[ability] and self.Abilities[ability].effect
+  if effect then table.insert(parts, self:L(effect)) end
   return table.concat(parts, "\n")
 end
 
