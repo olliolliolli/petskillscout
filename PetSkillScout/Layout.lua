@@ -1362,6 +1362,15 @@ function LY:PlaceMinimap()
   pcall(mm.SetSize, mm, size, size)
   if zoneText then pcall(zoneText.SetWidth, zoneText, size - 10) end
   if mm.SetMaskTexture then pcall(mm.SetMaskTexture, mm, FLAT) end
+  -- The rings around quest / archaeology / task areas are drawn for a round
+  -- minimap; with the square mask they show as a stray oval. Hide only the
+  -- rings, the areas themselves stay.
+  for _, m in ipairs({"SetQuestBlobRingScalar", "SetArchBlobRingScalar", "SetTaskBlobRingScalar"}) do
+    if type(mm[m]) == "function" then pcall(mm[m], mm, 0) end
+  end
+  for _, m in ipairs({"SetQuestBlobRingAlpha", "SetArchBlobRingAlpha", "SetTaskBlobRingAlpha"}) do
+    if type(mm[m]) == "function" then pcall(mm[m], mm, 0) end
+  end
   -- The map picture keeps its old size until the zoom changes: nudge it.
   local function nudge()
     local z = Plain(Call(mm.GetZoom, mm)) or 0

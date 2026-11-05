@@ -1,4 +1,4 @@
-PetSkillScout 2.6.9 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.10 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -204,6 +204,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.10
+- Square minimap: the game's rings around quest areas (made for a round
+  minimap) showed as a stray oval; they are hidden now. The quest areas
+  themselves still show.
+
 2.6.9
 - Gear tab: items from a quest get a map button. Hover: the quest giver,
   zone and coordinates, the level and, for a chain, how many quests it

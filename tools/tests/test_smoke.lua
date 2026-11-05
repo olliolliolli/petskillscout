@@ -124,5 +124,23 @@ do
   if found < tried * 0.5 then fails = fails + 1; print("FAIL too few gear quests matched") end
   UI:ShowView("gear")
 end
+-- Square minimap: the round quest-area rings are switched off.
+do
+  local LY = PSS.Layout
+  local set = {}
+  local mt = getmetatable(Minimap)
+  for _, m in ipairs({"SetQuestBlobRingScalar", "SetArchBlobRingScalar", "SetQuestBlobRingAlpha"}) do
+    mt["m_" .. m] = function(_, v) set[m] = v end
+  end
+  local oldWant = LY.Want
+  LY.Want = function(_, part) return part == "minimap" end
+  LY.applied.minimap = nil
+  local ok, err = pcall(LY.Apply, LY)
+  if not ok then fails = fails + 1; print("FAIL minimap apply", err) end
+  if set.SetQuestBlobRingScalar ~= 0 or set.SetArchBlobRingScalar ~= 0 or set.SetQuestBlobRingAlpha ~= 0 then
+    fails = fails + 1; print("FAIL quest blob ring still on", tostring(set.SetQuestBlobRingScalar))
+  end
+  LY.Want = oldWant
+end
 print("smoke: " .. (fails == 0 and "ok" or (fails .. " failures")))
 os.exit(fails == 0 and 0 or 1)
