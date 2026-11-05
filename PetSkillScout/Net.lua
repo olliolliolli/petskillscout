@@ -54,7 +54,8 @@ local function MakeConnect()
   local b = CreateFrame("Button", "PetSkillScoutNetConnect", UIParent, "SecureActionButtonTemplate")
   b:SetSize(330, 54)
   b:SetPoint("TOP", UIParent, "TOP", 0, -140)
-  b:SetFrameStrata("DIALOG")
+  b:SetFrameStrata("FULLSCREEN_DIALOG")
+  b:SetToplevel(true)
   b:RegisterForClicks("AnyUp", "AnyDown")
   b:SetAttribute("type", "macro")
   b:SetAttribute("macrotext", "/join " .. N.CHANNEL)
@@ -135,6 +136,35 @@ function N:ShowConnect(force, anchor)
 end
 
 function N:Join() return self:ShowConnect(true) end
+
+-- Auto-join: the minimap button and the floating icon are secure buttons
+-- too. While you are not in the channel, their left click also runs
+-- "/join PSSNet1" (the same as typing it) - so the first time you open the
+-- addon you are connected, no extra prompt. Attributes change out of combat.
+N.joinButtons = {}
+function N:AddJoinButton(b)
+  if not b then return end
+  self.joinButtons[#self.joinButtons + 1] = b
+  self:UpdateJoinButtons()
+end
+-- After a click that may have joined: confirm in a moment, then drop the macro.
+function N:AfterJoinClick()
+  if not self:ChannelIDRaw() and Enabled() then self.checkIn = 3 end
+end
+function N:UpdateJoinButtons()
+  if InCombat() then self.joinPending = true return end
+  self.joinPending = false
+  local want = Enabled() and PetSkillScoutDB and PetSkillScoutDB.netAutoJoin ~= false and not self:ChannelIDRaw()
+  for _, b in ipairs(self.joinButtons) do
+    if want then
+      b:SetAttribute("type1", "macro")
+      b:SetAttribute("macrotext1", "/join " .. N.CHANNEL)
+    else
+      b:SetAttribute("type1", nil)
+      b:SetAttribute("macrotext1", nil)
+    end
+  end
+end
 
 function N:Leave()
   if connect and not InCombat() then connect:Hide() end
@@ -273,9 +303,9 @@ N.frame:SetScript("OnEvent", function(_, event)
       pcall(Prune)
       promptIn, helloIn = 15, 18
     end
-  elseif event == "PLAYER_REGEN_ENABLED" and N.wantPrompt then
-    N.wantPrompt = nil
-    pcall(N.ShowConnect, N)
+  elseif event == "PLAYER_REGEN_ENABLED" then
+    if N.joinPending then pcall(N.UpdateJoinButtons, N) end
+    if N.wantPrompt then N.wantPrompt = nil; pcall(N.ShowConnect, N) end
   end
 end)
 N.frame:SetScript("OnUpdate", function(_, elapsed)
@@ -293,7 +323,9 @@ N.frame:SetScript("OnUpdate", function(_, elapsed)
     N.checkIn = N.checkIn - elapsed
     if N.checkIn <= 0 then
       N.checkIn = nil
+      pcall(N.UpdateJoinButtons, N)
       if N:ChannelID() then
+        if connect and not InCombat() then connect:Hide() end
         PSS:Print(PSS:L("netJoined"))
         pcall(N.Hello, N, true)
       end

@@ -182,7 +182,8 @@ end
 
 function S:Receive(msg, channel, sender)
   if not (PetSkillScoutDB and Enabled()) or type(msg) ~= "string" or #msg > 250 or type(sender) ~= "string" then return end
-  local who = Ambiguate and Ambiguate(sender, "short") or sender:match("^[^-]+") or sender
+  local who = Ambiguate and Ambiguate(sender, "short") or sender
+  who = who:match("^[^-]+") or who -- "Name-Realm" -> "Name" (else you show up twice)
   who = (who:gsub("[^%w\128-\255]", "")):sub(1, 24)
   local me = UnitName and UnitName("player")
   if who == "" or who == me then return end

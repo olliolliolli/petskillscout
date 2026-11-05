@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.1
+- Hunter network: the minimap button and the floating icon now connect you to the network with
+  your normal click to open the addon (they run "/join PSSNet1" while you are not in the channel),
+  so there is no separate prompt to find. Nothing is joined without a click; never in combat.
+- The Connect prompt is drawn above the main window (it was hidden behind the tabs).
+- Fixed: your own messages ("Name-Realm") listed you twice in the online list.
+
 2.9.0
 - New languages: Português (Brasil) and Русский (chosen automatically on ptBR/ruRU clients).
 - Performance: theme hooks (buffs, action bars, micro menu, minimap, chat, bags) now run once per

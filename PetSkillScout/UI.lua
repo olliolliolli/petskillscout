@@ -4258,7 +4258,7 @@ local SETTINGS = {
     {key="netEnabled", label="optNet", hint="optNetHint", kind="toggle", default=true,
       apply=function()
         if not PSS.Net then return end
-        if PetSkillScoutDB.netEnabled == false then PSS.Net:Leave() else PSS.Net:ShowConnect(true); PSS.Net:Hello(true) end
+        if PetSkillScoutDB.netEnabled == false then PSS.Net:Leave() else PSS.Net:ShowConnect(true); PSS.Net:Hello(true) end; PSS.Net:UpdateJoinButtons()
       end},
     {key="netConnect", label="optNetConnect", hint="optNetConnectHint", kind="action", button="netConnectBtn",
       run=function() if PSS.Net and not PSS.Net:ShowConnect(true) then PSS:Print(PSS:L(PSS.Net:ChannelID() and "netJoined" or "netNoConnect")) end end},

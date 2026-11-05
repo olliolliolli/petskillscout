@@ -28,12 +28,12 @@ end
 
 function PSS:CreateLauncher()
     if launcher then return launcher end
-    launcher = CreateFrame("Button", "PetSkillScoutLauncher", UIParent)
+    launcher = CreateFrame("Button", "PetSkillScoutLauncher", UIParent, "SecureActionButtonTemplate")
     launcher:SetSize(46, 46)
     launcher:SetFrameStrata("HIGH")
     launcher:SetClampedToScreen(true)
     launcher:EnableMouse(true)
-    launcher:RegisterForClicks("LeftButtonUp")
+    launcher:RegisterForClicks("LeftButtonUp", "LeftButtonDown")
     launcher:RegisterForDrag("LeftButton")
     launcher:SetMovable(true)
 
@@ -49,6 +49,7 @@ function PSS:CreateLauncher()
     highlight:SetAlpha(0.35)
 
     launcher:SetScript("OnDragStart", function(self)
+        if InCombatLockdown and InCombatLockdown() then return end
         self.dragging = true
         self:StartMoving()
     end)
@@ -59,11 +60,14 @@ function PSS:CreateLauncher()
         -- arrive within a short window instead of swallowing the next real click.
         self.dragStopTime = GetTime and GetTime() or 0
     end)
-    launcher:SetScript("OnClick", function(self, button)
+    launcher:SetScript("PostClick", function(self, button, down)
+        if not PSS:ClickRan(down) then return end
+        if PSS.Net and PSS.Net.AfterJoinClick then PSS.Net:AfterJoinClick() end
         local now = GetTime and GetTime() or 0
         if self.dragStopTime and now - self.dragStopTime < 0.3 then return end
         if button == "LeftButton" and PSS.Open then PSS:Open() end
     end)
+    if PSS.Net and PSS.Net.AddJoinButton then PSS.Net:AddJoinButton(launcher) end
     launcher:SetScript("OnEnter", function(self)
         if GameTooltip then
             GameTooltip:SetOwner(self, "ANCHOR_LEFT")
@@ -86,6 +90,8 @@ end
 local mmButton
 local function PlaceMinimapButton()
     if not (mmButton and Minimap) then return end
+    -- Secure button (it can join the network): never moved in combat.
+    if InCombatLockdown and InCombatLockdown() then return end
     local angle = math.rad(tonumber(PetSkillScoutDB and PetSkillScoutDB.minimapAngle) or 215)
     local radius = (Minimap:GetWidth() or 140) / 2 + 10
     local x, y = math.cos(angle), math.sin(angle)
@@ -104,11 +110,11 @@ PSS.PlaceMinimapButton = function() PlaceMinimapButton() end
 
 function PSS:CreateMinimapButton()
     if mmButton or not Minimap then return mmButton end
-    mmButton = CreateFrame("Button", "PetSkillScoutMinimapButton", Minimap)
+    mmButton = CreateFrame("Button", "PetSkillScoutMinimapButton", Minimap, "SecureActionButtonTemplate")
     mmButton:SetSize(31, 31)
     mmButton:SetFrameStrata("MEDIUM")
     mmButton:SetFrameLevel(8)
-    mmButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    mmButton:RegisterForClicks("LeftButtonUp", "RightButtonUp", "LeftButtonDown", "RightButtonDown")
     mmButton:RegisterForDrag("LeftButton")
     mmButton:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
     local bg = mmButton:CreateTexture(nil, "BACKGROUND")
@@ -125,6 +131,7 @@ function PSS:CreateMinimapButton()
     border:SetSize(53, 53)
     border:SetPoint("TOPLEFT", mmButton, "TOPLEFT", 0, 0)
     mmButton:SetScript("OnDragStart", function(self)
+        if InCombatLockdown and InCombatLockdown() then return end
         self:SetScript("OnUpdate", function()
             local mx, my = Minimap:GetCenter()
             local px, py = GetCursorPosition()
@@ -136,13 +143,16 @@ function PSS:CreateMinimapButton()
         end)
     end)
     mmButton:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
-    mmButton:SetScript("OnClick", function(_, button)
+    mmButton:SetScript("PostClick", function(_, button, down)
+        if not PSS:ClickRan(down) then return end
+        if PSS.Net and PSS.Net.AfterJoinClick then PSS.Net:AfterJoinClick() end
         if button == "RightButton" then
             if PSS.UI and PSS.UI.Open then PSS.UI:Open("settings") end
         elseif PSS.Open then
             PSS:Open()
         end
     end)
+    if PSS.Net and PSS.Net.AddJoinButton then PSS.Net:AddJoinButton(mmButton) end
     mmButton:SetScript("OnEnter", function(self)
         if not GameTooltip then return end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
@@ -162,6 +172,7 @@ end
 
 -- Visibility from Settings: minimap button (default on), floating icon (default off).
 function PSS:UpdateLaunchers()
+    if InCombatLockdown and InCombatLockdown() then return end
     local db = PetSkillScoutDB or {}
     if mmButton then
         if db.minimapButton ~= false then mmButton:Show(); PlaceMinimapButton() else mmButton:Hide() end

@@ -23,6 +23,8 @@ local function newObj(kind)
   end
   mt.m_SetText = function(self, t) self.text = t == nil and "" or tostring(t); if self.fs then self.fs.text = self.text end end
   mt.m_GetText = function(self) return self.text end
+  mt.m_SetAttribute = function(self, k, v) self.attr = self.attr or {}; self.attr[k] = v end
+  mt.m_GetAttribute = function(self, k) return self.attr and self.attr[k] end
   mt.m_GetStringWidth = function(self) local n = select(2, (self.text or ""):gsub("[^\128-\191]", "")); return n * ((self.fontSize or 13) * 0.55) end
   mt.m_SetFont = function(self, f, s) self.fontSize = s end
   mt.m_Show = function(self) self.shown = true end

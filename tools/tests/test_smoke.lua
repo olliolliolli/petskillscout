@@ -229,6 +229,25 @@ do
     if src:find('RegisterForClicks("AnyUp")', 1, true) then fails = fails + 1; print("FAIL secure button up-only in " .. f) end
   end
 end
+-- 2.9.1: the minimap button joins the network while you are not in it.
+do
+  local N = PSS.Net
+  local mm = PSS:CreateMinimapButton()
+  local old = N.ChannelIDRaw
+  N.ChannelIDRaw = function() return nil end
+  N:UpdateJoinButtons()
+  if not (mm and mm:GetAttribute("type1") == "macro" and mm:GetAttribute("macrotext1") == "/join PSSNet1") then
+    fails = fails + 1; print("FAIL minimap button joins the network") end
+  N.ChannelIDRaw = function() return 5 end
+  N:UpdateJoinButtons()
+  if mm:GetAttribute("type1") ~= nil then fails = fails + 1; print("FAIL join macro removed once connected") end
+  N.ChannelIDRaw = old
+  -- Own messages coming back as "Name-Realm" are not a second hunter.
+  local before = 0; for _ in pairs(PetSkillScoutDB.peers or {}) do before = before + 1 end
+  PSS.Sync:Receive("H", "GUILD", (UnitName("player") or "?") .. "-Grillz")
+  local after = 0; for _ in pairs(PetSkillScoutDB.peers or {}) do after = after + 1 end
+  if after ~= before then fails = fails + 1; print("FAIL own Name-Realm counted as a peer") end
+end
 -- Hook storms collapse into one pass.
 do
   local n = 0
