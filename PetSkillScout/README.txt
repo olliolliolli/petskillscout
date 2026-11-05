@@ -1,4 +1,4 @@
-PetSkillScout 2.6.1 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.2 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -36,7 +36,7 @@ SLASH COMMANDS
 /pss tooltip      switch the unit tooltip lines on/off
 
 FEATURES
-- Beasts: all 649 tameable beasts of WoW Forever in one list. Search by name,
+- Beasts: all 653 tameable beasts of WoW Forever in one list. Search by name,
   zone or family; quick filters Fast / Rare / Teaches a skill / For my pet;
   family, skill and rank dropdowns; sort by distance (nearest first), level,
   attack speed or name.
@@ -138,6 +138,9 @@ FEATURES
   tooltip lines, pet care reminder and Feed button mode.
 
 DATA AND LIMITATIONS
+- Quest database: AllTheThings commit 31a8fe6 (2026-11-05). Pet teachers and
+  beast positions from AllTheThings: commit d503738 (unchanged since).
+- 653 tameable beasts, 548 of them with spawn points.
 - Families use the client names (Scorpid, Tallstrider, Wind Serpent, Crocolisk);
   19 families incl. Fox and Core Hound, with shared and signature skills per family.
 - Every rank of every pet skill has its required pet level and training points.
@@ -201,6 +204,15 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.2
+- Data update 2026-11-05 (AllTheThings Forever database, commit 31a8fe6):
+  quest prerequisites and objectives refreshed. Tomb Weed now needs Doom
+  Weed first; WRIGGLE. is repeatable; first objective positions for Doom
+  Weed, Tomb Weed, Coming to Terms and A Light in the Darkness.
+- Pet data checked against the same commit: no changes to pet skill
+  teachers, rares or beast positions since 2.6.1.
+- Beast count in this README corrected to 653.
+
 2.6.1
 - Data update 2026-11-04 (AllTheThings Forever database, commit d503738):
   48 more teaching beasts for pet skills, among them the first known teachers

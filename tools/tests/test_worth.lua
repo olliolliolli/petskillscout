@@ -164,7 +164,11 @@ IsShiftKeyDown = function() return false end
 PetSkillScoutDB.questAuto = "worth"
 local gsel
 function GetNumAvailableQuests() return 2 end
-function GetAvailableQuestInfo(i) if i == 1 then return true, 0, false, false, found end return false, 0, false, false, 257 end
+-- A trivial (grey) quest the database does not know: skipped by the trivial flag,
+-- independent of which low quest pairs() happened to pick above.
+local greyNew = 999999
+assert(PSS.QuestDB[greyNew] == nil)
+function GetAvailableQuestInfo(i) if i == 1 then return true, 0, false, false, greyNew end return false, 0, false, false, 257 end
 function SelectAvailableQuest(i) gsel = i end
 MOCK.level = 12
 QA:OnGreeting()
