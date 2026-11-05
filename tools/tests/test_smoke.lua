@@ -216,6 +216,45 @@ do
   PetSkillScoutDB.petBarAuto = nil
   UnitExists, GetSpellBookItemName, GetPetActionInfo, PickupSpellBookItem, PickupPetAction, ClearCursor, GetCursorInfo, IsPassiveSpell, C_SpellBook = unpack(saved)
 end
+-- 2.9.2: your own action bars follow new ranks / new spells.
+do
+  local SB = PSS.SpellBar
+  local book = {{"Arcane Shot", "Rank 1", 1}, {"Arcane Shot", "Rank 2", 2}, {"Serpent Sting", "Rank 1", 3}}
+  local bars = {[1] = 1, [2] = 3, [3] = 1, [5] = 99}
+  local cursor
+  local saved = {GetSpellBookItemName, GetSpellBookItemInfo, IsPassiveSpell, HasAction, GetActionInfo, GetSpellInfo, GetSpellSubtext, PickupSpellBookItem, PlaceAction, ClearCursor, GetCursorInfo, C_SpellBook, C_Spell}
+  C_SpellBook, C_Spell = nil, nil
+  GetSpellBookItemName = function(i) local b = book[i]; if b then return b[1], b[2] end end
+  GetSpellBookItemInfo = function(i) if book[i] then return "SPELL", book[i][3] end end
+  IsPassiveSpell = function() return false end
+  local byId = {}
+  local function Index() for _, b in ipairs(book) do byId[b[3]] = b end end
+  Index(); byId[99] = {"Hearthstone", ""}
+  HasAction = function(s) return bars[s] ~= nil end
+  GetActionInfo = function(s) if bars[s] then return "spell", bars[s] end end
+  GetSpellInfo = function(id) return byId[id] and byId[id][1] end
+  GetSpellSubtext = function(id) return byId[id] and byId[id][2] end
+  PickupSpellBookItem = function(i) cursor = book[i][3] end
+  PlaceAction = function(s) if cursor then bars[s] = cursor; cursor = nil end end
+  ClearCursor = function() cursor = nil end
+  GetCursorInfo = function() return nil end
+  PetSkillScoutDB.spellBarKnown = nil
+  SB:Update()
+  if bars[1] ~= 2 or bars[3] ~= 2 then fails = fails + 1; print("FAIL action bars: rank 2 replaces rank 1 everywhere") end
+  if bars[2] ~= 3 or bars[5] ~= 99 then fails = fails + 1; print("FAIL action bars: other buttons untouched") end
+  if bars[4] then fails = fails + 1; print("FAIL action bars: known spells not forced on") end
+  book[4] = {"Hunter's Mark", "Rank 1", 4}; Index()
+  SB:Update()
+  if bars[4] ~= 4 then fails = fails + 1; print("FAIL action bars: new spell into first free slot") end
+  local oldIC = InCombatLockdown; InCombatLockdown = function() return true end
+  book[5] = {"Serpent Sting", "Rank 2", 5}; Index()
+  SB:Update()
+  if bars[2] ~= 3 or not SB.pending then fails = fails + 1; print("FAIL action bars wait for combat end") end
+  InCombatLockdown = oldIC
+  SB:Update()
+  if bars[2] ~= 5 then fails = fails + 1; print("FAIL action bars after combat") end
+  GetSpellBookItemName, GetSpellBookItemInfo, IsPassiveSpell, HasAction, GetActionInfo, GetSpellInfo, GetSpellSubtext, PickupSpellBookItem, PlaceAction, ClearCursor, GetCursorInfo, C_SpellBook, C_Spell = unpack(saved)
+end
 -- Secure buttons run on the client's click phase (both registered).
 do
   local old = GetCVarBool

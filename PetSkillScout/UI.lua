@@ -4217,6 +4217,7 @@ local SETTINGS = {
     {key="shotTimer", label="optShotTimer", hint="optShotTimerHint", kind="toggle", default=true},
     {key="fastLoot", label="optFastLoot", hint="optFastLootHint", kind="toggle", default=false,
       text=function() local o = PSS.FastLoot and PSS.FastLoot:Other(); if o then return string.format(PSS:L("optFastLootOther"), o) end end},
+    {key="spellBarAuto", label="optSpellBar", hint="optSpellBarHint", kind="toggle", default=true},
     {key="petBarAuto", label="optPetBar", hint="optPetBarHint", kind="toggle", default=true},
     {key="gearTooltip", label="optGearTooltip", hint="optGearTooltipHint", kind="toggle", default=true},
     {key="gearQuest", label="optGearQuest", hint="optGearQuestHint", kind="toggle", default=true},

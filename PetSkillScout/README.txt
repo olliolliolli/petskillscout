@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.2
+- Action bars (Settings > Hunter, on): out of combat, when you learn a new rank of a spell, every
+  button with an older rank gets the new one; a newly learned spell goes into the first free slot
+  of the main bar (then bottom left / bottom right). Spells you removed stay off your bars.
+
 2.9.1
 - Hunter network: the minimap button and the floating icon now connect you to the network with
   your normal click to open the addon (they run "/join PSSNet1" while you are not in the channel),
