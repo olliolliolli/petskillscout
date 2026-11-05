@@ -389,14 +389,123 @@ local function Candidates(mapID)
   return list
 end
 
+-- Spawn area of the rare selected on the world map (RareMap focus): the same
+-- purple dots and outline, drawn on the minimap and clipped to its circle.
+local areaDots, areaLines, areaHolder = {}, {}, nil
+local function HideArea()
+  for _, d in ipairs(areaDots) do d:Hide() end
+  for _, l in ipairs(areaLines) do l:Hide() end
+end
+local function FocusEntry(mapID)
+  local RM, R = PSS.RareMap, PSS.RarePets
+  if not (RM and RM.focus and R and R.entries) then return nil end
+  for _, e in ipairs(R.entries) do
+    if e.beast.npcID == RM.focus and e.beast.mapID == mapID and e.beast.spawnPoints then return e end
+  end
+end
+-- Part of segment a-b inside a circle of radius r around 0,0 (nil if none).
+local function ClipToCircle(ax, ay, bx, by, r)
+  local dx, dy = bx - ax, by - ay
+  local A = dx * dx + dy * dy
+  if A == 0 then return nil end
+  local B = 2 * (ax * dx + ay * dy)
+  local C = ax * ax + ay * ay - r * r
+  local disc = B * B - 4 * A * C
+  if disc <= 0 then return nil end
+  local sq = math.sqrt(disc)
+  local t1, t2 = math.max(0, (-B - sq) / (2 * A)), math.min(1, (-B + sq) / (2 * A))
+  if t1 >= t2 then return nil end
+  return ax + dx * t1, ay + dy * t1, ax + dx * t2, ay + dy * t2
+end
+local function Hull(points)
+  if #points < 3 then return points end
+  table.sort(points, function(a, b) return a[1] < b[1] or (a[1] == b[1] and a[2] < b[2]) end)
+  local function cross(o, a, b) return (a[1]-o[1])*(b[2]-o[2]) - (a[2]-o[2])*(b[1]-o[1]) end
+  local lower, upper = {}, {}
+  for _, p in ipairs(points) do
+    while #lower >= 2 and cross(lower[#lower-1], lower[#lower], p) <= 0 do table.remove(lower) end
+    lower[#lower + 1] = p
+  end
+  for i = #points, 1, -1 do
+    local p = points[i]
+    while #upper >= 2 and cross(upper[#upper-1], upper[#upper], p) <= 0 do table.remove(upper) end
+    upper[#upper + 1] = p
+  end
+  table.remove(lower); table.remove(upper)
+  for _, p in ipairs(upper) do lower[#lower + 1] = p end
+  return lower
+end
+local function DrawArea(mapID, px, py, scale, rotate, facing)
+  local e = FocusEntry(mapID)
+  if not e then HideArea() return end
+  if not areaHolder then
+    areaHolder = CreateFrame("Frame", nil, Minimap)
+    areaHolder:SetAllPoints(Minimap)
+    areaHolder:SetFrameLevel(Minimap:GetFrameLevel() + 15)
+    areaHolder:EnableMouse(false)
+  end
+  local half = Minimap:GetWidth() / 2
+  local limit = half * 0.97
+  local cs, sn = math.cos(-facing), math.sin(-facing)
+  local pts, nd = {}, 0
+  for _, p in ipairs(e.beast.spawnPoints) do
+    local dx, dy = Nav:Offset(mapID, px, py, p[1], p[2])
+    local ex, ny = dx, -dy
+    if rotate then ex, ny = ex * cs - ny * sn, ex * sn + ny * cs end
+    ex, ny = ex * scale, ny * scale
+    pts[#pts + 1] = {ex, ny}
+    if ex * ex + ny * ny <= limit * limit then
+      nd = nd + 1
+      local d = areaDots[nd]
+      if not d then
+        d = areaHolder:CreateTexture(nil, "OVERLAY")
+        d:SetTexture("Interface\\Buttons\\WHITE8X8")
+        d:SetSize(5, 5)
+        areaDots[nd] = d
+      end
+      d:SetVertexColor(0.71, 0.57, 0.96, 1)
+      d:ClearAllPoints()
+      d:SetPoint("CENTER", Minimap, "CENTER", ex, ny)
+      d:Show()
+    end
+  end
+  for i = nd + 1, #areaDots do areaDots[i]:Hide() end
+  local nl = 0
+  if type(areaHolder.CreateLine) == "function" then
+    local hull = Hull(pts)
+    if #hull >= 2 then
+      for i = 1, #hull do
+        local a, b = hull[i], hull[i % #hull + 1]
+        local x1, y1, x2, y2 = ClipToCircle(a[1], a[2], b[1], b[2], limit)
+        if x1 then
+          nl = nl + 1
+          local l = areaLines[nl]
+          if not l then
+            l = areaHolder:CreateLine(nil, "ARTWORK")
+            l:SetTexture("Interface\\Buttons\\WHITE8X8")
+            l:SetThickness(1.5)
+            areaLines[nl] = l
+          end
+          l:SetVertexColor(0.71, 0.57, 0.96, 0.85)
+          l:SetStartPoint("CENTER", Minimap, x1, y1)
+          l:SetEndPoint("CENTER", Minimap, x2, y2)
+          l:Show()
+        end
+      end
+    end
+  end
+  for i = nl + 1, #areaLines do areaLines[i]:Hide() end
+end
+
 local cached = {mapID = nil, list = {}}
 local function UpdateMinimap()
   if not Minimap or not Enabled() then
     for _, p in ipairs(pins) do p:Hide() end
+    HideArea()
     return
   end
   local mapID, px, py = Nav:PlayerPos()
-  if not mapID then for _, p in ipairs(pins) do p:Hide() end return end
+  if not mapID then for _, p in ipairs(pins) do p:Hide() end HideArea() return end
   if mmDirty or cached.mapID ~= mapID then
     cached.mapID, cached.list = mapID, Candidates(mapID)
     mmDirty = false
@@ -408,8 +517,10 @@ local function UpdateMinimap()
   -- Standing still with the same zoom: the icons are already right.
   local st = cached.state
   if st and not cached.fresh and st.px == px and st.py == py and st.zoom == zoom and st.mapID == mapID
-     and (not rotNow or st.facing == facingNow) and st.n == #cached.list then return end
-  cached.state = {px = px, py = py, zoom = zoom, mapID = mapID, facing = facingNow, n = #cached.list}
+     and (not rotNow or st.facing == facingNow) and st.n == #cached.list
+     and st.focus == (PSS.RareMap and PSS.RareMap.focus) then return end
+  cached.state = {px = px, py = py, zoom = zoom, mapID = mapID, facing = facingNow, n = #cached.list,
+    focus = PSS.RareMap and PSS.RareMap.focus}
   cached.fresh = false
   local radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2
   local scale = (Minimap:GetWidth() / 2) / radius
@@ -459,6 +570,7 @@ local function UpdateMinimap()
     end
   end
   for i = used + 1, #pins do pins[i]:Hide() end
+  DrawArea(mapID, px, py, scale, rotate, facing)
 end
 
 local driver = CreateFrame("Frame")

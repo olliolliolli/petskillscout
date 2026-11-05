@@ -850,10 +850,41 @@ function PlaceDock()
   pcall(dock.SetHeight, dock, 24)
 end
 
+-- A tab dragged out of the dock becomes a loose window on top of the panel
+-- (its text then overlaps the main chat). With the theme every window stays
+-- in the dock: after a drag, loose windows are docked back (order kept as the
+-- player dropped them) and the panel is re-fitted.
+local function RedockLoose()
+  if InCombat() or not LY.applied.chat then return end
+  if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then
+    PSS:Soon("chat-redock", RedockLoose, 0.3)
+    return
+  end
+  local dock = G("GENERAL_CHAT_DOCK") or G("GeneralDockManager")
+  for i = 2, tonumber(NUM_CHAT_WINDOWS) or 10 do
+    local cf = G("ChatFrame" .. i)
+    local tab = G("ChatFrame" .. i .. "Tab")
+    local shown = (cf and cf.IsShown and cf:IsShown()) or (tab and tab.IsShown and tab:IsShown())
+    if cf and shown and not cf.isDocked and type(FCF_DockFrame) == "function" then
+      local n = dock and type(dock.DOCKED_CHAT_FRAMES) == "table" and #dock.DOCKED_CHAT_FRAMES or i
+      pcall(FCF_DockFrame, cf, n + 1, true)
+    end
+  end
+  PlaceDock()
+  pcall(LY.FitChatFrame, LY)
+  pcall(LY.StyleTabs, LY)
+end
+LY.RedockLoose = RedockLoose
+
 local chatHooked = false
 local function HookChat()
   if chatHooked or not hooksecurefunc then return end
   chatHooked = true
+  for _, fn in ipairs({"FCF_StopDragging", "FCF_UnDockFrame"}) do
+    if type(_G[fn]) == "function" then
+      PSS.HookSecure(fn, function() PSS:Soon("chat-redock", RedockLoose, 0.2) end)
+    end
+  end
   for _, fn in ipairs({"FCF_DockUpdate", "FCFTab_UpdateColors", "FCF_Tab_OnClick", "FCF_OpenNewWindow",
     "FCF_Close", "FCFDock_SelectWindow", "FCF_SelectDockFrame"}) do
     if type(_G[fn]) == "function" then
@@ -890,7 +921,14 @@ function LY:HookChatFrameSize(cf)
   chatSizeHooked = true
   local function again()
     if fitting then return end
-    PSS:Soon("chatfit", function() LY:FitChatFrame() end, 0.05)
+    PSS:Soon("chatfit", function()
+      -- A tab is being dragged: the game moves the window itself; fit after.
+      if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then
+        PSS:Soon("chatfit-later", function() LY:FitChatFrame() end, 0.5)
+        return
+      end
+      LY:FitChatFrame()
+    end, 0.05)
   end
   for _, m in ipairs({"SetSize", "SetHeight", "SetWidth", "SetPoint"}) do
     if type(cf[m]) == "function" then pcall(PSS.HookSecure, cf, m, again) end

@@ -173,8 +173,22 @@ function R:SetWanted(entry, value)
   PetSkillScoutDB.rareWanted = PetSkillScoutDB.rareWanted or {}
   PetSkillScoutDB.rareWanted[entry.id] = value and true or nil
 end
+-- A beast someone has already tamed (another hunter's pet, or yours) is not
+-- a rare in the world: its GUID is "Pet-..." and the unit is player controlled.
+local function Flag(fn, unit)
+  if type(fn) ~= "function" then return false end
+  local ok, v = pcall(fn, unit)
+  if not ok or (PSS.IsSecret and PSS.IsSecret(v)) then return false end
+  return v and true or false
+end
+function R:IsTamed(unit)
+  local okG, guid = pcall(UnitGUID, unit)
+  if okG and type(guid) == "string" and not (PSS.IsSecret and PSS.IsSecret(guid)) and guid:find("^Pet%-") then return true end
+  return Flag(UnitPlayerControlled, unit) or Flag(UnitIsOtherPlayersPet, unit)
+end
 function R:Inspect(unit)
   if not UnitExists or not UnitExists(unit) then return end
+  if self:IsTamed(unit) then return end
   local dead = UnitIsDead and UnitIsDead(unit)
   local npc = NpcIDFromGUID(UnitGUID and UnitGUID(unit))
   -- Prefer the language-independent NPC ID match.

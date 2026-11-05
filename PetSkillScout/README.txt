@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.4
+- Minimap: the spawn area of the rare selected on the world map (purple dots and outline)
+  is drawn on the minimap too, clipped to its edge.
+- Rare alert: no alert for a rare beast that is already someone's pet - only for free ones
+  in the world.
+- Theme: dragging or swapping chat tabs no longer breaks the chat. A tab dragged out of the
+  dock is docked back after the drop, and the main chat is not pulled back while dragging.
+
 3.0.3
 - Feed button: Feed Pet is now cast straight on the food (no "/use" line), so the hunter no
   longer eats the food himself.
