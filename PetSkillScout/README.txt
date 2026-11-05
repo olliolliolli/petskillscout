@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.10
+- Theme: the addon's minimap button no longer drops onto the minimap for ~10 s after login; with
+  the square minimap it is always placed in the addon button bar.
+
 2.9.9
 - CPU: the quest tracker theme restyled the whole tracker every time any of its sections updated
   (more than ten sections, several times per frame) - about 5 ms of every second. It now restyles

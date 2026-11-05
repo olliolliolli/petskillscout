@@ -92,6 +92,13 @@ local function PlaceMinimapButton()
     if not (mmButton and Minimap) then return end
     -- Secure button (it can join the network): never moved in combat.
     if InCombatLockdown and InCombatLockdown() then return end
+    -- With the theme's square minimap the button lives in the addon button
+    -- bar: let the theme place it, never back on the round ring.
+    local LY = PSS.Layout
+    if LY and LY.applied and LY.applied.minimap and (PetSkillScoutDB or {}).skinMinimapBar ~= false then
+        if LY.ArrangeButtonBar then pcall(LY.ArrangeButtonBar, LY) end
+        return
+    end
     local angle = math.rad(tonumber(PetSkillScoutDB and PetSkillScoutDB.minimapAngle) or 215)
     local radius = (Minimap:GetWidth() or 140) / 2 + 10
     local x, y = math.cos(angle), math.sin(angle)
