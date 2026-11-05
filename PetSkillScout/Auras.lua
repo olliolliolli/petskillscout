@@ -200,8 +200,16 @@ local function Stack(list, anchor, baseY)
     local h = Plain(b:GetHeight()) or side
     local step, rowH = side + 4, math.max(h, side + 12) + 2
     local col, row = (k - 1) % PER_ROW_PLAYER, math.floor((k - 1) / PER_ROW_PLAYER)
-    pcall(b.ClearAllPoints, b)
-    pcall(b.SetPoint, b, "BOTTOMRIGHT", anchor, "TOPRIGHT", -col * step, baseY * ratio + row * rowH)
+    -- Only move a button that is not already there: every move makes the
+    -- aura container lay itself out again, which calls our hook again.
+    local x, y = -col * step, baseY * ratio + row * rowH
+    local p, rel, rp, ox, oy = b:GetPoint(1)
+    local n = b.GetNumPoints and b:GetNumPoints() or 1
+    if not (n == 1 and p == "BOTTOMRIGHT" and rel == anchor and rp == "TOPRIGHT" and type(ox) == "number"
+        and type(oy) == "number" and math.abs(ox - x) < 0.5 and math.abs(oy - y) < 0.5) then
+      pcall(b.ClearAllPoints, b)
+      pcall(b.SetPoint, b, "BOTTOMRIGHT", anchor, "TOPRIGHT", x, y)
+    end
     used = math.max(used, (row + 1) * rowH / ratio)
   end
   return used
@@ -399,7 +407,7 @@ function A:Apply()
   self:Arrange()
   if not hooked and hooksecurefunc then
     hooked = true
-    local function restyle() pcall(A.StyleAll, A); pcall(A.Arrange, A) end
+    local function restyle() PSS:Soon("auras", function() pcall(A.StyleAll, A); pcall(A.Arrange, A) end) end
     for _, n in ipairs({"BuffFrame", "DebuffFrame"}) do
       local f = G(n)
       if f then

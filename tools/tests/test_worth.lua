@@ -240,7 +240,7 @@ C_QuestLog.GetInfo = function(i) if i == 1 then return {isHeader = true} end ret
 UI.questState.mode = "log"; UI:UpdateQuests()
 ok(UI.qRows[1].data and UI.qRows[1].data.id == 257, "log row")
 ok(UI.qSummary:GetText():find("log"), "log summary")
-for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es"}) do
+for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
   for k, v in pairs(PSS.Locale.en) do
     if k:match("^qw") or k:match("^qMode") or k:match("^optQuest") or k:match("^qAuto") or k == "setQuests" or k == "setQuestsSub" or k == "qUnconfirmed" then
       local t = PSS.Locale[lang][k]

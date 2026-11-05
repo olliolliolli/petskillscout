@@ -178,7 +178,7 @@ MOCK.prints = {}
 UI:OpenQuestMap(Q:Get("daryl"))
 ok(MOCK.prints[1] and MOCK.prints[1]:find("combat"), "no map in combat")
 -- Header: tabs fit in every language.
-for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es"}) do
+for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
   PetSkillScoutDB.language = lang
   UI:RefreshHeader()
   local last = UI.tabs[#UI.tabs]
@@ -199,7 +199,7 @@ local en = PSS.Locale.en
 local nkeys = 0
 local src = io.open(dir .. "/Locale6.lua"):read("*a")
 for k in src:gmatch("\n    ([%w_]+) = ") do end
-for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es"}) do
+for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
   for k in pairs(en) do
     if k:match("^q") or k == "tabQuests" or k:match("^optQuest") then
       local v = PSS.Locale[lang][k]

@@ -145,7 +145,7 @@ local function CreateButton()
   button:SetFrameStrata("MEDIUM")
   button:SetClampedToScreen(true)
   button:SetMovable(true)
-  button:RegisterForClicks("AnyUp") -- one feed per click
+  button:RegisterForClicks("AnyUp", "AnyDown") -- the action runs once, on the phase the client uses
   button:RegisterForDrag("LeftButton")
   local pos = PetSkillScoutDB and PetSkillScoutDB.feedPos
   if pos and pos.x then button:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)

@@ -343,8 +343,13 @@ local fallTime, fallAlerted = 0, false
 local lastAggroAlert = -1e9
 local tick = 0
 local driver = CreateFrame("Frame")
+local dungeonCheck, inDungeon = 0, false
 driver:SetScript("OnUpdate", function(_, elapsed)
   elapsed = elapsed or 0
+  -- Outside dungeons there is nothing to watch: check that once a second only.
+  dungeonCheck = dungeonCheck - elapsed
+  if dungeonCheck <= 0 then dungeonCheck = 1; inDungeon = InDungeon() and true or false end
+  if not inDungeon and not G.flow and not (banner and banner:IsShown()) then return end
   local now = Now()
   if banner and banner:IsShown() and now > hideAt and not G.dragging then
     if G.flow then G:EndFlow(false) else G:HideAlert() end

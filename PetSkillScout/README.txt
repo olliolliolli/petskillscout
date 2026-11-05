@@ -206,6 +206,18 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.0
+- New languages: Português (Brasil) and Русский (chosen automatically on ptBR/ruRU clients).
+- Performance: theme hooks (buffs, action bars, micro menu, minimap, chat, bags) now run once per
+  burst instead of once per call, and buff icons are only moved when they are not already in place
+  (this stopped a layout loop that used CPU every frame). The dungeon pet guard sleeps outside dungeons.
+- Fixed "Interface actions failed because of this AddOn": the network Connect prompt is placed by
+  screen position instead of being tied to the main window; chat is never re-fitted in combat.
+- Fixed: the Connect and Feed buttons did nothing with the default "cast on key down" option.
+- Pet bar (Settings > Hunter, on): out of combat a newly learned rank replaces the old one on the
+  pet bar, and a new skill goes into a free ability slot. Skills you removed stay off the bar.
+- Quests that are not worth it are now shown as grey "!" on the map and minimap by default.
+
 2.8.1
 - Window header: the network chip covered the last tab and cut the
   character chip. The tabs now leave room for both chips (their font
@@ -775,7 +787,7 @@ CHANGELOG
 - Results show up to 40 matches with a "Showing N of M" note (was a silent 14).
 - Dropdown check marks follow the live filters.
 - Launcher no longer swallows the first click after dragging.
-- Removed hard-coded English/Ukrainian strings; all new text in 7 languages.
+- Removed hard-coded English/Ukrainian strings; all new text in 9 languages.
 - Removed the in-game donation button (Blizzard add-on policy allows donation
   links only on the download page); the link is in this README and the .toc.
 - Removed dead code (unused progress tracking, distance text, duplicate helpers).

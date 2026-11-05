@@ -55,7 +55,7 @@ local function MakeConnect()
   b:SetSize(330, 54)
   b:SetPoint("TOP", UIParent, "TOP", 0, -140)
   b:SetFrameStrata("DIALOG")
-  b:RegisterForClicks("AnyUp")
+  b:RegisterForClicks("AnyUp", "AnyDown")
   b:SetAttribute("type", "macro")
   b:SetAttribute("macrotext", "/join " .. N.CHANNEL)
   local bg = b:CreateTexture(nil, "BACKGROUND")
@@ -84,7 +84,8 @@ local function MakeConnect()
   b.sub:SetPoint("TOPLEFT", b.title, "BOTTOMLEFT", 0, -4)
   b.sub:SetWidth(240)
   b.sub:SetJustifyH("LEFT")
-  b:SetScript("PostClick", function(self)
+  b:SetScript("PostClick", function(self, _, down)
+    if not PSS:ClickRan(down) then return end
     N.dismissed = true
     if not InCombat() then self:Hide() end
     N.checkIn = 3 -- confirm the channel shortly after joining
@@ -115,7 +116,15 @@ function N:ShowConnect(force, anchor)
   b:ClearAllPoints()
   if anchor then
     -- Right under the button that asked for it (e.g. the header network chip).
-    b:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -6)
+    -- Screen position, not an anchor: a secure button tied to our window
+    -- would be blocked when the window moves or closes in combat.
+    local right, bottom = anchor:GetRight(), anchor:GetBottom()
+    local ratio = (anchor:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+    if right and bottom then
+      b:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", right * ratio, bottom * ratio - 6)
+    else
+      b:SetPoint("TOP", UIParent, "TOP", 0, -140)
+    end
   else
     b:SetPoint("TOP", UIParent, "TOP", 0, -140)
   end

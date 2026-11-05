@@ -5,7 +5,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.8.1"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.0"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -33,6 +33,29 @@ function PSS:Safe(text)
     text = text:gsub("\194\171", '"'):gsub("\194\187", '"') -- guillemets
     text = text:gsub("\195\151", "x")              -- multiplication sign
     return text
+end
+
+-- Runs fn once, a moment later, however often it is asked in between.
+-- Blizzard fires layout hooks in bursts (and our own changes can trigger
+-- them again); this keeps each burst to one pass instead of one per call.
+-- Secure buttons must listen to both mouse down and up: the client runs the
+-- action on the phase set by the "ActionButtonUseKeyDown" option (down by
+-- default). This tells whether a PostClick belongs to the phase that ran it.
+function PSS:ClickRan(down)
+  local keyDown = true
+  if GetCVarBool then
+    local ok, v = pcall(GetCVarBool, "ActionButtonUseKeyDown")
+    if ok and v ~= nil then keyDown = v and true or false end
+  end
+  return (down and true or false) == keyDown
+end
+
+local soonQueued = {}
+function PSS:Soon(key, fn, delay)
+  if soonQueued[key] then return end
+  soonQueued[key] = true
+  local function run() soonQueued[key] = nil; pcall(fn) end
+  if C_Timer and C_Timer.After then C_Timer.After(delay or 0.1, run) else run() end
 end
 
 function PSS:Print(msg)
@@ -99,7 +122,7 @@ end
 
 function PSS:InitializeDB()
     if type(PetSkillScoutDB) ~= "table" then PetSkillScoutDB = {} end
-    PetSkillScoutDB.language = PetSkillScoutDB.language or "en"
+    PetSkillScoutDB.language = PetSkillScoutDB.language or (({ukUA="uk",plPL="pl",deDE="de",frFR="fr",itIT="it",esES="es",esMX="es",ptBR="pt",ptPT="pt",ruRU="ru"})[GetLocale and GetLocale() or ""] or "en")
     PetSkillScoutDB.theme = (PetSkillScoutDB.theme == "classic" or PetSkillScoutDB.theme == "blizzard" or PetSkillScoutDB.theme == "moonglade") and PetSkillScoutDB.theme or "journal"
     PetSkillScoutDB.tracked = PetSkillScoutDB.tracked or {}
     -- Fields from older builds that are no longer used.

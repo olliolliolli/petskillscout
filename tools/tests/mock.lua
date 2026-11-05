@@ -1,12 +1,14 @@
 -- Fake WoW client for lua5.1 tests: frames, fonts, quest log, items, timers.
 MOCK = {level = 30, faction = "Alliance", class = "HUNTER", done = {}, inlog = {}, owned = {},
   titles = {}, items = {}, prints = {}, timers = {}, events = {}, combat = false, equipped = {}, warnings = {}}
+MOCK.track = MOCK_TRACK_EARLY and {} or nil
 local frames = {}
 MOCK_VERBS = {"Set", "Get", "Is", "Has", "Create", "Enable", "Disable", "Register", "Unregister", "Show", "Hide",
   "Clear", "Add", "Hook", "Start", "Stop", "Play", "Raise", "Lower", "Click", "Lock", "Unlock", "Update", "Release",
   "Highlight", "Unhighlight", "Can", "Adjust", "Refresh", "Stretch", "Flash", "Apply", "Reset"}
 local function newObj(kind)
   local o = {kind = kind, shown = true, text = "", scripts = {}, points = {}}
+  if MOCK.track then MOCK.track[#MOCK.track + 1] = o end
   local mt = {}
   mt.__index = function(t, k)
     local f = rawget(mt, "m_" .. k)

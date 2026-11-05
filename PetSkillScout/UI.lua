@@ -4118,7 +4118,7 @@ function UI:PlaceFeedOverlay()
   if not b then
     b = CreateFrame("Button", "PetSkillScoutCardFeedButton", UIParent, "SecureActionButtonTemplate")
     b:SetFrameStrata("DIALOG")
-    b:RegisterForClicks("AnyUp")
+    b:RegisterForClicks("AnyUp", "AnyDown")
     b:SetAttribute("type", "macro")
     b.bg = b:CreateTexture(nil, "BACKGROUND")
     b.bg:SetAllPoints(b)
@@ -4217,6 +4217,7 @@ local SETTINGS = {
     {key="shotTimer", label="optShotTimer", hint="optShotTimerHint", kind="toggle", default=true},
     {key="fastLoot", label="optFastLoot", hint="optFastLootHint", kind="toggle", default=false,
       text=function() local o = PSS.FastLoot and PSS.FastLoot:Other(); if o then return string.format(PSS:L("optFastLootOther"), o) end end},
+    {key="petBarAuto", label="optPetBar", hint="optPetBarHint", kind="toggle", default=true},
     {key="gearTooltip", label="optGearTooltip", hint="optGearTooltipHint", kind="toggle", default=true},
     {key="gearQuest", label="optGearQuest", hint="optGearQuestHint", kind="toggle", default=true},
     {key="gearRolls", label="optGearRolls", hint="optGearRollsHint", kind="toggle", default=true},
@@ -4228,7 +4229,7 @@ local SETTINGS = {
     {key="questWorth", label="optQuestWorth", hint="optQuestWorthHint", kind="toggle", default=true},
     {key="questPins", label="optQuestPins", hint="optQuestPinsHint", kind="toggle", default=true,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
-    {key="questPinsSkip", label="optQuestPinsSkip", hint="optQuestPinsSkipHint", kind="toggle", default=false,
+    {key="questPinsSkip", label="optQuestPinsSkip", hint="optQuestPinsSkipHint", kind="toggle", default=true,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questLearn", label="optQuestLearn", hint="optQuestLearnHint", kind="toggle", default=true},
     {key="questMinimap", label="optQuestMinimap", hint="optQuestMinimapHint", kind="toggle", default=true,

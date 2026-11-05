@@ -402,13 +402,13 @@ local function HookAll()
     hooksecurefunc("GroupLootFrame_OpenNewFrame", function() pcall(GC.MarkRolls, GC) end)
   end
   if type(ContainerFrame_Update) == "function" then
-    hooksecurefunc("ContainerFrame_Update", function(f) pcall(GC.MarkContainer, GC, f) end)
+    hooksecurefunc("ContainerFrame_Update", function(f) PSS:Soon(f, function() GC:MarkContainer(f) end) end)
   end
   local frames = {G("ContainerFrameCombinedBags")}
   for i = 1, 13 do frames[#frames + 1] = G("ContainerFrame" .. i) end
   for _, f in pairs(frames) do
     if f and type(f.UpdateItems) == "function" then
-      pcall(hooksecurefunc, f, "UpdateItems", function(self) pcall(GC.MarkContainer, GC, self) end)
+      pcall(hooksecurefunc, f, "UpdateItems", function(self) PSS:Soon(self, function() GC:MarkContainer(self) end) end)
     end
   end
 end

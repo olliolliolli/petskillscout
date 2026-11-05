@@ -563,11 +563,12 @@ local function BuildBars()
   end
   LY:LayoutBars()
   -- Blizzard re-arranges bars when one is toggled; follow it out of combat.
-  local function relayout()
+  local function relayoutNow()
     if InCombat() then LY.pendingLayout = true; return end
     pcall(LY.LayoutBars, LY); PlaceCastBar(); pcall(LY.PlaceMenus, LY); pcall(LY.PlaceMinimap, LY)
     if PSS.Auras and PSS.Auras.on then pcall(PSS.Auras.Place, PSS.Auras) end
   end
+  local function relayout() PSS:Soon("relayout", relayoutNow) end
   -- Modern bars lay their buttons out themselves (edit mode); redo ours after.
   for _, n in ipairs({"MainMenuBar", "MainActionBar", "MultiBarBottomLeft", "MultiBarBottomRight",
     "PetActionBar", "StanceBar"}) do
@@ -579,10 +580,7 @@ local function BuildBars()
   end
   for _, fn in ipairs({"MultiActionBar_Update", "UIParent_ManageFramePositions", "MainMenuBar_UpdateArt"}) do
     if type(_G[fn]) == "function" then
-      hooksecurefunc(fn, function()
-        if InCombat() then LY.pendingLayout = true; return end
-        pcall(LY.LayoutBars, LY); PlaceCastBar(); pcall(LY.PlaceMenus, LY)
-      end)
+      hooksecurefunc(fn, relayout)
     end
   end
 end
@@ -842,8 +840,7 @@ local function HookChat()
     "FCF_Close", "FCFDock_SelectWindow", "FCF_SelectDockFrame"}) do
     if type(_G[fn]) == "function" then
       hooksecurefunc(fn, function()
-        if fn == "FCF_DockUpdate" then PlaceDock() end
-        pcall(LY.StyleTabs, LY)
+        PSS:Soon("chattabs", function() PlaceDock(); pcall(LY.StyleTabs, LY) end)
       end)
     end
   end
@@ -854,6 +851,7 @@ local fitting = false
 function LY:FitChatFrame()
   local cf = G("ChatFrame1")
   if not (cf and leftPanel and self.applied.chat) or fitting then return end
+  if InCombat() then self.pendingLayout = true; return end
   local w, h = self:ChatSize()
   fitting = true
   pcall(cf.ClearAllPoints, cf)
@@ -871,7 +869,7 @@ function LY:HookChatFrameSize(cf)
   chatSizeHooked = true
   local function again()
     if fitting then return end
-    if C_Timer and C_Timer.After then C_Timer.After(0, function() LY:FitChatFrame() end) else LY:FitChatFrame() end
+    PSS:Soon("chatfit", function() LY:FitChatFrame() end, 0.05)
   end
   for _, m in ipairs({"SetSize", "SetHeight", "SetWidth", "SetPoint"}) do
     if type(cf[m]) == "function" then pcall(hooksecurefunc, cf, m, again) end
@@ -1134,7 +1132,7 @@ local function BuildChatHooks()
   end
   for _, fn in ipairs({"MoveMicroButtons", "UpdateMicroButtonsParent", "UpdateMicroButtons"}) do
     if type(_G[fn]) == "function" then
-      hooksecurefunc(fn, function() if not InCombat() then pcall(LY.PlaceMenus, LY) end end)
+      hooksecurefunc(fn, function() PSS:Soon("menus", function() if not InCombat() then pcall(LY.PlaceMenus, LY) end end) end)
     end
   end
 end
@@ -1429,7 +1427,7 @@ local function BuildMinimap()
   end
   -- Blizzard re-lays out the cluster (edit mode, header option): put it back.
   if mc and type(mc.Layout) == "function" then
-    hooksecurefunc(mc, "Layout", function() if not InCombat() then pcall(LY.PlaceMinimap, LY) end end)
+    hooksecurefunc(mc, "Layout", function() PSS:Soon("minimap", function() if not InCombat() then pcall(LY.PlaceMinimap, LY) end end) end)
   end
   if C_Timer and C_Timer.After then
     C_Timer.After(1, function() pcall(LY.RefreshMinimapButtons, LY) end)
@@ -1867,7 +1865,7 @@ end
 LY.frame:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_REGEN_ENABLED" then
     if LY.pending then pcall(LY.Apply, LY) end
-    if LY.pendingLayout then LY.pendingLayout = false; pcall(LY.LayoutBars, LY); PlaceCastBar() end
+    if LY.pendingLayout then LY.pendingLayout = false; pcall(LY.LayoutBars, LY); PlaceCastBar(); pcall(LY.FitChatFrame, LY) end
   elseif event == "UPDATE_CHAT_WINDOWS" then
     if LY.applied.chat then pcall(LY.PlaceChat, LY) end
   else

@@ -181,7 +181,7 @@ PSS.Locale = {
 PSS.languageOptions = {
   {code="en", name="English"}, {code="uk", name="Українська"}, {code="pl", name="Polski"},
   {code="de", name="Deutsch"}, {code="fr", name="Français"}, {code="it", name="Italiano"},
-  {code="es", name="Español"}
+  {code="es", name="Español"}, {code="pt", name="Português (BR)"}, {code="ru", name="Русский"}
 }
 function PSS:L(key)
   local lang = (PetSkillScoutDB and PetSkillScoutDB.language) or "en"

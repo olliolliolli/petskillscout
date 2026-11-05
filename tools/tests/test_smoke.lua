@@ -8,7 +8,7 @@ MOCK.RunTimers()
 local UI = PSS.UI
 UI:Create()
 local fails = 0
-for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es"}) do
+for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
   PetSkillScoutDB.language = lang
   for _, v in ipairs({"beasts", "rares", "pet", "route", "collection", "gear", "quests", "network", "settings"}) do
     local ok, err = pcall(UI.ShowView, UI, v)
@@ -165,7 +165,7 @@ do
   local N = PSS.Net
   local oldID = N.ChannelID
   N.ChannelID = function() return nil end
-  for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es"}) do
+  for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
     PetSkillScoutDB.language = lang
     UI:RefreshHeader()
     local last = UI.tabs[#UI.tabs]
@@ -176,6 +176,65 @@ do
   end
   PetSkillScoutDB.language = "en"
   N.ChannelID = oldID
+end
+
+-- 2.9.0: pet bar follows new ranks / new skills.
+do
+  local PB = PSS.PetBar
+  local book = {{"Bite", "Rank 1"}, {"Bite", "Rank 2"}, {"Growl", "Rank 1"}, {"Dash", "Rank 1"}}
+  local bar = {[1] = {"Attack", nil, true}, [4] = {"Bite", "Rank 1"}, [5] = {"Growl", "Rank 1"}}
+  local cursor
+  local saved = {UnitExists, GetSpellBookItemName, GetPetActionInfo, PickupSpellBookItem, PickupPetAction, ClearCursor, GetCursorInfo, IsPassiveSpell, C_SpellBook}
+  C_SpellBook = nil
+  UnitExists = function(u) return u == "pet" end
+  GetSpellBookItemName = function(i) local b = book[i]; if b then return b[1], b[2] end end
+  GetSpellBookItemInfo = function() return "SPELL", nil end
+  IsPassiveSpell = function() return false end
+  GetPetActionInfo = function(s) local b = bar[s]; if b then return b[1], b[2], "tex", b[3] or false end end
+  PickupSpellBookItem = function(i) cursor = book[i] end
+  PickupPetAction = function(s) if cursor then bar[s] = {cursor[1], cursor[2]}; cursor = nil end end
+  ClearCursor = function() cursor = nil end
+  GetCursorInfo = function() return nil end
+  PetSkillScoutDB.petBarKnown = nil
+  PB:Update() -- first look at this pet: rank fix only
+  if not (bar[4] and bar[4][2] == "Rank 2") then fails = fails + 1; print("FAIL pet bar rank 2 replaces rank 1") end
+  if bar[6] then fails = fails + 1; print("FAIL pet bar: known skills not forced onto the bar") end
+  book[5] = {"Claw", "Rank 1"}
+  PB:Update()
+  if not (bar[6] and bar[6][1] == "Claw") then fails = fails + 1; print("FAIL pet bar: new skill into free slot") end
+  if bar[1][1] ~= "Attack" then fails = fails + 1; print("FAIL pet bar: command slot kept") end
+  MOCK.combat = true
+  local oldIC = InCombatLockdown; InCombatLockdown = function() return true end
+  book[6] = {"Claw", "Rank 2"}
+  PB:Update()
+  if bar[6][2] ~= "Rank 1" or not PB.pending then fails = fails + 1; print("FAIL pet bar waits for combat end") end
+  InCombatLockdown = oldIC; MOCK.combat = false
+  PetSkillScoutDB.petBarAuto = false
+  PB.pending = false
+  PB:Update()
+  if bar[6][2] ~= "Rank 1" then fails = fails + 1; print("FAIL pet bar option off") end
+  PetSkillScoutDB.petBarAuto = nil
+  UnitExists, GetSpellBookItemName, GetPetActionInfo, PickupSpellBookItem, PickupPetAction, ClearCursor, GetCursorInfo, IsPassiveSpell, C_SpellBook = unpack(saved)
+end
+-- Secure buttons run on the client's click phase (both registered).
+do
+  local old = GetCVarBool
+  GetCVarBool = function() return true end
+  if not PSS:ClickRan(true) or PSS:ClickRan(false) then fails = fails + 1; print("FAIL ClickRan key down") end
+  GetCVarBool = function() return false end
+  if PSS:ClickRan(true) or not PSS:ClickRan(false) then fails = fails + 1; print("FAIL ClickRan key up") end
+  GetCVarBool = old
+  for _, f in ipairs({"Net.lua", "PetCare.lua"}) do
+    local src = io.open(dir .. "/" .. f):read("*a")
+    if src:find('RegisterForClicks("AnyUp")', 1, true) then fails = fails + 1; print("FAIL secure button up-only in " .. f) end
+  end
+end
+-- Hook storms collapse into one pass.
+do
+  local n = 0
+  for _ = 1, 50 do PSS:Soon("t", function() n = n + 1 end) end
+  MOCK.RunTimers()
+  if n ~= 1 then fails = fails + 1; print("FAIL Soon coalesces: " .. n) end
 end
 print("smoke: " .. (fails == 0 and "ok" or (fails .. " failures")))
 os.exit(fails == 0 and 0 or 1)
