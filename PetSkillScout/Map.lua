@@ -248,3 +248,5 @@ pinDriver:SetScript("OnUpdate", function(_, elapsed)
   local ok, err = pcall(UpdateTrackedPins)
   if not ok and PSS.Map then PSS.Map._lastPinError = tostring(err) end
 end)
+pinDriver.pssKey = "Map pins"
+PSS:Every(pinDriver, 0.25)

@@ -344,6 +344,13 @@ local lastAggroAlert = -1e9
 local tick = 0
 local driver = CreateFrame("Frame")
 local dungeonCheck, inDungeon = 0, false
+-- Outside dungeons the per-frame watcher is switched off entirely.
+if C_Timer and C_Timer.NewTicker then
+  C_Timer.NewTicker(1, function()
+    local want = (InDungeon() and true or false) or G.flow or (banner and banner:IsShown())
+    driver:SetShown(want and true or false)
+  end)
+end
 driver:SetScript("OnUpdate", function(_, elapsed)
   elapsed = elapsed or 0
   -- Outside dungeons there is nothing to watch: check that once a second only.

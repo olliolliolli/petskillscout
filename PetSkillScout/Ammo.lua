@@ -340,3 +340,5 @@ A.frame:SetScript("OnEvent", function(self, event, unit)
   if not self:IsShown() then delay = 1 end
   self:Show()
 end)
+A.frame.pssKey = "Ammo"
+PSS:Every(A.frame, 0.2)

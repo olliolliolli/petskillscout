@@ -281,3 +281,5 @@ events:SetScript("OnUpdate", function(_, elapsed)
   PC:CheckReminder()
   if PC.pending or (button and button:IsShown()) or HasPet() then PC:UpdateButton() end
 end)
+events.pssKey = "PetCare"
+PSS:Every(events, 1)

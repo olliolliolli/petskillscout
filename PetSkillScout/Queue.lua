@@ -299,3 +299,5 @@ Q.frame:SetScript("OnUpdate", function(_, elapsed)
   tick = 0
   pcall(Q.Tick, Q)
 end)
+Q.frame.pssKey = "Queue"
+PSS:Every(Q.frame, 1)

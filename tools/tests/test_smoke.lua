@@ -328,6 +328,14 @@ do
   if not found then fails = fails + 1; print("FAIL profiler report lists the frame") end
   PSS.Print = oldPrint; debugprofilestop, EnumerateFrames = oldD, oldE
 end
+-- 2.9.6: no PetSkillScout frame runs an OnUpdate every frame while idle.
+do
+  local busy = {}
+  for _, o in ipairs({PSS.Minimap._driver, PSS.Net.frame, PSS.Sync.frame, PSS.Layout.unitEvents}) do
+    if o and o:GetScript("OnUpdate") then busy[#busy + 1] = tostring(o.pssKey or o.name) end
+  end
+  if #busy > 0 then fails = fails + 1; print("FAIL per-frame handlers left: " .. table.concat(busy, ", ")) end
+end
 -- Secure buttons run on the client's click phase (both registered).
 do
   local old = GetCVarBool

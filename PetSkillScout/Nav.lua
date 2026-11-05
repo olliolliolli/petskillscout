@@ -453,3 +453,5 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   local ok, err = pcall(UpdateMinimap)
   if not ok then MM._lastError = tostring(err) end
 end)
+driver.pssKey = "Nav minimap"
+PSS:Every(driver, 0.2)

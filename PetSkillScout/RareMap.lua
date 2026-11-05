@@ -283,3 +283,5 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   local ok, err = pcall(Update)
   if not ok then RM._lastError = tostring(err) end
 end)
+driver.pssKey = "RareMap"
+PSS:Every(driver, 0.2)

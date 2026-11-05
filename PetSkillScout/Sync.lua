@@ -276,3 +276,5 @@ S.frame:SetScript("OnUpdate", function()
   end
 end)
 Register()
+S.frame.pssKey = "Sync queue"
+PSS:Every(S.frame, 0.2)

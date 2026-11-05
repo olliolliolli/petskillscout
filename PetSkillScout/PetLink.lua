@@ -212,3 +212,5 @@ if PSS.Sync then
   PSS.Sync.handlers.C = OnCard
 end
 P.SkillsText = SkillsText
+watch.pssKey = "PetLink"
+PSS:Every(watch, 1)

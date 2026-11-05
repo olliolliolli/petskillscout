@@ -134,7 +134,7 @@ local oldPos, oldNear = Nav.PlayerPos, Nav.Nearest
 Nav.PlayerPos = function() return 1432, 0.5, 0.5 end
 Nav.Nearest = function() return 20, 0, 20 end
 local function minimapQuests()
-  MMp:Refresh(); MMp._driver:GetScript("OnUpdate")(MMp._driver, 1)
+  MMp:Refresh(); MMp._driver.pssTick(MMp._driver, 1)
   local n, purple = 0, false
   for _, p in ipairs(MMp._pins) do
     if p.shown and p.group then n = n + 1; if p.group.npc == 1187 then purple = p.group.best == "great" end end

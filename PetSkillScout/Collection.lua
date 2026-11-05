@@ -200,3 +200,5 @@ C.frame:SetScript("OnEvent", function(self, event, unit)
   delay = 1.0 -- after MyPet's own rescan
   self:Show()
 end)
+C.frame.pssKey = "Collection"
+PSS:Every(C.frame, 0.2)

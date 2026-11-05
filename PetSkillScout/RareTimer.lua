@@ -257,3 +257,5 @@ T.frame:SetScript("OnUpdate", function(_, elapsed)
   tick = 0
   pcall(T.Tick, T)
 end)
+T.frame.pssKey = "RareTimer"
+PSS:Every(T.frame, 5)

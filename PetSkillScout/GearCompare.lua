@@ -444,3 +444,5 @@ if PSS.Gear then
   PSS.Gear.SetSpec = function(self, s) set(self, s); GC:Reset(); pending = 0.1 end
 end
 GC.HookAll = HookAll
+GC.frame.pssKey = "GearCompare"
+PSS:Every(GC.frame, 0.1)

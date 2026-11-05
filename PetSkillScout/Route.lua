@@ -327,3 +327,5 @@ R.frame:SetScript("OnEvent", function(self, event)
   pending = 0.6
   self:Show()
 end)
+R.frame.pssKey = "Route"
+PSS:Every(R.frame, 0.2)

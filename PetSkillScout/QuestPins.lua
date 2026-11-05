@@ -129,3 +129,5 @@ for _, e in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "PLAYE
   pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function() QP:Refresh() end)
+driver.pssKey = "QuestPins"
+PSS:Every(driver, 0.25)

@@ -5,7 +5,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.5"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.6"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -86,6 +86,29 @@ function PSS:Timed(key, fn)
     fn(...)
     P:Add(key, debugprofilestop() - t)
   end
+end
+
+-- Run a frame's OnUpdate on a timer instead of every frame. Most of our
+-- OnUpdate handlers only count time until their next pass; called 60-144
+-- times a second that counting alone was most of the addon's CPU. The
+-- handler gets the timer step as "elapsed"; a hidden frame is skipped, so
+-- Show/Hide still switch it on and off.
+function PSS:Every(frame, interval)
+  local fn = frame and frame:GetScript("OnUpdate")
+  if type(fn) ~= "function" or not (C_Timer and C_Timer.NewTicker) then return end
+  frame:SetScript("OnUpdate", nil)
+  frame.pssTick = fn
+  frame.pssTicker = C_Timer.NewTicker(interval, function()
+    if frame:IsShown() then
+      local P = PSS.Profiler
+      if P and P.cost and debugprofilestop then
+        local t = debugprofilestop(); pcall(fn, frame, interval)
+        P:Add((frame.GetName and frame:GetName() or "timer") .. " " .. tostring(frame.pssKey or ""), debugprofilestop() - t)
+      else
+        pcall(fn, frame, interval)
+      end
+    end
+  end)
 end
 
 local soonQueued = {}

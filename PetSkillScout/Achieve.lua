@@ -164,3 +164,5 @@ A.frame:SetScript("OnUpdate", function(_, elapsed)
   tick = 0
   pcall(A.Check, A)
 end)
+A.frame.pssKey = "Achieve"
+PSS:Every(A.frame, 5)

@@ -341,3 +341,5 @@ N.frame:SetScript("OnUpdate", function(_, elapsed)
 end)
 
 if PSS.Sync then PSS.Sync.handlers.H = OnHello end
+N.frame.pssKey = "Net"
+PSS:Every(N.frame, 0.5)

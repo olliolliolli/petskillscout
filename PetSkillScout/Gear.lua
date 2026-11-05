@@ -511,3 +511,5 @@ G.frame:SetScript("OnUpdate", function(_, e)
     if UI and UI.view == "gear" and UI.UpdateGear then pcall(UI.UpdateGear, UI) end
   end
 end)
+G.frame.pssKey = "Gear"
+PSS:Every(G.frame, 0.5)

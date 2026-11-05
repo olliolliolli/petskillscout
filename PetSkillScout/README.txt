@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.6
+- CPU (from /pss cpu in game): 20 frame handlers that ran on every rendered frame only to count
+  time now run on timers (0.1-5 s steps): minimap icons, network, message queue, pet card
+  requests, pet care, gear marks, achievements, queues, rare timers, collection, ammo, route,
+  gear tab, map pins, unit frames, info bar, minimap buttons. The dungeon pet guard runs per frame
+  only inside dungeons.
+
 2.9.5
 - /pss cpu: a one-minute CPU check in game. It times the addon's own frames, delayed passes and
   tooltip hooks, then prints the 10 heaviest parts to chat (handlers are restored afterwards).

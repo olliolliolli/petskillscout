@@ -486,6 +486,8 @@ local function StartUnitEvents()
       for _, f in pairs(units) do pcall(UpdateUnit, f) end
     end
   end)
+  unitEvents.pssKey = "unit frames"
+  PSS:Every(unitEvents, 0.3)
   -- The layout is built on PLAYER_ENTERING_WORLD, after that event fired:
   -- draw everything once now.
   for _, f in pairs(units) do pcall(UpdateUnit, f); pcall(UpdatePortrait, f) end
@@ -747,6 +749,8 @@ local function BuildChat()
     tick = 0
     pcall(LY.UpdateInfo, LY)
   end)
+  leftPanel.pssKey = "info bar"
+  PSS:Every(leftPanel, 1)
   LY:PlaceChat()
 end
 
@@ -1444,6 +1448,8 @@ local function BuildMinimap()
     tick = 0
     pcall(LY.SquareMinimapButtons, LY)
   end)
+  mmHolder.pssKey = "minimap buttons"
+  PSS:Every(mmHolder, 2)
   if mm.EnableMouseWheel then
     mm:EnableMouseWheel(true)
     mm:HookScript("OnMouseWheel", function(self, delta)
