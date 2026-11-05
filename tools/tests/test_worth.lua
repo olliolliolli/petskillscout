@@ -127,6 +127,28 @@ PetSkillScoutDB.questPinsSkip = true; QP:Refresh(); QP.Update()
 ok(QP.shown >= shownAll, "grey pins on request")
 PetSkillScoutDB.questPins = false; QP:Refresh(); QP.Update()
 ok(true, "pins off ok")
+-- Minimap: quest givers nearby get the same coloured "!" (Settings > Quests > on the minimap).
+PetSkillScoutDB.questPins = true
+local Nav, MMp = PSS.Nav, PSS.Minimap
+local oldPos, oldNear = Nav.PlayerPos, Nav.Nearest
+Nav.PlayerPos = function() return 1432, 0.5, 0.5 end
+Nav.Nearest = function() return 20, 0, 20 end
+local function minimapQuests()
+  MMp:Refresh(); MMp._driver:GetScript("OnUpdate")(MMp._driver, 1)
+  local n, purple = 0, false
+  for _, p in ipairs(MMp._pins) do
+    if p.shown and p.group then n = n + 1; if p.group.npc == 1187 then purple = p.group.best == "great" end end
+  end
+  return n, purple
+end
+local mn, mpurple = minimapQuests()
+ok(mn > 0 and mpurple, "minimap quest givers " .. mn .. ", Daryl purple")
+PetSkillScoutDB.questMinimap = false
+ok(minimapQuests() == 0, "minimap quest givers can be switched off")
+PetSkillScoutDB.questMinimap = nil
+PetSkillScoutDB.questPins = false
+ok(minimapQuests() == 0, "no minimap quest givers when quest markers are off")
+Nav.PlayerPos, Nav.Nearest = oldPos, oldNear
 -- Horde sees no Daryl.
 PetSkillScoutDB.questPins = true
 MOCK.faction = "Horde"

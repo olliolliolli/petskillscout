@@ -252,6 +252,7 @@ end
 PSS.Minimap = {}
 local MM = PSS.Minimap
 local pins = {}
+MM._pins = pins
 local OUTDOOR = {466 + 2/3, 400, 333 + 1/3, 266 + 2/3, 200, 133 + 1/3}
 local INDOOR = {300, 240, 180, 120, 80, 50}
 local indoors = false
@@ -289,6 +290,7 @@ local function Pin(i)
     p.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     p:SetScript("OnEnter", function(self)
       if not GameTooltip then return end
+      if self.group and PSS.QuestPins then PSS.QuestPins.Tooltip(self); return end
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
       GameTooltip:AddLine(PSS:Safe(self.label or "?"), 1, 0.82, 0.25)
       if self.sub then GameTooltip:AddLine(PSS:Safe(self.sub), 0.8, 0.8, 0.8) end
@@ -353,6 +355,17 @@ local function Candidates(mapID)
       end
     end
   end
+  -- Quest givers with quests you can take now (same rating colours as the world map).
+  local QP = PSS.QuestPins
+  if QP and QP.MinimapEnabled and QP:MinimapEnabled() and PSS.QuestWorth then
+    local ok, groups = pcall(QP.Groups, QP, mapID, PSS.QuestWorth:PlayerLevel())
+    for _, g in ipairs(ok and groups or {}) do
+      if g.best ~= "skip" or QP:ShowSkip() then
+        table.insert(list, {quest = g, verdict = g.best, target = {name = PSS.QuestWorth:NPCName(g.npc)
+          or PSS.QuestWorth:Title(g.quests[1].id), mapID = mapID, points = {{g.x, g.y}}}})
+      end
+    end
+  end
   if Nav.target and Nav.target.mapID == mapID then
     table.insert(list, {target = Nav.target, icon = "Interface\\Icons\\Ability_Hunter_Pathfinding",
       color = {0.95, 0.77, 0.30}, label = Nav.target.name, sub = PSS:L("arrowTarget"), edge = true})
@@ -394,9 +407,25 @@ local function UpdateMinimap()
         end
         used = used + 1
         local p = Pin(used)
-        p.icon:SetTexture(c.icon)
-        p.ring:SetVertexColor(c.color[1], c.color[2], c.color[3], 1)
-        p:SetAlpha(onMap and 1 or 0.6)
+        p.group = c.quest
+        if c.quest then
+          -- Quest giver: the "!" icon in its rating colour, no ring.
+          p.icon:SetTexture(PSS.QuestPins.ICON)
+          p.icon:SetTexCoord(0, 1, 0, 1)
+          p.ring:Hide()
+          PSS.QuestPins:Style(p, c.verdict)
+          if c.verdict == "great" then p:SetSize(16, 16) else p:SetSize(13, 13) end
+          if not onMap then p:SetAlpha(0.6) end
+        else
+          p:SetSize(14, 14)
+          p.icon:SetDesaturated(false)
+          p.icon:SetVertexColor(1, 1, 1)
+          p.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+          p.icon:SetTexture(c.icon)
+          p.ring:Show()
+          p.ring:SetVertexColor(c.color[1], c.color[2], c.color[3], 1)
+          p:SetAlpha(onMap and 1 or 0.6)
+        end
         p.label, p.sub, p.dist, p.target = c.label, c.sub, math.floor(dist), c.target
         p:ClearAllPoints()
         p:SetPoint("CENTER", Minimap, "CENTER", ex * scale, ny * scale)

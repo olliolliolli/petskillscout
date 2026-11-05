@@ -17,11 +17,13 @@ local ORDER = {great = 1, ok = 2, skip = 3}
 local function DB() return PetSkillScoutDB or {} end
 function QP:Enabled() return DB().questPins ~= false end
 function QP:ShowSkip() return DB().questPinsSkip == true end
-function QP:Refresh() dirty = true end
+function QP:MinimapEnabled() return QP:Enabled() and DB().questMinimap ~= false end
+function QP:Refresh() dirty = true; if PSS.Minimap then PSS.Minimap:Refresh() end end
+QP.ICON = ICON
 
 local function HideAll() for _, p in ipairs(pins) do p:Hide() end end
 
-local function Tooltip(pin)
+function QP.Tooltip(pin)
   local g = pin.group
   if not (g and GameTooltip) then return end
   local W = PSS.QuestWorth
@@ -44,7 +46,7 @@ local function Ensure(i, canvas)
     pin.icon = pin:CreateTexture(nil, "ARTWORK")
     pin.icon:SetAllPoints(pin)
     pin.icon:SetTexture(ICON)
-    pin:SetScript("OnEnter", Tooltip)
+    pin:SetScript("OnEnter", QP.Tooltip)
     pin:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
     pin:SetScript("OnClick", function(self)
       local g = self.group
@@ -125,4 +127,4 @@ local ev = CreateFrame("Frame")
 for _, e in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "PLAYER_LEVEL_UP", "PLAYER_EQUIPMENT_CHANGED"}) do
   pcall(ev.RegisterEvent, ev, e)
 end
-ev:SetScript("OnEvent", function() dirty = true end)
+ev:SetScript("OnEvent", function() QP:Refresh() end)

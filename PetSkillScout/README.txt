@@ -1,4 +1,4 @@
-PetSkillScout 2.6.3 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.4 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -204,6 +204,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.4
+- Quest givers on the minimap: the same "!" as on the world map for quest
+  givers nearby, in the rating colours (purple = worth it, yellow = normal,
+  grey on request). Hover for the quests, click for the arrow. Switch:
+  Settings > Quests > Quest givers on the minimap (on by default). The
+  game's own yellow "!" still shows as well; addons cannot change it.
+
 2.6.3
 - Settings: the options of a section stay inside the window and scroll with
   the mouse wheel (a thin bar shows the position) instead of running off the

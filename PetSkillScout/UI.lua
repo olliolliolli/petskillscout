@@ -3979,6 +3979,8 @@ local SETTINGS = {
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questPinsSkip", label="optQuestPinsSkip", hint="optQuestPinsSkipHint", kind="toggle", default=false,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
+    {key="questMinimap", label="optQuestMinimap", hint="optQuestMinimapHint", kind="toggle", default=true,
+      apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questAuto", label="optQuestAuto", hint="optQuestAutoHint", kind="choice", default="off",
       options={{"off","qAutoOff"},{"worth","qAutoWorth"},{"all","qAutoAll"}}},
   }},
