@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.6
+- Theme: the Hunter Network tab could float over the chat; the right-side tabs are now anchored
+  to the tab strip itself.
+
 3.0.5
 - Theme: the Combat Log tab sits on the right edge of the chat tab strip with the Hunter Network tab next to it (both kept last in the dock).
 

@@ -903,14 +903,19 @@ function PlaceCombatTab()
       end
     end
   end
-  local anchor
+  -- Each tab is anchored to the dock itself (not to the next tab): the tabs
+  -- live in the dock's scroll strip, and a tab-to-tab anchor could leave a tab
+  -- floating over the chat.
+  local x = 0
   for k = #right, 1, -1 do
     local tab = G(right[k]:GetName() .. "Tab")
     if tab then
+      if tab.Show then pcall(tab.Show, tab) end
       pcall(tab.ClearAllPoints, tab)
-      if anchor then pcall(tab.SetPoint, tab, "BOTTOMRIGHT", anchor, "BOTTOMLEFT", -2, 0)
-      else pcall(tab.SetPoint, tab, "BOTTOMRIGHT", dock, "BOTTOMRIGHT", 0, 0) end
-      anchor = tab
+      pcall(tab.SetPoint, tab, "BOTTOMRIGHT", dock, "BOTTOMRIGHT", -x, 0)
+      local w = tab.GetWidth and tab:GetWidth() or 0
+      if not w or w < 20 then w = 90 end
+      x = x + w + 2
     end
   end
   combatBusy = false
