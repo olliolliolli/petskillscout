@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.0.2"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.0.3"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -218,6 +218,11 @@ function PSS:InitializeDB()
     if not PetSkillScoutDB.observedIDsV2 then
         PetSkillScoutDB.observedCreatureIDs = nil
         PetSkillScoutDB.observedIDsV2 = true
+    end
+    -- 3.0.3: the rare alert sound (wolf howl) is on by default now.
+    if not PetSkillScoutDB.howlV1 then
+        PetSkillScoutDB.rareSound = nil
+        PetSkillScoutDB.howlV1 = true
     end
 end
 

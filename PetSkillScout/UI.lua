@@ -4120,7 +4120,6 @@ function UI:PlaceFeedOverlay()
     b = CreateFrame("Button", "PetSkillScoutCardFeedButton", UIParent, "SecureActionButtonTemplate")
     b:SetFrameStrata("DIALOG")
     b:RegisterForClicks("AnyUp", "AnyDown")
-    b:SetAttribute("type", "macro")
     b.bg = b:CreateTexture(nil, "BACKGROUND")
     b.bg:SetAllPoints(b)
     local hl = b:CreateTexture(nil, "HIGHLIGHT")
@@ -4147,7 +4146,7 @@ function UI:PlaceFeedOverlay()
   b:SetFrameLevel(frame:GetFrameLevel() + 60)
   b.text:SetFont(FONT, math.max(9, math.floor(13 * ratio + 0.5)), "")
   b.text:SetText(L("feedNow"))
-  b:SetAttribute("macrotext", "/cast " .. FeedSpellName() .. "\n/use " .. food.bag .. " " .. food.slot)
+  PSS.SetFeedAttributes(b, food)
   self:StyleFeedOverlay()
   b:Show()
 end
@@ -4249,7 +4248,7 @@ local SETTINGS = {
   {id="alerts", title="setAlerts", sub="setAlertsSub", rows={
     {key="rareRadarEnabled", label="optRadar", hint="optRadarHint", kind="toggle", default=true},
     {key="rareAlertPopup", label="rareAlertPopup", hint="optPopupHint", kind="toggle", default=true},
-    {key="rareSound", label="optSound", hint="optSoundHint", kind="toggle", default=false},
+    {key="rareSound", label="optSound", hint="optSoundHint", kind="toggle", default=true},
     {key="rareChat", label="optChat", hint="optChatHint", kind="toggle", default=true},
     {key="syncEnabled", label="optSync", hint="optSyncHint", kind="toggle", default=true},
     {key="syncNotify", label="optSyncNotify", hint="optSyncNotifyHint", kind="choice", default="wanted",

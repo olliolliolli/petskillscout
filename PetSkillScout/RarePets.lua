@@ -284,6 +284,19 @@ function R:SeenText(entry)
   return when .. where .. count
 end
 
+-- Wolf howl from the game files (classic wolf, then Draenor wolf), raid
+-- warning sound if neither plays. Master channel: heard with effects muted.
+local HOWLS = {564211, 929455}
+function R:Howl()
+  if PlaySoundFile then
+    for _, id in ipairs(HOWLS) do
+      local ok, willPlay = pcall(PlaySoundFile, id, "Master")
+      if ok and willPlay then return end
+    end
+  end
+  if PlaySound then pcall(PlaySound, 8959, "Master") end
+end
+
 -- unit (optional): the unit token the rare was seen on, used for the portrait.
 function R:AlertName(name, unit)
   if not name then return end
@@ -300,7 +313,7 @@ function R:AlertName(name, unit)
     local message=PSS:L('rareWarning')..entry.name
     pcall(RaidNotice_AddMessage,RaidWarningFrame,PSS:Safe(message),ChatTypeInfo and ChatTypeInfo.RAID_WARNING)
   end
-  if PetSkillScoutDB and PetSkillScoutDB.rareSound and PlaySound then pcall(PlaySound,8959) end
+  if not PetSkillScoutDB or PetSkillScoutDB.rareSound ~= false then R:Howl() end
   if PSS.RareAlert and (not PetSkillScoutDB or PetSkillScoutDB.rareAlertPopup ~= false) then
     PSS.RareAlert:Show(entry, unit)
   end

@@ -27,7 +27,7 @@ local function Now() return Plain(Call(GetServerTime)) or (time and time()) or 0
 
 -- Tuning ------------------------------------------------------------------
 W.GREAT_RATIO = 1.4     -- XP per minute against a typical quest at your level
-W.SKIP_RATIO = 0.55
+W.SKIP_RATIO = 0.8      -- below this the XP per minute is not worth the time
 W.GEAR_GREAT = 10       -- attack power gain that makes any quest worth it
 W.GEAR_OK = 3
 W.TYPICAL_MIN = 11      -- minutes of a typical solo quest
@@ -343,7 +343,12 @@ function W:OnMap(mapID, level)
   level = level or self:PlayerLevel()
   local out = {}
   for _, id in ipairs(self.byMap[mapID] or {}) do
-    if self:Available(id, level) then
+    -- Map pins only for quests that an NPC gives: quests started by an item
+    -- or object have no one standing at the position, and ATT entries
+    -- marked for later expansions ("[CATA+]") do not exist in Forever.
+    local rec = self:Record(id)
+    local pinnable = rec and rec.g and not (rec.n and rec.n:find("%[%u+%+%]"))
+    if pinnable and self:Available(id, level) then
       local rate = self:Rate(id, level)
       out[#out + 1] = {id = id, r = self:Record(id), rate = rate}
     end

@@ -152,8 +152,21 @@ local function EnsureTrackedPin(index, canvas)
           GameTooltip:AddLine(PSS:Safe(self.ability .. " " .. PSS:L("rank") .. " " .. tostring(self.rank or "?")), 0.4, 1, 0.5)
         end
         if self.px and self.py then GameTooltip:AddLine(PSS:Safe(string.format("%.1f, %.1f", self.px, self.py)), 1, 1, 1) end
+        if self.beastID then GameTooltip:AddLine(PSS:Safe(PSS:L("untrackHint")), 0.6, 0.6, 0.6) end
         GameTooltip:Show()
       end
+    end)
+    -- Right click: stop tracking this beast (no need to find it in the addon).
+    pin:RegisterForClicks("RightButtonUp")
+    pin:SetScript("OnClick", function(self, button)
+      if button ~= "RightButton" or not self.beastID then return end
+      PSS:SetTracked(self.beastID, false)
+      if PSS.selected and PSS.selected.id == self.beastID then PSS.selected = nil end
+      if GameTooltip then GameTooltip:Hide() end
+      self:Hide()
+      if PSS.Minimap then PSS.Minimap:Refresh() end
+      if PSS.UI and PSS.UI.Refresh then pcall(PSS.UI.Refresh, PSS.UI) end
+      PSS:Print(string.format(PSS:L("untrackedPin"), self.beastName or "?"))
     end)
     pin:SetScript("OnLeave", function(self)
       if self.label then self.label:Hide() end
@@ -225,7 +238,7 @@ local function UpdateTrackedPins()
         if math.abs(y) <= 1 then y = y * 100 end
         used = used + 1
         local pin = EnsureTrackedPin(used, canvas)
-        pin.beastName, pin.zone = beast.name, beast.zone
+        pin.beastName, pin.zone, pin.beastID = beast.name, beast.zone, beast.id
         pin.label:SetText(beast.name or "Pet")
         pin.ability, pin.rank = abilityName, beast.rank
         pin.px, pin.py = x, y

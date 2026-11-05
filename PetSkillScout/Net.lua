@@ -43,7 +43,8 @@ local function NoticeFilter(_, _, ...)
   return ok and ours or false
 end
 if ChatFrame_AddMessageEventFilter then
-  for _, e in ipairs({"CHAT_MSG_CHANNEL_NOTICE", "CHAT_MSG_CHANNEL_NOTICE_USER", "CHAT_MSG_CHANNEL"}) do
+  for _, e in ipairs({"CHAT_MSG_CHANNEL_NOTICE", "CHAT_MSG_CHANNEL_NOTICE_USER", "CHAT_MSG_CHANNEL",
+      "CHAT_MSG_CHANNEL_JOIN", "CHAT_MSG_CHANNEL_LEAVE"}) do
     pcall(ChatFrame_AddMessageEventFilter, e, PSS:Timed("chat filter", NoticeFilter))
   end
 end
@@ -293,12 +294,43 @@ local function Prune()
   end
 end
 
+-- Join / leave notices of the hidden channel: the channel is only used by the
+-- addon, so whoever joins it is a PetSkillScout hunter. They count as online
+-- at once, and we answer with a hello so the newcomer sees us too.
+local function CleanName(sender)
+  if type(sender) ~= "string" or (PSS.IsSecret and PSS.IsSecret(sender)) then return nil end
+  local who = Ambiguate and Ambiguate(sender, "short") or sender
+  who = who:match("^[^-]+") or who
+  who = (who:gsub("[^%w\128-\255 ]", ""):gsub("^%s+", ""):gsub("%s+$", "")):sub(1, 32)
+  if who == "" or (PSS.Sync and PSS.Sync.IsMe and PSS.Sync:IsMe(who)) then return nil end
+  return who
+end
+function N:OnChannelMember(event, ...)
+  if not (PetSkillScoutDB and Enabled()) then return end
+  local sender = select(2, ...)
+  if not IsOurs(select(4, ...), select(9, ...)) then return end
+  local who = CleanName(sender)
+  if not who then return end
+  if event == "CHAT_MSG_CHANNEL_JOIN" then
+    self:Seen(who)
+    self.helloSoon = 2 + math.random() * 4
+  else
+    local p = Peers()[who]
+    if p and p.t then p.t = math.min(p.t, Now() - PEER_ONLINE) end
+  end
+  if PSS.UI and PSS.UI.view == "network" and PSS.UI.UpdateNetwork then pcall(PSS.UI.UpdateNetwork, PSS.UI) end
+end
+
 N.frame = CreateFrame("Frame")
 N.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+pcall(N.frame.RegisterEvent, N.frame, "CHAT_MSG_CHANNEL_JOIN")
+pcall(N.frame.RegisterEvent, N.frame, "CHAT_MSG_CHANNEL_LEAVE")
 pcall(N.frame.RegisterEvent, N.frame, "PLAYER_REGEN_ENABLED")
 local promptIn, helloIn = nil, nil
-N.frame:SetScript("OnEvent", function(_, event)
-  if event == "PLAYER_ENTERING_WORLD" then
+N.frame:SetScript("OnEvent", function(_, event, ...)
+  if event == "CHAT_MSG_CHANNEL_JOIN" or event == "CHAT_MSG_CHANNEL_LEAVE" then
+    pcall(N.OnChannelMember, N, event, ...)
+  elseif event == "PLAYER_ENTERING_WORLD" then
     if not N.started then
       N.started = true
       pcall(Prune)
@@ -313,6 +345,13 @@ N.frame:SetScript("OnUpdate", function(_, elapsed)
   elapsed = elapsed or 0
   -- A score change during the throttle window is sent once it ends.
   if N.pendingHello and Now() - lastHello >= 120 then pcall(N.Hello, N) end
+  if N.helloSoon then
+    N.helloSoon = N.helloSoon - elapsed
+    if N.helloSoon <= 0 then
+      N.helloSoon = nil
+      if Now() - lastHello >= 30 then pcall(N.Hello, N, true) end
+    end
+  end
   if promptIn then
     promptIn = promptIn - elapsed
     if promptIn <= 0 then

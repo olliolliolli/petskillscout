@@ -297,10 +297,25 @@ local function Pin(i)
       if self.sub then GameTooltip:AddLine(PSS:Safe(self.sub), 0.8, 0.8, 0.8) end
       if self.dist then GameTooltip:AddLine(PSS:Safe(string.format("%d yd", math.floor(self.dist + 0.5))), 1, 1, 1) end
       GameTooltip:AddLine(PSS:Safe(PSS:L("minimapHint")), 0.6, 0.6, 0.6)
+      if self.beastID then GameTooltip:AddLine(PSS:Safe(PSS:L("untrackHint")), 0.6, 0.6, 0.6) end
       GameTooltip:Show()
     end)
     p:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
-    p:SetScript("OnClick", function(self) if self.target then Nav:SetTarget(self.target) end end)
+    p:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    p:SetScript("OnClick", function(self, button)
+      if button == "RightButton" then
+        -- Tracked beast: right click stops tracking it.
+        if self.beastID then
+          PSS:SetTracked(self.beastID, false)
+          if GameTooltip then GameTooltip:Hide() end
+          MM:Refresh()
+          if PSS.UI and PSS.UI.Refresh then pcall(PSS.UI.Refresh, PSS.UI) end
+          PSS:Print(string.format(PSS:L("untrackedPin"), self.label or "?"))
+        end
+        return
+      end
+      if self.target then Nav:SetTarget(self.target) end
+    end)
     pins[i] = p
   end
   return p
@@ -328,7 +343,7 @@ local function Candidates(mapID)
       local t = Nav:TargetFromBeast(b)
       if t then
         table.insert(list, {target = t, icon = "Interface\\Icons\\Ability_Hunter_BeastTaming",
-          color = {0.47, 0.79, 0.51}, label = b.name, sub = (PSS:NameAbility(b.ability) .. " " .. tostring(b.rank))})
+          color = {0.47, 0.79, 0.51}, beastID = b.id, label = b.name, sub = (PSS:NameAbility(b.ability) .. " " .. tostring(b.rank))})
       end
     end
   end
@@ -339,7 +354,7 @@ local function Candidates(mapID)
         local t = Nav:TargetFromAtlas(rec.npcID)
         if t then
           table.insert(list, {target = t, icon = "Interface\\Icons\\Ability_Hunter_BeastTaming",
-            color = {0.47, 0.79, 0.51}, label = rec.name, sub = PSS.Atlas:TeachesText(rec) or PSS:NameFamily(rec.family)})
+            color = {0.47, 0.79, 0.51}, beastID = rec.id, label = rec.name, sub = PSS.Atlas:TeachesText(rec) or PSS:NameFamily(rec.family)})
         end
       end
     end
@@ -436,7 +451,7 @@ local function UpdateMinimap()
           p.ring:SetVertexColor(c.color[1], c.color[2], c.color[3], 1)
           p:SetAlpha(onMap and 1 or 0.6)
         end
-        p.label, p.sub, p.dist, p.target = c.label, c.sub, math.floor(dist), c.target
+        p.label, p.sub, p.dist, p.target, p.beastID = c.label, c.sub, math.floor(dist), c.target, c.beastID
         p:ClearAllPoints()
         p:SetPoint("CENTER", Minimap, "CENTER", ex * scale, ny * scale)
         p:Show()

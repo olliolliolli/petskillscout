@@ -130,6 +130,17 @@ function PC:BestFood()
 end
 
 -- Feed button --------------------------------------------------------------
+-- Feed Pet is cast straight on the food item (spell + target-bag/target-slot),
+-- not through "/cast" + "/use": with the macro, whenever the cast did not open
+-- the item cursor the "/use" line made the hunter eat the food himself.
+function PSS.SetFeedAttributes(b, food)
+  b:SetAttribute("type", "spell")
+  b:SetAttribute("spell", FEED_PET)
+  b:SetAttribute("unit", nil)
+  b:SetAttribute("target-bag", food.bag)
+  b:SetAttribute("target-slot", food.slot)
+  b:SetAttribute("macrotext", nil)
+end
 local button
 local function FeedSpellName()
   if C_Spell and C_Spell.GetSpellInfo then
@@ -162,7 +173,6 @@ local function CreateButton()
   button.count:SetPoint("BOTTOMRIGHT", -2, 2)
   button.mood = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   button.mood:SetPoint("TOP", button, "BOTTOM", 0, -2)
-  button:SetAttribute("type", "macro")
   button:SetScript("OnDragStart", function(self)
     if not (InCombatLockdown and InCombatLockdown()) and IsShiftKeyDown and IsShiftKeyDown() then self:StartMoving() end
   end)
@@ -205,7 +215,7 @@ function PC:UpdateButton()
   end
   CreateButton()
   button.food = food
-  button:SetAttribute("macrotext", "/cast " .. FeedSpellName() .. "\n/use " .. food.bag .. " " .. food.slot)
+  PSS.SetFeedAttributes(button, food)
   button.icon:SetTexture(food.icon or "Interface\\Icons\\INV_Misc_Food_14")
   button.count:SetText(food.count and food.count > 1 and food.count or "")
   button.mood:SetText(h and PSS:L("happy" .. h) or "")

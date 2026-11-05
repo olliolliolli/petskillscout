@@ -206,6 +206,20 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.3
+- Feed button: Feed Pet is now cast straight on the food (no "/use" line), so the hunter no
+  longer eats the food himself.
+- Taming level: the tooltip uses the real level of the beast under the mouse; a beast one
+  level above you is shown as too high. Atlas records with a level range above yours say
+  "Some levels can be tamed".
+- Quest pins: only quests given by an NPC get a pin (item/object-started quests and ATT
+  entries for later expansions were shown on empty spots). Grey "not worth it" now also
+  covers quests with poor experience per minute, not only low-level ones.
+- Hunter network: hunters who join the network channel count as online at once (and get a
+  hello back); join / leave notices of the channel no longer appear in General chat.
+- Rare alert: wolf howl from the game files when a rare beast is spotted (on by default).
+- Map: right-click a tracked beast's pin (world map or minimap) to stop tracking it.
+
 3.0.2
 - Theme: swapping chat tabs by dragging could leave the tabs on top of each other (the theme
   re-anchored the chat dock in the middle of the game's tab layout). The dock is now left alone
