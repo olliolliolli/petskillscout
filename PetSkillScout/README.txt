@@ -1,4 +1,4 @@
-PetSkillScout 2.6.2 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.3 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -204,6 +204,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.3
+- Settings: the options of a section stay inside the window and scroll with
+  the mouse wheel (a thin bar shows the position) instead of running off the
+  bottom of the window.
+- Settings: size buttons (Small ... Extra large) grow with their text, so
+  long translations are no longer cut off.
+
 2.6.2
 - Data update 2026-11-05 (AllTheThings Forever database, commit 31a8fe6):
   quest prerequisites and objectives refreshed. Tomb Weed now needs Doom

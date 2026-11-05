@@ -4140,10 +4140,16 @@ function UI:BuildSettings()
   self.sSub = Label(p, "", 12, C.muted, cw, "LEFT", true)
   self.sSub:SetPoint("TOPLEFT", p, "TOPLEFT", 226, -32)
   self.sSections = {}
+  local viewH = BODY_H - 60
   for _, sec in ipairs(SETTINGS) do
-    local box = CreateFrame("Frame", nil, p)
-    box:SetPoint("TOPLEFT", p, "TOPLEFT", 226, -60)
-    box:SetSize(cw, BODY_H - 60)
+    -- Rows scroll inside the window (mouse wheel + slim bar in the gap before the preview).
+    local sf = CreateFrame("ScrollFrame", nil, p)
+    sf:SetPoint("TOPLEFT", p, "TOPLEFT", 226, -60)
+    sf:SetSize(cw, viewH)
+    local box = CreateFrame("Frame", nil, sf)
+    box:SetSize(cw, viewH)
+    sf:SetScrollChild(box)
+    box.sf = sf
     box.rows = {}
     local y = 0
     for i, def in ipairs(sec.rows) do
@@ -4170,7 +4176,7 @@ function UI:BuildSettings()
         for j, opt in ipairs(def.options) do
           local b = MakeButton(row, "", bw, 28, function() SetOption(def, opt[1]) end, {size=12})
           b:SetPoint("TOPRIGHT", row, "TOPRIGHT", -14 - (n - j) * (bw + 4), -8)
-          b.value, b.key = opt[1], opt[2]
+          b.value, b.key, b.minW = opt[1], opt[2], bw
           row.options[j] = b
         end
       elseif def.kind == "action" then
@@ -4188,6 +4194,25 @@ function UI:BuildSettings()
       end
       box.rows[i] = row
     end
+    box:SetHeight(math.max(viewH, y - 8))
+    local bar = Solid(p, "OVERLAY", C.gold, 0.55)
+    bar:SetWidth(4)
+    sf.bar = bar
+    function sf:Range() return math.max(0, (box:GetHeight() or 0) - viewH) end
+    function sf:ScrollTo(v)
+      local range = self:Range()
+      v = math.max(0, math.min(range, v or 0))
+      self:SetVerticalScroll(v)
+      if range <= 0 then bar:Hide(); return end
+      local h = math.max(24, viewH * viewH / (viewH + range))
+      bar:SetHeight(h)
+      bar:ClearAllPoints()
+      bar:SetPoint("TOPLEFT", self, "TOPRIGHT", 6, -(viewH - h) * v / range)
+      bar:Show()
+    end
+    sf:EnableMouseWheel(true)
+    sf:SetScript("OnMouseWheel", function(f, delta) f:ScrollTo((f:GetVerticalScroll() or 0) - delta * 66) end)
+    sf:ScrollTo(0)
     self.sSections[sec.id] = box
   end
 
@@ -4259,8 +4284,12 @@ function UI:RefreshSettings()
   current = current or SETTINGS[1]
   self.sHeading:SetText(L(current.title))
   self.sSub:SetText(L(current.sub))
-  for id, box in pairs(self.sSections) do Show(box, id == current.id) end
+  for id, box in pairs(self.sSections) do Show(box.sf, id == current.id) end
   local box = self.sSections[current.id]
+  if self.sShownSection ~= current.id then
+    self.sShownSection = current.id
+    box.sf:ScrollTo(0)
+  end
   for _, row in ipairs(box.rows) do
     local def = row.def
     row.label:SetText(L(def.label))
@@ -4268,9 +4297,17 @@ function UI:RefreshSettings()
     if row.action then row.action:SetText(L(def.button)) end
     local value = OptionValue(def)
     if row.switch then row.switch:Set(value and true or false) end
-    for _, b in ipairs(row.options or {}) do
+    local x = -14
+    for j = #(row.options or {}), 1, -1 do
+      local b = row.options[j]
       b:SetText(L(b.key))
       SetActive(b, b.value == value)
+      local fs = b:GetFontString()
+      local w = math.max(b.minW or 74, math.ceil((fs and fs:GetStringWidth() or 0) + 18))
+      b:SetWidth(w)
+      b:ClearAllPoints()
+      b:SetPoint("TOPRIGHT", row, "TOPRIGHT", x, -8)
+      x = x - w - 4
     end
     if row.dd then row.dd:Sync() end
   end

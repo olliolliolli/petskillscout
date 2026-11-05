@@ -20,5 +20,23 @@ local found = false
 local src = io.open(dir .. "/UI.lua"):read("*a")
 found = src:find('key="questAlert"', 1, true) ~= nil
 if not found then fails = fails + 1; print("FAIL settings row") end
+-- Settings rows stay inside a scroll frame: every row fits in its box, long sections scroll.
+UI:ShowView("settings")
+local scrolls = 0
+for id, box in pairs(UI.sSections or {}) do
+  local sf = box.sf
+  if not sf then fails = fails + 1; print("FAIL no scroll frame", id) else
+    local bottom = 0
+    for _, row in ipairs(box.rows) do
+      local pt = row.points[#row.points]
+      bottom = math.max(bottom, -(pt[5] or 0) + row:GetHeight())
+    end
+    if box:GetHeight() < bottom then fails = fails + 1; print("FAIL rows overflow", id, bottom, box:GetHeight()) end
+    if sf:Range() > 0 then scrolls = scrolls + 1 end
+    local ok, err = pcall(sf:GetScript("OnMouseWheel"), sf, -1)
+    if not ok then fails = fails + 1; print("FAIL wheel", id, err) end
+  end
+end
+if scrolls == 0 then fails = fails + 1; print("FAIL no settings section needs scrolling (interface should)") end
 print("smoke: " .. (fails == 0 and "ok" or (fails .. " failures")))
 os.exit(fails == 0 and 0 or 1)
