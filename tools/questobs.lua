@@ -36,3 +36,22 @@ for _, id in ipairs(ids) do
     inDB, r.n or ""}, "\t"))
 end
 print(string.format("records %d, confirmed %d", #ids, confirmed))
+
+-- Relayed data (3.0.0): rare spots and ammo vendors from every realm.
+local spots = PetSkillScoutDB and PetSkillScoutDB.rareSpots or {}
+print("\nrare\tnpc\tmap\tx\ty\treports\tconfirmed")
+local ns = 0
+for id, list in pairs(spots) do
+  for _, p in ipairs(list) do
+    ns = ns + 1
+    print(table.concat({id, tostring(list.npc or ""), p.m, p.x, p.y, p.n or 1, p.c and "yes" or "no"}, "\t"))
+  end
+end
+local vend = PetSkillScoutDB and PetSkillScoutDB.ammoVendors or {}
+print("\nvendor\tname\tmap\tx\ty\tkinds\tfrom")
+local nv = 0
+for npc, v in pairs(vend) do
+  nv = nv + 1
+  print(table.concat({npc, v.n or "", v.m or "", v.x or "", v.y or "", v.k or "", v.from or "me"}, "\t"))
+end
+print(string.format("rare spots %d, ammo vendors %d", ns, nv))

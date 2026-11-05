@@ -206,6 +206,15 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.0
+- Relay between realms: the hunter network only reaches your realm, but the addon's data belongs
+  to your whole account. Whatever you learn - quests and their givers, ammo vendors, places where
+  rares were seen - is now passed on automatically when you play on another realm, and other
+  hunters pass on theirs. Nothing to do: everyone answers a small batch when a hunter connects
+  (and every 30 minutes), the records sent the longest ago first.
+- Rare spawn places reported by other hunters (from any realm) are shown as extra dots when you
+  select a rare on the world map.
+
 2.9.11
 - LICENSE.txt: PetSkillScout is (c) DarthRev1, all rights reserved; copying, changing or
   republishing the code needs written permission. Third-party data (AllTheThings,

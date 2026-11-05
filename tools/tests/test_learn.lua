@@ -114,5 +114,44 @@ local okDraw, err = pcall(UI.ShowView, UI, "network")
 ok(okDraw, "network tab draws: " .. tostring(err))
 ok(UI.netFeedRows[1].text:GetText():find("Mine Quest") ~= nil, "feed row text: " .. tostring(UI.netFeedRows[1].text:GetText()))
 UnitGUID, UnitName, PSS.Nav.PlayerPos = oldGUID, oldName, oldPos
+
+-- 3.0.0: relay between realms (vendors, rare spots) - answered with quests on "P".
+do
+  local RL = PSS.Relay
+  local got = {}
+  PSS.Sync.SendAll = function(_, msg) got[#got + 1] = msg; return true end
+  PetSkillScoutDB.ammoVendors = {[3589] = {n = "Keina", m = 1438, x = 59.3, y = 41.1, k = "a"}}
+  PetSkillScoutDB.rareSeen = {Nightscreech = {mapID = 1438, x = 51.4, y = 50.1, n = 1}}
+  local n = RL:Answer(true)
+  local v, x = false, false
+  for _, m in ipairs(got) do
+    if m:find("^V~3589~1438~59.3~41.1~a~Keina") then v = true end
+    if m:find("^X~0~Nightscreech~1438~51.4~50.1") then x = true end
+  end
+  ok(n >= 2 and v and x, "relay answer has vendors and rare spots: " .. table.concat(got, " | "))
+  -- Receiving a spot from another realm's hunter.
+  PSS.Sync.handlers.X({"X", "1234", "Ghostfang", "1440", "40.0", "60.0", "3"}, "Mira Stone")
+  local spots = PetSkillScoutDB.rareSpots.Ghostfang
+  ok(spots and #spots == 1 and spots[1].x == 40 and spots.npc == 1234, "relayed rare spot stored")
+  PSS.Sync.handlers.X({"X", "1234", "Ghostfang", "1440", "41.0", "60.5", "1"}, "Ole Brand")
+  ok(#spots == 1 and spots[1].c, "same spot from a second hunter is confirmed, not duplicated")
+  PSS.Sync.handlers.X({"X", "1234", "Ghostfang", "1440", "140", "60", "1"}, "Ole Brand")
+  ok(#spots == 1, "bad coordinates ignored")
+  -- Oldest first: a second answer sends other records before repeating.
+  for i = 1, 20 do RL:AddSpot("R" .. i, 1, 1438, i, i, 1, "x") end
+  got = {}; RL:Answer(true)
+  local first = {}; for _, m in ipairs(got) do first[m] = true end
+  got = {}; RL:Answer(true)
+  local repeated = 0; for _, m in ipairs(got) do if first[m] and m:find("^X") then repeated = repeated + 1 end end
+  ok(repeated < 15, "relay rotates records between answers (repeated " .. repeated .. ")")
+  -- "P" is answered by both quests and relay.
+  got = {}
+  local QLp = PSS.Sync.handlers.P
+  ok(type(QLp) == "function", "P handler chained")
+  PetSkillScoutDB.relay = false
+  ok(RL:Answer(true) == 0, "relay can be switched off")
+  PetSkillScoutDB.relay = nil
+  PSS.Sync.SendAll = nil
+end
 print("passed " .. pass .. ", failed " .. fail)
 os.exit(fail == 0 and 0 or 1)

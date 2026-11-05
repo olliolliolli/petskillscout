@@ -228,6 +228,24 @@ local function Update()
       dot:Show()
       table.insert(pts, {p[1] / 100 * width, p[2] / 100 * height})
     end
+    -- Spots other hunters reported (also relayed from other realms) that the
+    -- built-in data does not have yet: extra dots, no outline.
+    local extra = PSS.Relay and PetSkillScoutDB and PetSkillScoutDB.rareSpots and PetSkillScoutDB.rareSpots[focusEntry.id]
+    local k = #(focusEntry.beast.spawnPoints or {})
+    for _, p in ipairs(extra or {}) do
+      if p.m == mapID then
+        local known = false
+        for _, q in ipairs(focusEntry.beast.spawnPoints or {}) do
+          if math.abs(q[1] - p.x) <= 2 and math.abs(q[2] - p.y) <= 2 then known = true end
+        end
+        if not known then
+          k = k + 1
+          local dot = EnsureDot(k, canvas)
+          PSS.Map:Place(dot, canvas, p.x, p.y, width, height, scale)
+          dot:Show()
+        end
+      end
+    end
     DrawOutline(canvas, pts, scale)
   elseif areaFrame then
     areaFrame:Hide()
