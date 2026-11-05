@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.8
+- /pss cpu now also times every hook on Blizzard functions and scripts (tooltips, bags, chat,
+  buffs, action buttons, quest tracker) and the chat filter, so nothing the addon runs is missed.
+
 2.9.7
 - CPU: the Auto Shot bar only changes its text and colour when they differ (the bar itself still
   moves every frame); minimap icons skip the update while you stand still; the buff pass after

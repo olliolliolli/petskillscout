@@ -305,7 +305,7 @@ function S:HookSlotTooltips()
   -- Hook each button once; retry on later opens if it did not exist yet.
   if button and not self.hookedSlots[i] and type(button.HookScript)=='function' then
    self.hookedSlots[i]=true
-   button:HookScript('OnEnter',function(widget)
+   PSS.HookScript(button, 'OnEnter',function(widget)
     -- Original OnEnter populates the tooltip before hooked scripts run.
     S:CaptureSlot(slot,widget)
    end)

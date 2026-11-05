@@ -250,9 +250,9 @@ local function Hook(owner, name, fn)
   local key = tostring(owner) .. name
   if hooked[key] then return end
   if owner == _G then
-    if type(_G[name]) == "function" then hooksecurefunc(name, fn); hooked[key] = true end
+    if type(_G[name]) == "function" then PSS.HookSecure(name, fn); hooked[key] = true end
   elseif owner and type(owner[name]) == "function" then
-    hooksecurefunc(owner, name, fn); hooked[key] = true
+    PSS.HookSecure(owner, name, fn); hooked[key] = true
   end
 end
 
@@ -263,7 +263,7 @@ function QA:HookUI()
   Hook(_G, "QuestLogQuests_Update", function() pcall(QA.MarkLog, QA) end)
   Hook(_G, "QuestLog_Update", function() pcall(QA.MarkLog, QA) end)
   if QuestFrame and QuestFrame.HookScript and not hooked.questHide then
-    QuestFrame:HookScript("OnHide", function() if QA.line then QA.line:Hide() end end)
+    PSS.HookScript(QuestFrame, "OnHide", function() if QA.line then QA.line:Hide() end end)
     hooked.questHide = true
   end
 end

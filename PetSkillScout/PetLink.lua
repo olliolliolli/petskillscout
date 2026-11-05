@@ -166,7 +166,7 @@ end
 if EventRegistry and EventRegistry.RegisterCallback then
   pcall(EventRegistry.RegisterCallback, EventRegistry, "SetItemRef", function(_, link) P:HandleLink(link) end, P)
 end
-if hooksecurefunc then pcall(hooksecurefunc, "SetItemRef", function(link) P:HandleLink(link) end) end
+if hooksecurefunc then pcall(PSS.HookSecure, "SetItemRef", function(link) P:HandleLink(link) end) end
 
 -- Whisper protocol ---------------------------------------------------------------
 local lastReply = {}

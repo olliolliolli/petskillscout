@@ -109,9 +109,9 @@ TT.OnUnit = OnUnit
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
   TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, PSS:Timed("unit tooltip", OnUnit))
 elseif GameTooltip and GameTooltip.HookScript then
-  pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetUnit", OnUnit)
+  pcall(PSS.HookScript, GameTooltip, "OnTooltipSetUnit", OnUnit)
 end
 if GameTooltip and GameTooltip.HookScript then
-  GameTooltip:HookScript("OnTooltipCleared", function(self) self.pssDone = nil end)
-  GameTooltip:HookScript("OnHide", function(self) self.pssDone = nil end)
+  PSS.HookScript(GameTooltip, "OnTooltipCleared", function(self) self.pssDone = nil end)
+  PSS.HookScript(GameTooltip, "OnHide", function(self) self.pssDone = nil end)
 end

@@ -5,7 +5,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.7"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "2.9.8"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -83,8 +83,9 @@ function PSS:Timed(key, fn)
     local P = PSS.Profiler
     if not (P and P.cost and debugprofilestop) then return fn(...) end
     local t = debugprofilestop()
-    fn(...)
+    local r = {fn(...)} -- keep the results (chat filters return them)
     P:Add(key, debugprofilestop() - t)
+    return unpack(r)
   end
 end
 
@@ -109,6 +110,21 @@ function PSS:Every(frame, interval)
       end
     end
   end)
+end
+
+-- Hooks on Blizzard functions and scripts, timed by /pss cpu while a check
+-- runs (named after the hooked function). Same as hooksecurefunc / HookScript.
+local function HookName(a, b)
+  if type(a) == "string" then return a end
+  local n = type(a) == "table" and a.GetName and a:GetName()
+  return (n or "?") .. ":" .. tostring(b)
+end
+function PSS.HookSecure(a, b, c)
+  if type(a) == "string" then return hooksecurefunc(a, PSS:Timed("hook " .. HookName(a), b)) end
+  return hooksecurefunc(a, b, PSS:Timed("hook " .. HookName(a, b), c))
+end
+function PSS.HookScript(f, script, fn)
+  return f:HookScript(script, PSS:Timed("hook " .. HookName(f, script), fn))
 end
 
 local soonQueued = {}

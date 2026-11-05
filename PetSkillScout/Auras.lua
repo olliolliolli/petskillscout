@@ -412,19 +412,19 @@ function A:Apply()
       local f = G(n)
       if f then
         for _, m in ipairs({"UpdateAuraButtons", "Update", "UpdateGridLayout"}) do
-          if type(f[m]) == "function" then pcall(hooksecurefunc, f, m, restyle) end
+          if type(f[m]) == "function" then pcall(PSS.HookSecure, f, m, restyle) end
         end
         -- The modern container lays itself out on its own (dirty flag).
         local c = F(f, "AuraContainer")
         if c then
           for _, m in ipairs({"Layout", "UpdateGridLayout"}) do
-            if type(c[m]) == "function" then pcall(hooksecurefunc, c, m, restyle) end
+            if type(c[m]) == "function" then pcall(PSS.HookSecure, c, m, restyle) end
           end
         end
       end
     end
     for _, fn in ipairs({"BuffFrame_Update", "AuraButton_Update", "BuffFrame_UpdateAllBuffAnchors"}) do
-      if type(_G[fn]) == "function" then hooksecurefunc(fn, restyle) end
+      if type(_G[fn]) == "function" then PSS.HookSecure(fn, restyle) end
     end
     if EventRegistry and EventRegistry.RegisterCallback then
       pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Exit", function() pcall(A.Place, A) end, A)

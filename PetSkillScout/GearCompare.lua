@@ -155,13 +155,13 @@ if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and
   end))
 else
   for _, tt in ipairs({GameTooltip, ItemRefTooltip}) do
-    if tt and tt.HookScript then pcall(tt.HookScript, tt, "OnTooltipSetItem", function(t) pcall(OnItemTooltip, t) end) end
+    if tt and tt.HookScript then pcall(PSS.HookScript, tt, "OnTooltipSetItem", function(t) pcall(OnItemTooltip, t) end) end
   end
 end
 for _, tt in ipairs({GameTooltip, ItemRefTooltip}) do
   if tt and tt.HookScript then
-    pcall(tt.HookScript, tt, "OnTooltipCleared", function(t) t.pssGearDone = nil end)
-    pcall(tt.HookScript, tt, "OnHide", function(t) t.pssGearDone = nil end)
+    pcall(PSS.HookScript, tt, "OnTooltipCleared", function(t) t.pssGearDone = nil end)
+    pcall(PSS.HookScript, tt, "OnHide", function(t) t.pssGearDone = nil end)
   end
 end
 
@@ -396,19 +396,19 @@ local function HookAll()
   if hooked or not hooksecurefunc then return end
   hooked = true
   if type(QuestInfo_Display) == "function" then
-    hooksecurefunc("QuestInfo_Display", function() pcall(GC.MarkQuestRewards, GC) end)
+    PSS.HookSecure("QuestInfo_Display", function() pcall(GC.MarkQuestRewards, GC) end)
   end
   if type(GroupLootFrame_OpenNewFrame) == "function" then
-    hooksecurefunc("GroupLootFrame_OpenNewFrame", function() pcall(GC.MarkRolls, GC) end)
+    PSS.HookSecure("GroupLootFrame_OpenNewFrame", function() pcall(GC.MarkRolls, GC) end)
   end
   if type(ContainerFrame_Update) == "function" then
-    hooksecurefunc("ContainerFrame_Update", function(f) PSS:Soon(f, function() GC:MarkContainer(f) end) end)
+    PSS.HookSecure("ContainerFrame_Update", function(f) PSS:Soon(f, function() GC:MarkContainer(f) end) end)
   end
   local frames = {G("ContainerFrameCombinedBags")}
   for i = 1, 13 do frames[#frames + 1] = G("ContainerFrame" .. i) end
   for _, f in pairs(frames) do
     if f and type(f.UpdateItems) == "function" then
-      pcall(hooksecurefunc, f, "UpdateItems", function(self) PSS:Soon(self, function() GC:MarkContainer(self) end) end)
+      pcall(PSS.HookSecure, f, "UpdateItems", function(self) PSS:Soon(self, function() GC:MarkContainer(self) end) end)
     end
   end
 end

@@ -361,7 +361,7 @@ local function MakeUnit(unit, w, h, ph, big)
   f:SetScript("OnEnter", UnitOnEnter)
   f:SetScript("OnLeave", function() GameTooltip:Hide() end)
   if unit ~= "player" and RegisterUnitWatch then RegisterUnitWatch(f) end
-  f:HookScript("OnShow", function(self) UpdateUnit(self); UpdatePortrait(self) end)
+  PSS.HookScript(f, "OnShow", function(self) UpdateUnit(self); UpdatePortrait(self) end)
   -- Visible colours from the first frame on (before any event arrives).
   local r, g, b = HealthColour(unit)
   f.hp:SetStatusBarColor(r, g, b)
@@ -575,14 +575,14 @@ local function BuildBars()
   for _, n in ipairs({"MainMenuBar", "MainActionBar", "MultiBarBottomLeft", "MultiBarBottomRight",
     "PetActionBar", "StanceBar"}) do
     local f = G(n)
-    if f and type(f.UpdateGridLayout) == "function" then hooksecurefunc(f, "UpdateGridLayout", relayout) end
+    if f and type(f.UpdateGridLayout) == "function" then PSS.HookSecure(f, "UpdateGridLayout", relayout) end
   end
   if EventRegistry and EventRegistry.RegisterCallback then
     pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Exit", relayout, LY)
   end
   for _, fn in ipairs({"MultiActionBar_Update", "UIParent_ManageFramePositions", "MainMenuBar_UpdateArt"}) do
     if type(_G[fn]) == "function" then
-      hooksecurefunc(fn, relayout)
+      PSS.HookSecure(fn, relayout)
     end
   end
 end
@@ -823,7 +823,7 @@ function LY:StyleTabs()
       end
       if not tabsVisible[tab] and hooksecurefunc then
         tabsVisible[tab] = true
-        pcall(hooksecurefunc, tab, "SetAlpha", KeepVisible)
+        pcall(PSS.HookSecure, tab, "SetAlpha", KeepVisible)
       end
       tabBusy = true; pcall(tab.SetAlpha, tab, 1); tabBusy = false
     end
@@ -846,7 +846,7 @@ local function HookChat()
   for _, fn in ipairs({"FCF_DockUpdate", "FCFTab_UpdateColors", "FCF_Tab_OnClick", "FCF_OpenNewWindow",
     "FCF_Close", "FCFDock_SelectWindow", "FCF_SelectDockFrame"}) do
     if type(_G[fn]) == "function" then
-      hooksecurefunc(fn, function()
+      PSS.HookSecure(fn, function()
         PSS:Soon("chattabs", function() PlaceDock(); pcall(LY.StyleTabs, LY) end)
       end)
     end
@@ -879,7 +879,7 @@ function LY:HookChatFrameSize(cf)
     PSS:Soon("chatfit", function() LY:FitChatFrame() end, 0.05)
   end
   for _, m in ipairs({"SetSize", "SetHeight", "SetWidth", "SetPoint"}) do
-    if type(cf[m]) == "function" then pcall(hooksecurefunc, cf, m, again) end
+    if type(cf[m]) == "function" then pcall(PSS.HookSecure, cf, m, again) end
   end
 end
 
@@ -954,10 +954,10 @@ function LY:HookEditBox(eb)
   end
   local function update() pcall(LY.UpdateEditBoxes, LY) end
   for _, sc in ipairs({"OnShow", "OnHide", "OnEditFocusGained", "OnEditFocusLost"}) do
-    pcall(eb.HookScript, eb, sc, update)
+    pcall(PSS.HookScript, eb, sc, update)
   end
   if hooksecurefunc then
-    pcall(hooksecurefunc, eb, "SetAlpha", function(_, a)
+    pcall(PSS.HookSecure, eb, "SetAlpha", function(_, a)
       if ebBusy then return end
       local want = Typing(eb) and 1 or 0
       if a ~= want then ebBusy = true; pcall(eb.SetAlpha, eb, want); ebBusy = false end
@@ -1120,15 +1120,15 @@ end
 
 local function BuildChatHooks()
   if type(GameTooltip_SetDefaultAnchor) == "function" then
-    hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tt) if LY.applied.chat then TooltipAnchor(tt) end end)
+    PSS.HookSecure("GameTooltip_SetDefaultAnchor", function(tt) if LY.applied.chat then TooltipAnchor(tt) end end)
   end
   if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
     pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, PSS:Timed("item tooltip (theme)", function(tt) pcall(TooltipQuality, tt) end))
   elseif GameTooltip and GameTooltip.HookScript then
-    pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetItem", function(tt) pcall(TooltipQuality, tt) end)
+    pcall(PSS.HookScript, GameTooltip, "OnTooltipSetItem", function(tt) pcall(TooltipQuality, tt) end)
   end
   if GameTooltip and GameTooltip.HookScript then
-    GameTooltip:HookScript("OnTooltipCleared", function(tt)
+    PSS.HookScript(GameTooltip, "OnTooltipCleared", function(tt)
       local S = PSS.Skin
       local bd = S and S.BackdropOf and S:BackdropOf(tt)
       if bd and S.active then
@@ -1139,7 +1139,7 @@ local function BuildChatHooks()
   end
   for _, fn in ipairs({"MoveMicroButtons", "UpdateMicroButtonsParent", "UpdateMicroButtons"}) do
     if type(_G[fn]) == "function" then
-      hooksecurefunc(fn, function() PSS:Soon("menus", function() if not InCombat() then pcall(LY.PlaceMenus, LY) end end) end)
+      PSS.HookSecure(fn, function() PSS:Soon("menus", function() if not InCombat() then pcall(LY.PlaceMenus, LY) end end) end)
     end
   end
 end
@@ -1434,7 +1434,7 @@ local function BuildMinimap()
   end
   -- Blizzard re-lays out the cluster (edit mode, header option): put it back.
   if mc and type(mc.Layout) == "function" then
-    hooksecurefunc(mc, "Layout", function() PSS:Soon("minimap", function() if not InCombat() then pcall(LY.PlaceMinimap, LY) end end) end)
+    PSS.HookSecure(mc, "Layout", function() PSS:Soon("minimap", function() if not InCombat() then pcall(LY.PlaceMinimap, LY) end end) end)
   end
   if C_Timer and C_Timer.After then
     C_Timer.After(1, function() pcall(LY.RefreshMinimapButtons, LY) end)
@@ -1452,7 +1452,7 @@ local function BuildMinimap()
   PSS:Every(mmHolder, 2)
   if mm.EnableMouseWheel then
     mm:EnableMouseWheel(true)
-    mm:HookScript("OnMouseWheel", function(self, delta)
+    PSS.HookScript(mm, "OnMouseWheel", function(self, delta)
       local z = Plain(Call(self.GetZoom, self)) or 0
       local levels = Plain(Call(self.GetZoomLevels, self)) or 5
       if delta > 0 then z = math.min(levels - 1, z + 1) else z = math.max(0, z - 1) end
@@ -1592,7 +1592,7 @@ function LY:ChatFonts()
   end
   if not chatFontHooked and hooksecurefunc and type(FCF_SetChatWindowFontSize) == "function" then
     chatFontHooked = true
-    hooksecurefunc("FCF_SetChatWindowFontSize", function()
+    PSS.HookSecure("FCF_SetChatWindowFontSize", function()
       if C_Timer and C_Timer.After then C_Timer.After(0, function() LY:ChatFonts() end) else LY:ChatFonts() end
     end)
   end

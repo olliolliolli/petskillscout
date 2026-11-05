@@ -105,7 +105,7 @@ local function Fade(region)
   end
   if not hookedAlpha[region] and hooksecurefunc then
     hookedAlpha[region] = true
-    pcall(hooksecurefunc, region, "SetAlpha", OnAlpha)
+    pcall(PSS.HookSecure, region, "SetAlpha", OnAlpha)
   end
   busy = true; pcall(region.SetAlpha, region, 0); busy = false
 end
@@ -353,7 +353,7 @@ local TOOLTIPS = {"GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "Shopping
 local function HookShow(frame, fn)
   if type(frame) ~= "table" or hookedShow[frame] or not frame.HookScript then return end
   hookedShow[frame] = true
-  pcall(frame.HookScript, frame, "OnShow", function(f) if S.active then pcall(fn, f) end end)
+  pcall(PSS.HookScript, frame, "OnShow", function(f) if S.active then pcall(fn, f) end end)
 end
 
 local function WindowNow(f) S:Window(f) end
@@ -667,15 +667,15 @@ local function HookTracker()
   local otf = G("ObjectiveTrackerFrame")
   if otf then
     for _, m in ipairs({"Update", "Layout"}) do
-      if type(otf[m]) == "function" then pcall(hooksecurefunc, otf, m, again) end
+      if type(otf[m]) == "function" then pcall(PSS.HookSecure, otf, m, again) end
     end
   end
   for _, fn in ipairs({"ObjectiveTracker_Update", "ObjectiveTracker_Expand", "ObjectiveTracker_Collapse"}) do
-    if type(_G[fn]) == "function" then hooksecurefunc(fn, again) end
+    if type(_G[fn]) == "function" then PSS.HookSecure(fn, again) end
   end
   for _, n in ipairs(TRACKER_MODULES) do
     local m = G(n)
-    if m and type(m.Update) == "function" then pcall(hooksecurefunc, m, "Update", again) end
+    if m and type(m.Update) == "function" then pcall(PSS.HookSecure, m, "Update", again) end
   end
 end
 
@@ -799,7 +799,7 @@ local function SkinActionButton(b)
   StyleHotkey(b)
   if not hookedShow[b] and hooksecurefunc then
     hookedShow[b] = true
-    if type(b.UpdateHotkeys) == "function" then pcall(hooksecurefunc, b, "UpdateHotkeys", StyleHotkey) end
+    if type(b.UpdateHotkeys) == "function" then pcall(PSS.HookSecure, b, "UpdateHotkeys", StyleHotkey) end
   end
   -- Border on the button edge, fill behind the icon.
   S:Backdrop(b, "slot", {0, 0, 0, 0}, "OVERLAY")
@@ -811,7 +811,7 @@ local hotkeyHooked = false
 local function SkinBars()
   if not hotkeyHooked and type(ActionButton_UpdateHotkeys) == "function" and hooksecurefunc then
     hotkeyHooked = true
-    hooksecurefunc("ActionButton_UpdateHotkeys", function(b) pcall(StyleHotkey, b) end)
+    PSS.HookSecure("ActionButton_UpdateHotkeys", function(b) pcall(StyleHotkey, b) end)
   end
   for _, def in ipairs(BAR_BUTTONS) do
     for i = 1, def[2] do SkinActionButton(G(def[1] .. i)) end

@@ -43,7 +43,7 @@ local function NoticeFilter(_, _, ...)
 end
 if ChatFrame_AddMessageEventFilter then
   for _, e in ipairs({"CHAT_MSG_CHANNEL_NOTICE", "CHAT_MSG_CHANNEL_NOTICE_USER", "CHAT_MSG_CHANNEL"}) do
-    pcall(ChatFrame_AddMessageEventFilter, e, NoticeFilter)
+    pcall(ChatFrame_AddMessageEventFilter, e, PSS:Timed("chat filter", NoticeFilter))
   end
 end
 
