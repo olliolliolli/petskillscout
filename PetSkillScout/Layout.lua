@@ -831,9 +831,19 @@ function LY:StyleTabs()
   end
 end
 
-local function PlaceDock()
+local PlaceDock
+function PlaceDock()
   local dock = G("GeneralDockManager")
   if not (dock and leftPanel) or InCombat() then return end
+  -- Leave the dock alone while a tab is dragged, and when it is already in
+  -- place: re-anchoring it in the middle of the game's own tab layout (for
+  -- example when tabs are swapped) left the tabs on top of each other.
+  if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then
+    PSS:Soon("chattabs-later", PlaceDock, 0.5)
+    return
+  end
+  local p, rel, rp, x, y = dock:GetPoint(1)
+  if dock:GetNumPoints() == 2 and p == "BOTTOMLEFT" and rel == leftPanel and rp == "TOPLEFT" and x == 0 and y == 2 then return end
   pcall(dock.ClearAllPoints, dock)
   pcall(dock.SetPoint, dock, "BOTTOMLEFT", leftPanel, "TOPLEFT", 0, 2)
   pcall(dock.SetPoint, dock, "BOTTOMRIGHT", leftPanel, "TOPRIGHT", 0, 2)
@@ -848,7 +858,10 @@ local function HookChat()
     "FCF_Close", "FCFDock_SelectWindow", "FCF_SelectDockFrame"}) do
     if type(_G[fn]) == "function" then
       PSS.HookSecure(fn, function()
-        PSS:Soon("chattabs", function() PlaceDock(); pcall(LY.StyleTabs, LY) end)
+        PSS:Soon("chattabs", function()
+          if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then return end -- dragging a tab
+          PlaceDock(); pcall(LY.StyleTabs, LY)
+        end)
       end)
     end
   end

@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.2
+- Theme: swapping chat tabs by dragging could leave the tabs on top of each other (the theme
+  re-anchored the chat dock in the middle of the game's tab layout). The dock is now left alone
+  while a tab is dragged and is only moved when it is not in place.
+
 3.0.1
 - Built-in learned data (LearnedData.lua): at every data update, confirmed findings of players -
   quests and rewards, ammo vendors, places rares were seen - go into the addon itself, so every
