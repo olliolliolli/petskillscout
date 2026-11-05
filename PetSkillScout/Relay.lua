@@ -149,6 +149,43 @@ if PSS.Sync then
   end
 end
 
+-- Built-in learned data (tools/learned.lua at each data update): merged into
+-- your saved data once per version, so it is used and relayed like your own.
+function RL:Seed()
+  local L, d = PSS.LearnedData, DB()
+  if not (L and d) or d.learnedSeed == PSS.version then return 0 end
+  local n = 0
+  local QL = PSS.QuestLearn
+  for id, r in pairs(L.quests or {}) do
+    if QL and not QL:Records()[id] then
+      local rec = QL:Add(id, {n = r.n, g = r.g, gn = r.gn, f = r.f, m = r.m, x = r.x, y = r.y, i = r.i}, "~data")
+      if rec then rec.b = true; n = n + 1 end
+    end
+  end
+  d.ammoVendors = d.ammoVendors or {}
+  for npc, v in pairs(L.vendors or {}) do
+    if not d.ammoVendors[npc] then
+      d.ammoVendors[npc] = {n = v.n, m = v.m, x = v.x, y = v.y, k = v.k, z = v.z, from = "data", t = 0}
+      n = n + 1
+    end
+  end
+  for id, list in pairs(L.rares or {}) do
+    for _, p in ipairs(list) do
+      if self:AddSpot(id, list.npc, p.m, p.x, p.y, 1, "~data") then n = n + 1 end
+      for _, q in ipairs(self:Spots()[id]) do
+        if q.m == p.m and math.abs(q.x - p.x) <= NEAR and math.abs(q.y - p.y) <= NEAR then q.c = true end
+      end
+    end
+  end
+  d.learnedSeed = PSS.version
+  return n
+end
+do
+  local f = CreateFrame("Frame")
+  f:RegisterEvent("PLAYER_LOGIN")
+  f:SetScript("OnEvent", function() pcall(RL.Seed, RL) end)
+end
+
 -- Ask again now and then: other hunters may have come from other realms.
 if C_Timer and C_Timer.NewTicker then
   C_Timer.NewTicker(PULL_EVERY, function()

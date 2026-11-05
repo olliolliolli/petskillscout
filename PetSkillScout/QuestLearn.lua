@@ -89,6 +89,7 @@ function QL:Best(rec)
 end
 
 function QL:Confirmed(rec)
+  if rec.b then return true end -- shipped with the addon (checked at the data update)
   local p, n, mine = self:Best(rec)
   return p ~= nil and (n >= 2 or mine)
 end

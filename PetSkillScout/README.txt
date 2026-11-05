@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.1
+- Built-in learned data (LearnedData.lua): at every data update, confirmed findings of players -
+  quests and rewards, ammo vendors, places rares were seen - go into the addon itself, so every
+  player on every realm gets them with the next version, even without the network. They are
+  merged into your saved data once per version and relayed like your own. First batch: 3 quests
+  with new rewards, 3 ammo vendors in Teldrassil, 1 Nightscreech spot.
+
 3.0.0
 - Relay between realms: the hunter network only reaches your realm, but the addon's data belongs
   to your whole account. Whatever you learn - quests and their givers, ammo vendors, places where

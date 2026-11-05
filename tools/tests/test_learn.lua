@@ -153,5 +153,21 @@ do
   PetSkillScoutDB.relay = nil
   PSS.Sync.SendAll = nil
 end
+
+-- 3.0.1: built-in learned data is merged once and counts as confirmed.
+do
+  local RL, QL = PSS.Relay, PSS.QuestLearn
+  PSS.LearnedData = {quests = {[990777] = {n = "Lost Bow", g = 5, f = "A", m = 1438, x = 10, y = 20, i = {123}}},
+    vendors = {[777] = {n = "Ammo Joe", m = 1438, x = 30, y = 40, k = "ab"}},
+    rares = {Snarl = {npc = 99, {m = 1438, x = 50, y = 50}}}}
+  PetSkillScoutDB.learnedSeed = nil
+  local n = RL:Seed()
+  ok(n == 3, "seeded quest, vendor and rare spot: " .. n)
+  ok(QL:Confirmed(QL:Records()[990777]), "built-in quest counts as confirmed")
+  ok(PetSkillScoutDB.ammoVendors[777] and PetSkillScoutDB.ammoVendors[777].from == "data", "built-in vendor")
+  ok(PetSkillScoutDB.rareSpots.Snarl[1].c, "built-in rare spot confirmed")
+  ok(RL:Seed() == 0, "seeded only once per version")
+  PSS.LearnedData = nil
+end
 print("passed " .. pass .. ", failed " .. fail)
 os.exit(fail == 0 and 0 or 1)
