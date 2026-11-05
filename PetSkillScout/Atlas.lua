@@ -98,6 +98,15 @@ function A:Build()
       self.byNpc[b.npcID] = rec
     end
   end
+  -- Beasts still without a position: ATT positions on their own zone map (PetDataATT.lua).
+  for _, rec in ipairs(self.list) do
+    local att = PSS.BeastPositionsATT and PSS.BeastPositionsATT[rec.npcID]
+    if att and not (rec.spawnPoints and #rec.spawnPoints > 0) then
+      rec.mapID, rec.spawnPoints = att.mapID, att.points
+      rec.x, rec.y = att.points[1][1], att.points[1][2]
+      rec.verifiedCoords, rec.source = true, "AllTheThings"
+    end
+  end
   table.sort(self.list, function(x, y)
     local lx, ly = x.minLevel or 99, y.minLevel or 99
     if lx ~= ly then return lx < ly end

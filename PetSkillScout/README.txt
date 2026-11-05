@@ -1,4 +1,4 @@
-PetSkillScout 2.6.0 - WoW: Forever (Interface 16001)
+PetSkillScout 2.6.1 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -145,13 +145,21 @@ DATA AND LIMITATIONS
   Tendon Rip, Savage Rend, Dust Cloud, Mine!, Trickster's Dance, Lava Breath)
   have no known wild teaching beasts; the addon says so instead of showing an
   empty list.
-- Not yet in the database (no public source lists the teachers): Demoralizing
-  Screech 1-4, Lightning Breath 1 and 6, Thunderstomp 4.
+- Teachers for Demoralizing Screech 1-4 and Lightning Breath 6 come from the
+  AllTheThings Forever database. Lightning Breath 1 has no wild teacher there
+  either, and that database lists only 3 ranks of Thunderstomp.
 - Data comes from the Forever beta (build 1.60.1.704xx). Re-check after launch.
 - 305 skill / rank records across 266 NPCs with 10,956 spawn points, imported
   from a community dataset (2026-10-06). Accuracy on the live realm is not
   independently verified. Coordinates that are unknown are never invented.
 - Rank and pet level data: WCLBox Forever pet database and Forever guides.
+- AllTheThings Forever database (MIT, PetDataATT.lua): 48 more teaching-beast
+  records (mostly dungeon beasts) and positions of 196 tameable beasts on their
+  own zone map, used where the addon had no spawn points (e.g. Zephras Isle).
+  Checked on 2026-11-04: 162 beasts' spawn areas match an ATT position within
+  3% of the map, 33 differ (ATT often has one point, e.g. a quest objective; to
+  be checked in game), 103 beasts (mostly in dungeons and new Forever NPCs)
+  have no known position yet.
 - The rare radar sees only units the client shows (nameplates, target,
   mouseover). It cannot detect spawns out of view.
 - "Distance" is a straight line, not a travel path. The skill route orders
@@ -182,7 +190,7 @@ NPC and display IDs: AzerothCore world database (creature_template, creature_tem
 
 CREDITS
 Quest database (quest givers, positions, levels, previous quests,
-objectives, rewards): AllTheThings by the ATT team
+objectives, rewards) and part of the pet data (PetDataATT.lua): AllTheThings by the ATT team
 (https://github.com/ATTWoWAddon/AllTheThings), WoW Forever database, MIT
 licence - the licence text is in QuestDB-LICENSE.txt.
 Gear data and the quest / item IDs of the Quests tab: wow-classic-items
@@ -193,6 +201,18 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.6.1
+- Data update 2026-11-04 (AllTheThings Forever database, commit d503738):
+  48 more teaching beasts for pet skills, among them the first known teachers
+  of Demoralizing Screech 1-4 and Lightning Breath 6, and four beasts that
+  were missing from the beast list (Kresh, Ghamoo-ra, Spawn of Hakkar,
+  Deviate Crocolisk).
+- Positions for 11 tameable beasts that had none, among them the Zephras
+  Isle beasts and rares (Slydris, Fernfeather, Mystmane), Rekk'tilac and
+  the Sewer Beast. Positions are only taken when they lie on the beast's own
+  zone map.
+- Quests, quest rewards and items: no changes since 2.6.0.
+
 2.6.0
 - Quest database for all of WoW Forever: 4,444 quests from the open
   AllTheThings project (MIT), updated on November 4 (launch day data).
