@@ -32,7 +32,7 @@ S.Register = Register
 local queue, tokens, lastRefill = {}, 8, nil
 local function RawSend(msg, dist, target)
   local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
-  if type(fn) == "function" then pcall(fn, PREFIX, msg, dist, target) end
+  if type(fn) == "function" then S:NoteSent(msg); pcall(fn, PREFIX, msg, dist, target) end
 end
 local function Refill()
   local now = Now()
@@ -180,13 +180,43 @@ local function Flooding(who)
   return r.n > 30
 end
 
+-- Is this sender you? Your own messages come back from the guild and the
+-- network channel, and the name there can be longer than UnitName("player")
+-- ("First Last", "Name-Realm"). A message you sent a moment ago, coming back
+-- under a name that starts with yours, is you - and that name is remembered.
+local sentAt = {}
+function S:NoteSent(msg) sentAt[msg] = Now() end
+local function Squash(s) return (tostring(s or ""):gsub("[%s%-]", ""):lower()) end
+function S:MyNames()
+  local d = PetSkillScoutDB
+  d.myNetNames = d.myNetNames or {}
+  return d.myNetNames
+end
+function S:IsMe(who, msg)
+  local me = UnitName and UnitName("player")
+  if not me then return false end
+  if who == me or self:MyNames()[who] then return true end
+  local hit = false
+  local full = GetUnitName and GetUnitName("player", true)
+  if type(full) == "string" and Squash(full) == Squash(who) then hit = true end
+  local t = msg and sentAt[msg]
+  if t and Now() - t < 60 and Squash(who):sub(1, #Squash(me)) == Squash(me) then hit = true end
+  if not hit then return false end
+  self:MyNames()[who] = true
+  -- Drop the "second you" saved by older versions.
+  local peers = PetSkillScoutDB.peers
+  if peers then peers[who] = nil; peers[(who:gsub("%s", ""))] = nil end
+  return true
+end
+
+
 function S:Receive(msg, channel, sender)
   if not (PetSkillScoutDB and Enabled()) or type(msg) ~= "string" or #msg > 250 or type(sender) ~= "string" then return end
   local who = Ambiguate and Ambiguate(sender, "short") or sender
-  who = who:match("^[^-]+") or who -- "Name-Realm" -> "Name" (else you show up twice)
-  who = (who:gsub("[^%w\128-\255]", "")):sub(1, 24)
-  local me = UnitName and UnitName("player")
-  if who == "" or who == me then return end
+  who = who:match("^[^-]+") or who -- "Name-Realm" -> "Name"
+  -- Forever names are "First Last": keep the space, drop anything odd.
+  who = (who:gsub("[^%w\128-\255 ]", ""):gsub("^%s+", ""):gsub("%s+$", "")):sub(1, 32)
+  if who == "" or S:IsMe(who, msg) then return end
   if Flooding(who) then return end
   local parts = {strsplit(SEP, msg)}
   local kind = parts[1]

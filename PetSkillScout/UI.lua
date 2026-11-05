@@ -4261,6 +4261,8 @@ local SETTINGS = {
         if not PSS.Net then return end
         if PetSkillScoutDB.netEnabled == false then PSS.Net:Leave() else PSS.Net:ShowConnect(true); PSS.Net:Hello(true) end; PSS.Net:UpdateJoinButtons()
       end},
+    {key="netChatTab", label="optNetChat", hint="optNetChatHint", kind="toggle", default=true,
+      apply=function() PetSkillScoutDB.netChatMade = nil; if PSS.NetChat then PSS.NetChat.tried = nil; PSS.NetChat:Ensure() end end},
     {key="netConnect", label="optNetConnect", hint="optNetConnectHint", kind="action", button="netConnectBtn",
       run=function() if PSS.Net and not PSS.Net:ShowConnect(true) then PSS:Print(PSS:L(PSS.Net:ChannelID() and "netJoined" or "netNoConnect")) end end},
     {key="netInfo", label="optNetInfo", hint="", kind="info",

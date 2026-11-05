@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+2.9.4
+- Hunter network: Forever names are "First Last". Your own messages coming back under your full
+  name no longer list you twice (the old duplicate is removed), and other hunters keep their
+  full name with the space.
+- New chat tab "Hunters" (Settings > Hunter network, on): every network event appears there live -
+  joins, rares seen / tamed / killed, taming queues, ammo vendors, quests found. Close the tab to
+  stop it; switching the option off and on brings it back.
+
 2.9.3
 - Lower CPU: world map pin updates (beasts, rares, quests) stop while the map is closed; the
   info bar scans bags, ammo and durability every 5 s instead of every second; minimap button

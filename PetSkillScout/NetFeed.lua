@@ -25,6 +25,7 @@ function F:Add(kind, who, a, b, mine)
   table.insert(list, 1, {t = Now(), kind = kind, who = who, a = a, b = b, mine = mine})
   if #list > MAX then list[#list] = nil end
   self.changed = true
+  if PSS.NetChat then pcall(PSS.NetChat.Post, PSS.NetChat, list[1]) end
   if PSS.UI and PSS.UI.view == "network" and PSS.UI.UpdateNetwork then pcall(PSS.UI.UpdateNetwork, PSS.UI) end
 end
 

@@ -275,6 +275,34 @@ do
   if d2:IsShown() then fails = fails + 1; print("FAIL late map driver sleeps too") end
   WorldMapFrame = oldWM
 end
+-- 2.9.4: Forever names are "First Last" - your own echo is still you.
+do
+  local S = PSS.Sync
+  PetSkillScoutDB.peers = PetSkillScoutDB.peers or {}
+  PetSkillScoutDB.peers["TesterSmith"] = {t = time()} -- left by an older version
+  S:NoteSent("H|test|1")
+  if not S:IsMe("Tester Smith", "H|test|1") then fails = fails + 1; print("FAIL own First Last echo is you") end
+  if PetSkillScoutDB.peers["TesterSmith"] then fails = fails + 1; print("FAIL old duplicate of you removed") end
+  if not S:IsMe("Tester Smith", "other") then fails = fails + 1; print("FAIL your full name is remembered") end
+  if S:IsMe("Mira Stone", "H|test|1") then fails = fails + 1; print("FAIL another hunter is not you") end
+  PSS.Sync:Receive("H", "CHANNEL", "Mira Stone-Grillz")
+  if not PetSkillScoutDB.peers["Mira Stone"] then fails = fails + 1; print("FAIL First Last peer kept with space") end
+end
+-- 2.9.4: network events go to their own chat tab.
+do
+  local lines, made = {}, nil
+  local oldOpen, oldInfo = FCF_OpenNewWindow, GetChatWindowInfo
+  FCF_OpenNewWindow = function(name)
+    made = CreateFrame("Frame"); made.AddMessage = function(_, t) lines[#lines + 1] = t end
+    ChatFrame7 = made; return made
+  end
+  GetChatWindowInfo = function(i) if i == 7 and made then return PSS:L("netChatTab"), 12, 1, 1, 1, 1, true, 0 end end
+  PetSkillScoutDB.netChatMade = nil; PSS.NetChat.tried = nil
+  PSS.NetFeed:Add("rare", "Mira Stone", "Ghostfang", "Barrens")
+  PSS.NetFeed:Add("join", "Ole Brand", "2.9.4")
+  if not made or #lines ~= 2 or not lines[1]:find("Ghostfang", 1, true) then fails = fails + 1; print("FAIL network chat tab gets events: " .. #lines) end
+  FCF_OpenNewWindow, GetChatWindowInfo = oldOpen, oldInfo
+end
 -- Secure buttons run on the client's click phase (both registered).
 do
   local old = GetCVarBool
