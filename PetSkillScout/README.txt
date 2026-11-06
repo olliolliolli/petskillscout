@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.5.1
+- Gamepad bar: the button glyphs (A, B, X, Y, LT, RT...) are back - only the big round art of
+  the backings is hidden.
+
 3.5.0
 - Gamepad action bar in the theme (GamepadTheme.lua, only in gamepad mode): all gamepad buttons
   get the theme's action button look (square border, cropped icon, theme fonts and colours of

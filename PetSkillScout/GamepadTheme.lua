@@ -99,7 +99,16 @@ local function SkinTree(f, depth)
       -- (button labels LT / RT / LB...) stay.
       local okS, w, h = pcall(function() return c:GetWidth(), c:GetHeight() end)
       if okS and type(w) == "number" and w >= 120 and h >= 60 and PSS.Skin and PSS.Skin.Fade then
-        for _, r in ipairs(Regions(c)) do pcall(PSS.Skin.Fade, r) end
+        -- Only the big round art; the small button glyphs (A, B, X, Y, LT,
+        -- RT...) drawn on the same backing stay, a bit dimmer and smaller look.
+        for _, r in ipairs(Regions(c)) do
+          local okR, rw, rh = pcall(function() return r:GetWidth(), r:GetHeight() end)
+          if okR and type(rw) == "number" and (rw >= 48 or rh >= 48) then
+            pcall(PSS.Skin.Fade, r)
+          elseif r.SetAlpha then
+            pcall(r.SetAlpha, r, 0.85)
+          end
+        end
       end
     end
     SkinTree(c, depth + 1)
