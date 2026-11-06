@@ -117,9 +117,12 @@ local function walk(node, ctx, depth)
   end
   -- Holiday content (ROOTS.Holidays, or a node with an event): seasonal NPCs
   -- stand there only during the event.
-  if rawget(node, "e") or (ctx.root and ROOTS and ctx.root == tostring(ROOTS.Holidays)) then
+  -- holiday = the event ID (EVENTS.*, the same IDs as the game calendar), or
+  -- -1 when the node is under ROOTS.Holidays without an event.
+  local ev = tonumber(rawget(node, "e"))
+  if ev or (ctx.root and ROOTS and ctx.root == tostring(ROOTS.Holidays) and not c.holiday) then
     if c == ctx then c = {}; for k, v in pairs(ctx) do c[k] = v end end
-    c.holiday = true
+    c.holiday = ev or c.holiday or -1
   end
   if rawget(node, "questID") then
     count = count + 1
@@ -127,8 +130,8 @@ local function walk(node, ctx, depth)
     local prev = quests[id]
     if not prev or (not prev.coord and (node.coord or node.coords)) then
       quests[id] = {node = node, ctx = c, holiday = c.holiday or (prev and prev.holiday)}
-    elseif c.holiday then
-      prev.holiday = true
+    elseif c.holiday and not prev.holiday then
+      prev.holiday = c.holiday
     end
   end
   local g = rawget(node, "groups") or rawget(node, "g")

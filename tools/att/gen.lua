@@ -84,7 +84,7 @@ for _, id in ipairs(ids) do
     if #obj > 0 then f[#f + 1] = 'o="' .. table.concat(obj) .. '"' end
     if ox then f[#f + 1] = string.format("ox=%s,oy=%s,om=%d", num(ox[1]), num(ox[2]), ox[3]) end
     if #items > 0 then f[#f + 1] = "i=" .. arr(items) end
-    if Q[id].holiday then f[#f + 1] = "hol=1" end
+    if Q[id].holiday then f[#f + 1] = "hol=" .. num(Q[id].holiday) end
     if QNAME[id] then f[#f + 1] = "n=" .. string.format("%q", QNAME[id]) end
     lines[#lines + 1] = string.format("[%d]={%s},", id, table.concat(f, ","))
     stats.kept = stats.kept + 1
@@ -100,7 +100,7 @@ fh:write("-- Forever database, MIT licence - the licence text is in QuestDB-LICE
 fh:write("-- Source commit " .. (arg[3] or "?") .. ". Fields: g quest giver NPC, x/y/m giver position (0-100, uiMapID),\n")
 fh:write("-- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),\n")
 fh:write("-- a alternative quests, b breadcrumb, r repeatable, sk profession, mr reputation, d dungeon / raid,\n")
-fh:write("-- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday (seasonal), n name.\n")
+fh:write("-- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.\n")
 fh:write("local PSS = PetSkillScout\nPSS.QuestDB = {\n")
 fh:write(table.concat(lines, "\n"))
 fh:write("\n}\nPSS.QuestNPC = {\n")

@@ -345,10 +345,11 @@ function W:OnMap(mapID, level)
   for _, id in ipairs(self.byMap[mapID] or {}) do
     -- Map pins only for quests that an NPC gives: quests started by an item
     -- or object have no one standing at the position, holiday givers stand
-    -- there only during the event (hol), and ATT entries
+    -- there only during the event (hol: shown while the calendar has it), and ATT entries
     -- marked for later expansions ("[CATA+]") do not exist in Forever.
     local rec = self:Record(id)
-    local pinnable = rec and rec.g and not rec.hol and not (rec.n and rec.n:find("%[%u+%+%]"))
+    local holidayOff = rec and rec.hol and not (PSS.Holidays and PSS.Holidays:IsActive(rec.hol))
+    local pinnable = rec and rec.g and not holidayOff and not (rec.n and rec.n:find("%[%u+%+%]"))
     if pinnable and self:Available(id, level) then
       local rate = self:Rate(id, level)
       out[#out + 1] = {id = id, r = self:Record(id), rate = rate}
@@ -369,7 +370,7 @@ function W:GiverVerdict(npc, level)
   local best
   for _, id in ipairs(self.byGiver[npc] or {}) do
     local rec = self:Record(id)
-    if not (rec and rec.hol) and self:Available(id, level) then
+    if not (rec and rec.hol and not (PSS.Holidays and PSS.Holidays:IsActive(rec.hol))) and self:Available(id, level) then
       local v = self:Verdict(id, level)
       if v == "great" then return "great" end
       if v == "ok" or not best then best = v end

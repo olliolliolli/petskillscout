@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.13
+- Quest pins: holiday quests are shown again while their holiday is on, read from the game
+  calendar (Lunar Festival, Hallow's End, Darkmoon Faire...). The quest database stores the
+  event ID of each holiday quest. /pss holidays lists today's holidays. If the client's
+  calendar has no holidays, holiday quests stay hidden.
+
 3.1.12
 - Quest pins: holiday quests (Lunar Festival elders, Hallow's End, Darkmoon Faire and other
   events - 219 quests) no longer get map pins; their givers stand there only during the event.
