@@ -245,14 +245,29 @@ function N:Hello(force)
   if PSS.Showcase then PSS.Showcase:Send() end
 end
 
+-- Hello numbers within sane limits: no fake ranking entries.
+local function Stat(v, max)
+  v = tonumber(v)
+  if v and v >= 0 and v <= max then return math.floor(v) end
+end
+N.Stat = Stat
+N.MAX_PEERS = 500
 local function OnHello(parts, who, dist)
-  local p = Peers()[who] or {}
-  p.t, p.v = Now(), parts[2]
-  p.score, p.skins, p.rares, p.fams = tonumber(parts[3]) or 0, tonumber(parts[4]) or 0, tonumber(parts[5]) or 0, tonumber(parts[6]) or 0
-  p.g = parts[7] ~= "" and parts[7] or nil
+  local ver = tostring(parts[2] or "")
+  if not ver:match("^%d+%.%d+%.?%d*$") then return end
+  local peers = Peers()
+  if not peers[who] then
+    local n = 0
+    for _ in pairs(peers) do n = n + 1 end
+    if n >= N.MAX_PEERS then return end
+  end
+  local p = peers[who] or {}
+  p.t, p.v = Now(), ver
+  p.score, p.skins, p.rares, p.fams = Stat(parts[3], 100000) or 0, Stat(parts[4], 10000) or 0, Stat(parts[5], 1000) or 0, Stat(parts[6], 100) or 0
+  p.g = parts[7] ~= "" and tostring(parts[7] or ""):sub(1, 48) or nil
   if dist == "GUILD" then p.guild = true end
   Peers()[who] = p
-  CheckVersion(who, parts[2])
+  CheckVersion(who, ver)
   if PSS.UI and PSS.UI.view == "collection" and PSS.UI.UpdateCollection then PSS.UI:UpdateCollection() end
 end
 

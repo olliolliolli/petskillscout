@@ -50,4 +50,14 @@ N:AddMember("Slu Gnu", "Slu Gnu-CAMWOWEU4Realm8PvP")
 check("other realm not added", N.members["Slu Gnu"] == nil)
 N:AddMember("Kim Bo", "Kim Bo-CAMWOWEU5Realm6PvP")
 check("own realm kept, short target", N.members["Kim Bo"] and N.members["Kim Bo"].target == "Kim Bo")
+-- Incoming data is checked (3.7.3).
+do
+  local N, S = PSS.Net, PSS.Sync
+  check("stat limits", N.Stat("5", 10) == 5 and N.Stat("99999", 10) == nil and N.Stat("-1", 10) == nil)
+  local old, got = S.handlers.ZZ, nil
+  S.handlers.ZZ = function(parts) got = parts[2] end
+  S:Receive("ZZ~a|cffff0000b", "PARTY", "Tester-Realm")
+  S.handlers.ZZ = old
+  check("escape codes stripped", got == nil or not got:find("|", 1, true))
+end
 print(string.format("passed %d, failed %d", passes, fails))

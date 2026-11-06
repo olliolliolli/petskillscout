@@ -15,7 +15,7 @@ local function safe(fn, ...)
 end
 
 local function HasPet()
-  return UnitExists and UnitExists("pet") and not (UnitIsDead and UnitIsDead("pet"))
+  return UnitExists and UnitExists("pet") and not (UnitIsDead and PSS.Plain(UnitIsDead("pet")))
 end
 
 -- 1 unhappy, 2 content, 3 happy (nil when not available), plus the exact
@@ -97,7 +97,7 @@ end
 function PC:BestFood()
   local diet = self:Diet()
   if not (diet and PSS.Foods) then return nil end
-  local petLevel = (UnitLevel and UnitLevel("pet")) or 1
+  local petLevel = (UnitLevel and PSS.Plain(UnitLevel("pet"))) or 1
   local full, partial, total = nil, nil, {}
   for bag = 0, 4 do
     for slot = 1, NumSlots(bag) do
@@ -186,7 +186,7 @@ local function CreateButton()
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
     GameTooltip:AddLine(PSS:Safe("PetSkillScout"), 0.44, 0.84, 1)
     if self.food then
-      GameTooltip:AddLine(PSS:Safe(string.format(PSS:L("feedButtonTip"), UnitName("pet") or "?", self.food.name)), 1, 1, 1, true)
+      GameTooltip:AddLine(PSS:Safe(string.format(PSS:L("feedButtonTip"), PSS.Plain(UnitName("pet")) or "?", self.food.name)), 1, 1, 1, true)
     end
     GameTooltip:AddLine(PSS:Safe(PSS:L("feedButtonDrag")), 0.6, 0.6, 0.6)
     GameTooltip:Show()
@@ -234,7 +234,7 @@ function PC:CheckReminder()
     local now = GetTime and GetTime() or 0
     if now - lastReminder > 60 then
       lastReminder = now
-      local msg = string.format(PSS:L("feedReminder"), UnitName("pet") or "?", PSS:L("happy" .. h))
+      local msg = string.format(PSS:L("feedReminder"), PSS.Plain(UnitName("pet")) or "?", PSS:L("happy" .. h))
       PSS:Print(msg)
       if RaidNotice_AddMessage and RaidWarningFrame then
         pcall(RaidNotice_AddMessage, RaidWarningFrame, PSS:Safe(msg), ChatTypeInfo and ChatTypeInfo.RAID_WARNING)

@@ -195,7 +195,7 @@ function R:Inspect(unit)
   end
   if not UnitExists or not UnitExists(unit) then return end
   if self:IsTamed(unit) then return end
-  local dead = UnitIsDead and UnitIsDead(unit)
+  local dead = UnitIsDead and PSS.Plain(UnitIsDead(unit))
   local npc = NpcIDFromGUID(UnitGUID and UnitGUID(unit))
   -- Prefer the language-independent NPC ID match.
   local entry = npc and self.byNpcID[npc]

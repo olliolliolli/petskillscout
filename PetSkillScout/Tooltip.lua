@@ -15,7 +15,7 @@ local function Enabled()
 end
 
 local function NpcID(unit)
-  local guid = UnitGUID and UnitGUID(unit)
+  local guid = UnitGUID and PSS.Plain(UnitGUID(unit))
   if type(guid) ~= "string" or not strsplit then return nil end
   local kind, _, _, _, _, id = strsplit("-", guid)
   if kind ~= "Creature" then return nil end

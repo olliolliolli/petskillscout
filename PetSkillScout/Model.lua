@@ -544,7 +544,7 @@ function Preview:ShowStable(pet)
   -- The pet that is currently summoned can be rendered straight from its unit,
   -- even when the stable record has no NPC or display ID.
   local view = pet
-  if UnitExists and UnitExists("pet") and UnitName and UnitName("pet") == pet.name then
+  if UnitExists and UnitExists("pet") and UnitName and PSS.Plain(UnitName("pet")) == pet.name then
     view = setmetatable({unit="pet"}, {__index=pet})
   end
   self:Show(view)

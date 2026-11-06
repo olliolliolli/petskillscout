@@ -232,6 +232,8 @@ function S:Receive(msg, channel, sender)
   if who == "" or S:IsMe(who, msg) then return end
   if Flooding(who) then return end
   local parts = {strsplit(SEP, msg)}
+  -- No chat escape codes or control characters from other players.
+  for i = 1, #parts do parts[i] = parts[i]:gsub("[|%c]", "") end
   local kind = parts[1]
   if PSS.Net and PSS.Net.Seen then PSS.Net:Seen(who, channel) end
   if channel == "WHISPER" and PSS.Net and PSS.Net.AddMember then PSS.Net:AddMember(who, sender); PSS.Net:Confirm(who) end

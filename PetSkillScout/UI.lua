@@ -454,7 +454,7 @@ local function NewModel(parent)
   -- opts = {unit=, display=, npc=}; the same subject is not reloaded.
   function m:ShowSubject(opts, force)
     opts = opts or {}
-    local guid = opts.unit and UnitGUID and UnitGUID(opts.unit)
+    local guid = opts.unit and UnitGUID and PSS.Plain(UnitGUID(opts.unit))
     local key = tostring(opts.unit) .. ":" .. tostring(guid) .. ":" .. tostring(opts.display) .. ":" .. tostring(opts.npc)
     if key == self.key and not force then return end
     self.key = key
@@ -4151,7 +4151,7 @@ function UI:PlaceFeedOverlay()
     b:SetScript("OnEnter", function(self)
       if not (GameTooltip and UI.feedFood) then return end
       GameTooltip:SetOwner(self, "ANCHOR_TOP")
-      GameTooltip:SetText(PSS:Safe(string.format(L("feedButtonTip"), UnitName("pet") or "?", UI.feedFood.name)), 1, 1, 1, 1, true)
+      GameTooltip:SetText(PSS:Safe(string.format(L("feedButtonTip"), PSS.Plain(UnitName("pet")) or "?", UI.feedFood.name)), 1, 1, 1, 1, true)
       GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)

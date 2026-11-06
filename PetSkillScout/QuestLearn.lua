@@ -244,8 +244,11 @@ local function OnRecord(parts, who)
   if not QL:Enabled() then return end
   local _, id, npc, map, x, y, fac, items, title, pre = unpack(parts)
   id = Num(id)
-  if not id then return end
-  local data = {g = Num(npc), m = Num(map), x = Coord(x), y = Coord(y), n = title, pre = pre}
+  if not id or id < 1 or id > 1000000 or id ~= math.floor(id) then return end
+  npc, map = Num(npc), Num(map)
+  if npc and (npc < 1 or npc > 2000000) then npc = nil end
+  if map and (map < 1 or map > 100000) then map = nil end
+  local data = {g = npc, m = map, x = Coord(x), y = Coord(y), n = title, pre = pre}
   if fac == "A" or fac == "H" then data.f = fac end
   data.i = {}
   for item in tostring(items or ""):gmatch("%d+") do

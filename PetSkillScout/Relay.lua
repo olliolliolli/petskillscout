@@ -135,7 +135,14 @@ local function OnSpot(parts, who)
   if not RL:Enabled() then return end
   local _, npc, id, m, x, y, n = unpack(parts)
   m, x, y = tonumber(m), Coord(x), Coord(y)
-  if not (id and id ~= "" and m and x and y) then return end
+  if not (id and id ~= "" and #id <= 40 and m and m >= 1 and m <= 100000 and x and y) then return end
+  -- Only rares the addon knows: nothing else may fill the saved data.
+  local R = PSS.RarePets
+  if R and R.entries and #R.entries > 0 then
+    local known = false
+    for _, e in ipairs(R.entries) do if tostring(e.id) == id then known = true break end end
+    if not known then return end
+  end
   if RL:AddSpot(id, tonumber(npc), m, x, y, tonumber(n), who) then RL.stats.got = RL.stats.got + 1 end
 end
 
