@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.1"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.2"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -248,6 +248,17 @@ SLASH_PETSKILLSCOUT1 = "/petskills"
 SLASH_PETSKILLSCOUT2 = "/pss"
 SlashCmdList.PETSKILLSCOUT = function(msg)
     msg = (msg or ""):lower()
+    if msg == "questsrc" then
+        -- Where quest pins come from on the current map: the game's list or the database.
+        local mapID = PSS.Nav and PSS.Nav:PlayerPos()
+        local W = PSS.QuestWorth
+        local game = W and mapID and W:GameAvailable(mapID)
+        local n = 0
+        for _ in pairs(game or {}) do n = n + 1 end
+        PSS:Print(string.format("questsrc: map %s, C_QuestLine %s, game list %s quests", tostring(mapID),
+            tostring(C_QuestLine and C_QuestLine.GetAvailableQuestLines ~= nil), game and n or "none"))
+        return
+    end
     if msg == "pinsreset" then
         if PSS.QuestPins then PSS.QuestPins:ResetHidden() end
         PSS:Print(PSS:L("qPinsReset"))

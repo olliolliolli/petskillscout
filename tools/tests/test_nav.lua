@@ -28,4 +28,17 @@ W.OnMap = function() return {
 local groups = QP:Groups(1438, 20)
 check("close givers merged", #groups == 2 and #groups[1].quests == 2 and groups[1].best == "great")
 W.OnMap = oldOnMap
+-- The game's own list of available quests wins over the database.
+C_QuestLine = {GetAvailableQuestLines = function(mapID)
+  if mapID ~= 1439 then return {} end
+  return {{questID = 98013, x = 0.40, y = 0.70, questName = "Swelling Forces"},
+          {questID = 999991, x = 0.30, y = 0.30, questName = "Brand New"}}
+end}
+local list = W:OnMap(1439, 12)
+local ids = {}
+for _, x in ipairs(list) do ids[x.id] = x end
+check("game quests listed", ids[98013] and ids[999991] and #list == 2)
+check("game position used", ids[98013] and math.abs(ids[98013].r.x - 40) < 0.01)
+check("missing quest kept for the data update", PetSkillScoutDB.gameQuests and PetSkillScoutDB.gameQuests[999991] ~= nil)
+C_QuestLine = nil
 print(string.format("passed %d, failed %d", passes, fails))

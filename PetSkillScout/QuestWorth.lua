@@ -364,10 +364,64 @@ function W:Index()
 end
 
 -- Available quests on a map with their ratings, best first.
+-- Quests the game itself shows as available on a map (the "!" of the
+-- modern map, C_QuestLine): quest ID -> {x, y} in 0-100. nil when the client
+-- has no such API or reports nothing. Cached for 3 seconds per map.
+local gameCache = {}
+function W:GameAvailable(mapID)
+  local QLn = C_QuestLine
+  if not (mapID and QLn and QLn.GetAvailableQuestLines) then return nil end
+  local now = GetTime and GetTime() or 0
+  local c = gameCache[mapID]
+  if c and now - c.t < 3 then return c.list end
+  if QLn.RequestQuestLinesForMap then Call(QLn.RequestQuestLinesForMap, mapID) end
+  local lines = Call(QLn.GetAvailableQuestLines, mapID)
+  local list
+  if type(lines) == "table" then
+    for _, q in ipairs(lines) do
+      local id, x, y = tonumber(Plain(q.questID)), tonumber(Plain(q.x)), tonumber(Plain(q.y))
+      if id and x and y and not Plain(q.isHidden) then
+        list = list or {}
+        list[id] = {x = x * 100, y = y * 100, n = Plain(q.questName)}
+        -- Quests the database lacks: kept for the next data update ("чек").
+        if not (PSS.QuestDB and PSS.QuestDB[id]) and PetSkillScoutDB then
+          PetSkillScoutDB.gameQuests = PetSkillScoutDB.gameQuests or {}
+          PetSkillScoutDB.gameQuests[id] = {m = mapID, x = math.floor(x * 1000 + 0.5) / 10,
+            y = math.floor(y * 1000 + 0.5) / 10, n = Plain(q.questName)}
+        end
+      end
+    end
+  end
+  gameCache[mapID] = {t = now, list = list}
+  return list
+end
+
 function W:OnMap(mapID, level)
   self:Index()
   level = level or self:PlayerLevel()
   local out = {}
+  -- The game knows exactly which quests you can take and where their givers
+  -- stand: when it reports them, its list is used (database quests the game
+  -- does not offer - wrong phase, unmet condition - get no pin).
+  local game = self:GameAvailable(mapID)
+  if game then
+    for id, gq in pairs(game) do
+      local r = self:Record(id)
+      local rec = {}
+      for k, v in pairs(r or {}) do rec[k] = v end
+      rec.x, rec.y, rec.m, rec.n = gq.x, gq.y, mapID, rec.n or gq.n
+      out[#out + 1] = {id = id, r = rec, rate = self:Rate(id, level), game = true}
+    end
+  end
+  if game then
+    local order = {great = 1, ok = 2, skip = 3}
+    table.sort(out, function(a, b)
+      if a.rate.verdict ~= b.rate.verdict then return order[a.rate.verdict] < order[b.rate.verdict] end
+      if a.rate.ratio ~= b.rate.ratio then return a.rate.ratio > b.rate.ratio end
+      return a.id < b.id
+    end)
+    return out
+  end
   for _, id in ipairs(self.byMap[mapID] or {}) do
     -- Map pins only for quests that an NPC gives: quests started by an item
     -- or object have no one standing at the position, holiday givers stand

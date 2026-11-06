@@ -290,7 +290,7 @@ driver:SetScript("OnUpdate", function(_, elapsed)
 end)
 local ev = CreateFrame("Frame")
 for _, e in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "PLAYER_LEVEL_UP", "PLAYER_EQUIPMENT_CHANGED",
-    "UNIT_QUEST_LOG_CHANGED"}) do
+    "UNIT_QUEST_LOG_CHANGED", "QUESTLINE_UPDATE"}) do
   pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function() QP:Refresh() end)

@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.2
+- Quest pins: when the game reports the quests you can take on a map (C_QuestLine, the "!" of
+  the game's map), that list is used - with the game's own giver positions - and rated as before.
+  Quests the game offers but the database lacks get a pin too (and are saved for the next data
+  update); database quests the game does not offer get none. /pss questsrc shows which source
+  is used on your map.
+
 3.3.1
 - Minimap: quest objective marks too (same as the world map), next to the merged quest giver
   pins and exact placement from 3.3.0.
