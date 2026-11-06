@@ -322,9 +322,54 @@ function N:AddMember(who, target)
   end
   self.members[who] = {target = t, t = Now()}
 end
+-- Whisper targets the server says are not online ("No player named X is
+-- currently playing": other connected realm, logged out). They are dropped
+-- for 30 minutes and the system line is hidden from chat.
+N.unreachable = {}
+local NOT_FOUND
+local function NotFoundPattern()
+  if NOT_FOUND ~= nil then return NOT_FOUND end
+  local fmt = type(ERR_CHAT_PLAYER_NOT_FOUND_S) == "string" and ERR_CHAT_PLAYER_NOT_FOUND_S or nil
+  if not fmt then NOT_FOUND = false return false end
+  NOT_FOUND = "^" .. fmt:gsub("([%(%)%.%+%-%*%?%[%]%^%$])", "%%%1"):gsub("%%s", "(.+)") .. "$"
+  return NOT_FOUND
+end
+function N:IsTarget(name)
+  if type(name) ~= "string" then return nil end
+  for who, m in pairs(self.members) do
+    if m.target == name or who == name then return who end
+  end
+  if self.sentTo and self.sentTo[name] then return name end
+end
+function N:OnNotFound(text)
+  local pat = NotFoundPattern()
+  if not pat or type(text) ~= "string" or (PSS.IsSecret and PSS.IsSecret(text)) then return false end
+  local name = text:match(pat)
+  if not name then return false end
+  local who = self:IsTarget(name)
+  if not who then return false end
+  self.members[who] = nil
+  self.unreachable[who] = Now()
+  return true
+end
+if ChatFrame_AddMessageEventFilter then
+  pcall(ChatFrame_AddMessageEventFilter, "CHAT_MSG_SYSTEM", function(_, _, text)
+    local ok, hide = pcall(N.OnNotFound, N, text)
+    return ok and hide or false
+  end)
+end
+function N:NoteWhisper(target)
+  self.sentTo = self.sentTo or {}
+  self.sentTo[target] = Now()
+end
+
 function N:Members()
   local list = {}
-  for who, m in pairs(self.members) do list[#list + 1] = {who = who, target = m.target, t = m.t} end
+  local now = Now()
+  for who, m in pairs(self.members) do
+    local bad = self.unreachable[who]
+    if not (bad and now - bad < 1800) then list[#list + 1] = {who = who, target = m.target, t = m.t} end
+  end
   table.sort(list, function(a, b) return a.t > b.t end)
   for i = #list, self.MAX_MEMBERS + 1, -1 do list[i] = nil end
   return list

@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.4
+- Hunter network: "No player named X is currently playing" lines for network whispers are
+  hidden from chat, and such players are left out of the network for 30 minutes.
+
 3.1.3
 - Hunter network: channel text from addons is only allowed during a key press on WoW: Forever,
   so automatic messages were blocked (ADDON_ACTION_BLOCKED). The network now sends addon

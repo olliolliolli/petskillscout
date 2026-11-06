@@ -28,4 +28,13 @@ local targets = {}
 for _, x in ipairs(sent) do if x[2] == "WHISPER" and x[1] == "H~x" then targets[x[3]] = true end end
 check("broadcast whispers each member", targets["Freya Laroux"] and targets["Sei Fy"])
 check("no channel text sent", not sent.chat)
+ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
+check("not-found line hidden", N:OnNotFound("No player named 'Sei Fy' is currently playing.") == true)
+check("unreachable dropped", N.members["Sei Fy"] == nil)
+check("other system lines kept", N:OnNotFound("No player named 'Stranger' is currently playing.") == false)
+sent = {}
+S:Send("H~y", "CHANNEL", 7)
+local again = {}
+for _, x in ipairs(sent) do if x[2] == "WHISPER" then again[x[3]] = true end end
+check("unreachable not whispered again", not again["Sei Fy"] and again["Freya Laroux"])
 print(string.format("passed %d, failed %d", passes, fails))

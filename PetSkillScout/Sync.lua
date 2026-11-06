@@ -49,7 +49,7 @@ function S:Send(msg, dist, target)
   if dist == "CHANNEL" then
     local N = PSS.Net
     if not (N and N.Members) then return end
-    for _, m in ipairs(N:Members()) do self:Send(msg, "WHISPER", m.target) end
+    for _, m in ipairs(N:Members()) do N:NoteWhisper(m.target); self:Send(msg, "WHISPER", m.target) end
     return
   end
   if not Register() then return end
