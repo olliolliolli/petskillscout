@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.6.0
+- Gamepad control of the window (GamepadNav.lua, only in gamepad mode while the window is
+  open): LB / RB switch tabs, the d-pad moves a gold selection frame to the nearest button,
+  A presses it (its tooltip shows), B closes the window, X goes back, Y opens settings. A hint
+  strip at the bottom of the window shows the buttons. New key binding "Open PetSkillScout"
+  (Key Bindings > AddOns) can be put on a gamepad button.
+
 3.5.2
 - Gamepad bar: every button shows a small glyph in its corner - d-pad arrows and the face
   buttons X / Y / B / A in their colours (the game drew them into the hidden round backings).
