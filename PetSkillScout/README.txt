@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.5.0
+- Gamepad action bar in the theme (GamepadTheme.lua, only in gamepad mode): all gamepad buttons
+  get the theme's action button look (square border, cropped icon, theme fonts and colours of
+  the chosen theme), the big round backings behind the button groups are hidden, and the
+  whole gamepad bar is scaled to 85 % (out of combat; button positions stay with the game).
+
 3.4.5
 - /pss gamepad: the frame dump is fail-safe (every step protected, partial result and the error
   are saved) and prints how many frames were saved.

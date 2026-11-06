@@ -67,11 +67,65 @@ local function SyncStrips()
 end
 GT.Sync = function() pcall(SyncStrips) end
 
+-- Gamepad action buttons in the theme ---------------------------------------
+-- The game's gamepad bar: GamepadMainActionBarFrame > ...PageUnit > four
+-- groups (Left/Top/Right/Bottom ...CenteredAnchor...Bar) of 8 buttons, two
+-- class action buttons, and a big round 256x128 backing behind each group.
+-- Buttons get the same look as the theme's action bars (square border,
+-- cropped icon, theme fonts); the round backings are faded; the whole bar is
+-- scaled down (only out of combat; positions are left to the game).
+GT.SCALE = 0.85
+local skinned = setmetatable({}, {__mode = "k"})
+local function Children(f)
+  local ok, list = pcall(function() return {f:GetChildren()} end)
+  return ok and list or {}
+end
+local function Regions(f)
+  local ok, list = pcall(function() return {f:GetRegions()} end)
+  return ok and list or {}
+end
+local function SkinTree(f, depth)
+  if depth > 6 then return end
+  for _, c in ipairs(Children(f)) do
+    local _, name = pcall(c.GetName, c)
+    local _, kind = pcall(c.GetObjectType, c)
+    if type(name) == "string" and (name:find("ActionButton%d+$") or name:find("ClassAction$")) then
+      if not skinned[c] and PSS.Skin and PSS.Skin.SkinActionButton then
+        skinned[c] = true
+        pcall(PSS.Skin.SkinActionButton, c)
+      end
+    elseif kind == "Frame" and not name then
+      -- Unnamed art frames: the round backings (256x128) are faded; small ones
+      -- (button labels LT / RT / LB...) stay.
+      local okS, w, h = pcall(function() return c:GetWidth(), c:GetHeight() end)
+      if okS and type(w) == "number" and w >= 120 and h >= 60 and PSS.Skin and PSS.Skin.Fade then
+        for _, r in ipairs(Regions(c)) do pcall(PSS.Skin.Fade, r) end
+      end
+    end
+    SkinTree(c, depth + 1)
+  end
+end
+function GT:SkinBar()
+  local root = _G.GamepadMainActionBarFrame
+  if not (root and PSS.Skin and PSS.Skin.active) then return false end
+  pcall(SkinTree, root, 0)
+  if not InCombat() and root.SetScale then
+    local want = (PetSkillScoutDB and tonumber(PetSkillScoutDB.gamepadScale)) or self.SCALE
+    pcall(root.SetScale, root, want)
+  end
+  if not self.rootHooked and root.HookScript then
+    self.rootHooked = true
+    pcall(root.HookScript, root, "OnShow", function() PSS:Soon("gp-skin", function() GT:SkinBar() end, 0.2) end)
+  end
+  return true
+end
+
 function GT:Apply(active)
   if InCombat() then self.pending = active; return end
   self.pending = nil
   self.active = active
   local L = LY()
+  if active then pcall(self.SkinBar, self) end
   if not (L and L.applied and L.applied.units) then SyncStrips() return end
   PlaceUnits(active)
   SyncStrips()
@@ -94,6 +148,8 @@ ev:SetScript("OnEvent", function(_, event)
     C_Timer.After(2, function()
       local active = PSS.Gamepad and PSS.Gamepad:InUse() or false
       GT:Apply(active)
+      -- The gamepad bar may be built a bit later: try the skin again.
+      if active then C_Timer.After(5, function() pcall(GT.SkinBar, GT) end) end
     end)
   end
 end)

@@ -815,6 +815,8 @@ local function SkinActionButton(b)
   if bd and bd.bg.SetDrawLayer then pcall(bd.bg.SetDrawLayer, bd.bg, "BACKGROUND", -8) end
 end
 
+S.SkinActionButton = SkinActionButton -- also used by GamepadTheme.lua
+
 local hotkeyHooked = false
 local function SkinBars()
   if not hotkeyHooked and type(ActionButton_UpdateHotkeys) == "function" and hooksecurefunc then
