@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.12
+- Quest pins checked at the NPC also when the NPC has a single quest for you (the game opens
+  that quest directly, without a list): its other database quests lose their pin, so the pin
+  colour follows only the quests the NPC really offers.
+
 3.3.11
 - Quest pins checked at the NPC: when you talk to a quest giver, its database quests that the
   NPC does not offer (skill level too low, hidden condition) lose their pin until your level

@@ -67,7 +67,21 @@ local function Skip()
 end
 
 -- Every quest an NPC offers you is remembered as available (map pins).
+-- When an NPC has a single quest for you, the game opens it directly (no
+-- list): that quest is the only one offered. The list windows set this time.
+QA.listAt = -1e9
+function QA:NoteSingle(id)
+  local W = PSS.QuestWorth
+  if not (W and W.NotOffered and id) then return end
+  if Now() - self.listAt < 3 then return end -- opened from a list
+  local guid = Plain(Call(UnitGUID, "npc"))
+  if type(guid) ~= "string" or not guid:find("^Creature") then return end
+  local npc = tonumber((select(6, strsplit("-", guid))))
+  if npc then W:NotOffered(npc, {[id] = true}) end
+end
+
 function QA:NoteOffered()
+  self.listAt = Now()
   local W = PSS.QuestWorth
   if not (W and W.Offered) then return end
   local npc
@@ -130,6 +144,7 @@ function QA:OnDetail()
     local guid = Plain(Call(UnitGUID, "npc"))
     pcall(PSS.QuestWorth.Offered, PSS.QuestWorth, id, type(guid) == "string" and tonumber((select(6, strsplit("-", guid)))) or nil)
   end
+  if id then pcall(self.NoteSingle, self, id) end
   self:ShowRating(id)
   if Skip() or not id then return end
   if Plain(Call(QuestGetAutoAccept)) then return end
