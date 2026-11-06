@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.11
+- Network: players of other (connected) realms cannot be whispered on WoW Forever, so only
+  same-realm channel members are whispered. The "not found" filter now uses the moment the
+  whisper actually left the queue (it could be 30+ s later), with a 60 s window.
+
 3.1.10
 - Quest pins: drawn a little up and right of the giver (beside the game's own "!") on a round
   backing in the rating colour - purple worth it, gold normal, dark with a grey edge not worth

@@ -45,4 +45,9 @@ sent = {}
 N:NoteWhisper("Wipe Nonmio")
 N.members["Wipe Nonmio"] = {target = "Wipe Nonmio", t = 0}
 check("odd wording still hidden", N:OnNotFound("Гравця на ім'я «Wipe Nonmio» зараз немає в грі.") == true)
+GetNormalizedRealmName = function() return "CAMWOWEU5Realm6PvP" end
+N:AddMember("Slu Gnu", "Slu Gnu-CAMWOWEU4Realm8PvP")
+check("other realm not added", N.members["Slu Gnu"] == nil)
+N:AddMember("Kim Bo", "Kim Bo-CAMWOWEU5Realm6PvP")
+check("own realm kept, short target", N.members["Kim Bo"] and N.members["Kim Bo"].target == "Kim Bo")
 print(string.format("passed %d, failed %d", passes, fails))

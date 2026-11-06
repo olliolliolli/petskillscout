@@ -32,6 +32,7 @@ S.Register = Register
 -- Sending with a small token bucket so bursts never hit the server throttle.
 local queue, tokens, lastRefill = {}, 8, nil
 local function RawSend(msg, dist, target)
+  if dist == "WHISPER" and PSS.Net and PSS.Net.NoteWhisper and type(target) == "string" then PSS.Net:NoteWhisper(target) end
   local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
   if type(fn) == "function" then S:NoteSent(msg); pcall(fn, PREFIX, msg, dist, target) end
 end
@@ -49,7 +50,7 @@ function S:Send(msg, dist, target)
   if dist == "CHANNEL" then
     local N = PSS.Net
     if not (N and N.Members) then return end
-    for _, m in ipairs(N:Members(msg:match("^(%a)"))) do N:NoteWhisper(m.target); self:Send(msg, "WHISPER", m.target) end
+    for _, m in ipairs(N:Members(msg:match("^(%a)"))) do self:Send(msg, "WHISPER", m.target) end
     return
   end
   if not Register() then return end

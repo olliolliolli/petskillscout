@@ -327,6 +327,14 @@ function N:AddMember(who, target, guid)
   if type(who) ~= "string" or who == "" then return end
   if PSS.Sync and PSS.Sync.IsMe and PSS.Sync:IsMe(who) then return end
   local t = FromGUID(guid) or (type(target) == "string" and target ~= "" and target) or who
+  -- Players of other realms cannot be whispered on WoW Forever (the server
+  -- answers "not found" even with Name-Realm): keep only same-realm members.
+  if t:find("-", 1, true) then
+    local realm = GetNormalizedRealmName and GetNormalizedRealmName()
+    local theirs = t:match("%-(.+)$")
+    if not (realm and theirs and theirs:gsub("%s", "") == realm) then return end
+    t = t:match("^[^-]+")
+  end
   if Ambiguate and t:find("-", 1, true) then
     local ok, v = pcall(Ambiguate, t, "none")
     if ok and type(v) == "string" then t = v end
@@ -364,9 +372,9 @@ function N:OnNotFound(text)
     -- line naming someone we whispered in the last 15 seconds is ours.
     local now = Now()
     for target, t in pairs(self.sentTo or {}) do
-      if now - t < 15 and text:find(target, 1, true) then who = self:IsTarget(target) or target break end
+      if now - t < 60 and text:find(target, 1, true) then who = self:IsTarget(target) or target break end
       local short = target:match("^[^-]+")
-      if now - t < 15 and short and text:find(short, 1, true) then who = self:IsTarget(target) or short break end
+      if now - t < 60 and short and text:find(short, 1, true) then who = self:IsTarget(target) or short break end
     end
   end
   if not who then return false end
