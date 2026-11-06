@@ -1,7 +1,7 @@
 -- Quests of WoW Forever (generated, do not edit by hand).
 -- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/AllTheThings),
 -- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.
--- Source commit b50b6d8. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
+-- Source commit 6f7b562. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
 -- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),
 -- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,
 -- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.
@@ -2458,6 +2458,7 @@ PSS.QuestDB = {
 [5654]={g=3706,x=54.2,y=42.8,m=1411,l=10,s="H",cl={5},a={5652,5655,5656,5657},n="Hex of Weakness [Durotar]"},
 [5655]={g=11407,x=47,y=58.8,m=1412,l=10,s="H",cl={5},a={5652,5654,5656,5657},n="Hex of Weakness [Mulgore]"},
 [5658]={g=4606,x=49.01,y=18.32,m=1458,l=10,s="H",cl={5},a={5660,5661,5662,5663},n="Touch of Weakness [Undercity]"},
+[5659]={s="H",cl={5},n="<NYI> Touch of Weakness"},
 [5660]={g=3706,x=54.2,y=42.8,m=1411,l=10,s="H",cl={5},a={5658,5661,5662,5663},n="Touch of Weakness [Durotar]"},
 [5661]={g=11407,x=47,y=58.8,m=1412,l=10,s="H",cl={5},a={5658,5660,5662,5663},n="Touch of Weakness [Mulgore]"},
 [5672]={g=11401,x=39.2,y=81,m=1457,l=20,s="A",cl={5},a={5675,5673},n="Elune's Grace [Darnassus]"},
@@ -3754,6 +3755,7 @@ PSS.QuestDB = {
 [93430]={l=30,o="i",ox=43,oy=39,om=1435,n="Taking the Bait Back"},
 [93459]={g=254151,x=63.8,y=36,m=2521,l=8,p={93165},r=1,n="More Al'Aketh Ears"},
 [93461]={g=251523,x=45.6,y=45.4,m=2521,l=4,s="A",n="Welcome to Shen'dar Village (A)"},
+[93462]={n="Completed by the 'DNT Windshapers' spells (1263988, 1266840), likely the Horde counterpart of 93463 for 'The Windshapers' (92595)."},
 [93463]={n="Triggered when turning in 'The High Order', likely a shared quest flag for either faction having completed their initial introduction quest."},
 [93464]={l=30,s="H",n="The Visiting Mage"},
 [93465]={g=11863,x=38.8,y=27.2,m=1443,l=30,s="H",p={93464},o="i",ox=80.8,oy=76.6,om=1443,n="Notes on Draenethyst"},
