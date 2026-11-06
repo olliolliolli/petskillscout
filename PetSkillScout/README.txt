@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.4.1
+- Gamepad, step 2 (separate file GamepadTheme.lua, only while a gamepad is in use): the theme's
+  player and target frames move up above the gamepad button clusters (unless you placed them
+  yourself), the cast bar too; everything goes back with keyboard and mouse. The backing
+  strips of the micro menu and bags hide when the game hides those bars.
+
 3.4.0
 - Gamepad, step 1: new separate module (Gamepad.lua) that only detects the gamepad (enabled in
   the client, last input) and reports changes to theme code - the themes themselves are not

@@ -29,11 +29,12 @@ end
 -- A gamepad is connected and was the last input.
 function GP:InUse()
   if not self:Enabled() then return false end
+  if self.lastActive ~= nil then return self.lastActive end
+  -- No input event yet: a connected, active device counts as in use.
   if C_GamePad and C_GamePad.GetActiveDeviceID then
-    local id = Plain(Call(C_GamePad.GetActiveDeviceID))
-    if id == nil then return self.lastActive or false end
+    return Plain(Call(C_GamePad.GetActiveDeviceID)) ~= nil
   end
-  return self.lastActive or false
+  return false
 end
 
 -- Theme code subscribes here: fn(active) runs out of combat when it changes.
