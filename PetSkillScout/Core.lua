@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.9"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.10"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -248,6 +248,19 @@ SLASH_PETSKILLSCOUT1 = "/petskills"
 SLASH_PETSKILLSCOUT2 = "/pss"
 SlashCmdList.PETSKILLSCOUT = function(msg)
     msg = (msg or ""):lower()
+    if msg == "skills" then
+        -- Skill lines the addon sees (quests needing Cooking, Fishing... and crafted gear).
+        local W = PSS.QuestWorth
+        local list = {}
+        for line, rank in pairs(W and W:Skills() or {}) do
+            if type(line) == "number" then list[#list + 1] = tostring((W.SKILL_EN or {})[line] or line) .. " " .. tostring(rank) end
+        end
+        table.sort(list)
+        PSS:Print("skills: " .. (#list > 0 and table.concat(list, ", ") or "none") ..
+            " (GetProfessions " .. tostring(type(GetProfessions) == "function") .. ", skill list " ..
+            tostring(type(GetSkillLineInfo) == "function") .. ")")
+        return
+    end
     if msg == "questdone" then
         local W = PSS.QuestWorth
         if not W then return end

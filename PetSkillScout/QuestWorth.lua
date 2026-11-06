@@ -227,13 +227,39 @@ function W:Skills()
       end
     end
   end
+  -- Classic-style clients: the character's skill list. Names are localised,
+  -- so each skill line is matched by the name of its base spell.
+  if not next(out) and type(GetNumSkillLines) == "function" and type(GetSkillLineInfo) == "function" then
+    local byName = {}
+    local spellName = (C_Spell and C_Spell.GetSpellName) or GetSpellInfo
+    for line, spell in pairs(W.SKILL_SPELLS) do
+      local n = Plain(Call(spellName, spell))
+      if type(n) == "string" then byName[n] = line end
+    end
+    for line, eng in pairs(W.SKILL_EN) do byName[eng] = byName[eng] or line end
+    local n = tonumber(Plain(Call(GetNumSkillLines))) or 0
+    for i = 1, n do
+      local name, header, _, rank = Call(GetSkillLineInfo, i)
+      name = Plain(name)
+      if name and not Plain(header) and byName[name] then out[byName[name]] = tonumber(Plain(rank)) or 1 end
+    end
+    out.listRead = n > 0 or nil
+  end
   skillCache, skillAt = out, now
   return out
 end
--- Unknown (no API): true, the quest is shown.
+-- Base spell and English name of each skill line (for the classic skill list).
+W.SKILL_SPELLS = {[185] = 2550, [356] = 7620, [129] = 3273, [182] = 2366, [186] = 2575, [393] = 8613,
+  [165] = 2108, [164] = 2018, [197] = 3908, [202] = 4036, [171] = 2259, [333] = 7411}
+W.SKILL_EN = {[185] = "Cooking", [356] = "Fishing", [129] = "First Aid", [182] = "Herbalism", [186] = "Mining",
+  [393] = "Skinning", [165] = "Leatherworking", [164] = "Blacksmithing", [197] = "Tailoring",
+  [202] = "Engineering", [171] = "Alchemy", [333] = "Enchanting"}
+-- Unknown (no API at all): true, the quest is shown.
 function W:HasSkill(line)
-  if type(GetProfessions) ~= "function" then return true end
-  return self:Skills()[tonumber(line) or 0] ~= nil
+  local skills = self:Skills()
+  local readable = type(GetProfessions) == "function" or skills.listRead
+  if not readable then return true end
+  return skills[tonumber(line) or 0] ~= nil
 end
 -- mr = {faction ID, reputation value}; unreadable reputation: only common
 -- thresholds (up to friendly) are assumed to be met.

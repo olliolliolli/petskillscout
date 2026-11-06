@@ -36,4 +36,16 @@ local found2 = false
 for _, x in ipairs(W:OnMap(1439, 15)) do if x.id == 4740 then found2 = true end end
 check("done quest has no pin", not found2)
 C_QuestLog.GetAllCompletedQuestIDs = oldAll
+-- Skills from the classic skill list (no GetProfessions): Cooking missing.
+local oldGP = GetProfessions
+GetProfessions = nil
+GetNumSkillLines = function() return 2 end
+GetSkillLineInfo = function(i) if i == 1 then return "Fishing", nil, nil, 40 end return "Swords", nil, nil, 30 end
+GetTime = GetTime or function() return 0 end
+W.SKILL_SPELLS = W.SKILL_SPELLS
+local t0 = GetTime()
+GetTime = function() return t0 + 100 end -- skip the skill cache
+check("fishing seen from skill list", W:HasSkill(356))
+check("no cooking: cooking quest hidden", not W:HasSkill(185))
+GetProfessions = oldGP
 print(string.format("passed %d, failed %d", passes, fails))

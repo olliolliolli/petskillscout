@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.10
+- Quest pins: quests that need a skill (e.g. Easy Strider Living - Cooking) showed even without
+  the skill when the client has no GetProfessions. The character's skill list is read now
+  (matched by the localised name of each skill's base spell); crafted gear uses it too.
+  /pss skills lists the skills the addon sees.
+
 3.3.9
 - Completed quests are tracked by the addon too: the server's full list is read at every login
   (so it survives reinstalls), every hand-in is recorded, and a done quest marks the quests

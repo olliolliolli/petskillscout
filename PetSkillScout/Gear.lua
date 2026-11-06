@@ -259,6 +259,13 @@ function G:Professions()
       end
     end
   end
+  -- Still nothing: the quest module reads the skill list by localised spell names.
+  if not next(out) and PSS.QuestWorth and PSS.QuestWorth.Skills then
+    for line, rank in pairs(PSS.QuestWorth:Skills()) do
+      local name = self.PROF_LINES[line]
+      if name then out[name] = {rank = rank, max = 0} end
+    end
+  end
   profCache, profAt = out, now
   return out
 end
