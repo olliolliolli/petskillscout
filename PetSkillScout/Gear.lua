@@ -216,23 +216,24 @@ function G:Practical(rec)
   return false
 end
 
-function G:Allowed(rec, maxLevel)
+-- relaxed: also rare drops (used when the slot is empty and nothing practical exists).
+function G:Allowed(rec, maxLevel, relaxed)
   if rec.lvl > maxLevel then return false end
   local fac = Faction()
   if rec.fac and fac and rec.fac ~= fac then return false end
   if rec.raid and not self:IncludeRaids() then return false end
   if rec.pvp and not self:IncludePvp() then return false end
   if #self:Sources(rec) == 0 then return false end
-  return self:IncludeRare() or self:Practical(rec)
+  return relaxed or self:IncludeRare() or self:Practical(rec)
 end
 
 -- Ranked candidates for a slot key at a level.
-function G:Candidates(slotDef, spec, maxLevel, limit)
+function G:Candidates(slotDef, spec, maxLevel, limit, relaxed)
   Index()
   local list = {}
   for _, kind in ipairs(slotDef.kinds) do
     for _, rec in ipairs(bySlot[kind] or {}) do
-      if self:Allowed(rec, maxLevel) then
+      if self:Allowed(rec, maxLevel, relaxed) then
         list[#list + 1] = {rec = rec, score = self:Score(self:Stats(rec.id), rec.slot, spec)}
       end
     end
@@ -265,6 +266,25 @@ function G:Plan(mode, spec)
       if not used[c.rec.id] then
         if not e.pick then e.pick = c else table.insert(e.alts, c) end
       end
+    end
+    -- Empty slot and nothing practical: anything is better than nothing, so
+    -- rare drops are offered too.
+    if not e.pick and not eqId then
+      for _, c in ipairs(self:Candidates(def, spec, level, 12, true)) do
+        if not used[c.rec.id] then
+          if not e.pick then e.pick = c; e.relaxed = true else table.insert(e.alts, c) end
+        end
+      end
+    end
+    -- Still nothing at your level: the nearest item that comes later
+    -- (lowest required level, best score among those), shown as "from level N".
+    if not e.pick and not eqId and mode ~= "max" then
+      local best
+      for _, c in ipairs(self:Candidates(def, spec, self:MaxLevel(), nil, true)) do
+        if not used[c.rec.id] and (not best or c.rec.lvl < best.rec.lvl
+           or (c.rec.lvl == best.rec.lvl and c.score > best.score)) then best = c end
+      end
+      e.upcoming = best
     end
     if e.pick and def.pair then used[e.pick.rec.id] = true end
     bySlotKey[def.key] = e
@@ -301,7 +321,7 @@ function G:Plan(mode, spec)
       elseif eq > 0 then
         e.gain = (e.pick.score - eq) / eq * 100
       end
-      e.better = e.pick.score > eq + 0.5 and not e.wearing
+      e.better = (e.pick.score > eq + 0.5 or not e.equipped.id) and not e.wearing
     end
   end
   return plan, level

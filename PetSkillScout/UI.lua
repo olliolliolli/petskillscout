@@ -2275,10 +2275,26 @@ function UI:UpdateGear()
       row.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
       row.icon:SetDesaturated(true)
       local text = e.twoHand and L("gearTwoHand") or (e.locked and string.format(L("gearDualAt"), e.locked) or L("gearNothing"))
-      row.name:SetText(text)
+      local up = e.upcoming and not e.twoHand and not e.locked and e.upcoming.rec
+      if up then
+        -- Empty slot, nothing at your level yet: the first item that comes later.
+        row.icon:SetTexture(G:Icon(up.id))
+        row.icon:SetDesaturated(true)
+        text = G:Name(up)
+      end
+      row.name:SetText(PSS:Safe(text))
       row.name:SetTextColor(C.muted[1], C.muted[2], C.muted[3])
-      row.sub:SetText(eqName and string.format(L("gearEquipped"), eqName) or "")
+      if up then
+        row.sub:SetText(string.format(L("gearFromLevel"), up.lvl))
+      else
+        row.sub:SetText(eqName and string.format(L("gearEquipped"), eqName) or "")
+      end
       row.src:SetText(""); row.src2:SetText(""); row.gain:SetText(""); row.diff:SetText("")
+      if up then
+        local l1, l2 = G:SourceShort(up)
+        row.src:SetText(PSS:Safe(l1 or "")); row.src2:SetText(PSS:Safe(l2 or ""))
+        G:Request(up.id)
+      end
       row.where.questID, row.where.quest, row.where.qname = nil, nil, nil
       Show(row.where, false)
       Show(row.bar, false)

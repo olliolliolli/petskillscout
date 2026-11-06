@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.1
+- Gear: empty slots get a recommendation. If nothing practical exists at your level, rare drops
+  are offered too; if the database has nothing for the slot yet at your level (rings start at
+  14, shoulders 18, head and neck 25, trinkets 46), the nearest later item is shown greyed
+  with "from level N" and where to get it.
+
 3.1.0
 - Hunter network works on WoW: Forever. The server accepts addon messages in chat channels
   but never delivers them (/pss netdiag), so the realm network now sends short hidden text
