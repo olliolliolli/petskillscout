@@ -74,45 +74,56 @@ end
 -- their holders): name, parent, type, size, position, protected, icon.
 -- Saved to PetSkillScoutDB.gamepadDiag (read from disk after /reload).
 function GP:Dump()
-  local out = {}
+  local out, err = {}, nil
   local sw, sh = UIParent:GetWidth(), UIParent:GetHeight()
-  local f = EnumerateFrames and EnumerateFrames()
-  local n = 0
-  while f and n < 40000 do
-    n = n + 1
+  local function one(f)
     local okV, vis = pcall(f.IsVisible, f)
-    if okV and vis then
-      local okB, l, b, w, h = pcall(f.GetRect, f)
-      if okB and l and b and w and h and w > 4 and h > 4 and w < sw * 0.8 and b < sh * 0.45 then
-        local okN, name = pcall(f.GetName, f)
-        local parent = f.GetParent and f:GetParent()
-        local pname = parent and select(2, pcall(parent.GetName, parent))
-        local okT, kind = pcall(f.GetObjectType, f)
-        local prot = f.IsProtected and select(2, pcall(f.IsProtected, f))
-        local action = f.GetAttribute and select(2, pcall(f.GetAttribute, f, "action"))
-        local icon = f.icon or f.Icon
-        local tex = icon and icon.GetTexture and select(2, pcall(icon.GetTexture, icon))
-        if not (type(name) == "string" and name:find("^PetSkillScout")) then
-          out[#out + 1] = string.format("%s|%s|%s|%.0f,%.0f %.0fx%.0f|%s|%s|%s",
-            tostring(name), tostring(pname), tostring(okT and kind), l, b, w, h,
-            prot and "P" or "-", tostring(action), tostring(tex))
-        end
-      end
-    end
-    f = EnumerateFrames(f)
+    if not (okV and vis) then return end
+    local okB, l, b, w, h = pcall(f.GetRect, f)
+    if not (okB and type(l) == "number" and type(b) == "number" and type(w) == "number" and type(h) == "number") then return end
+    if Secret(l) or Secret(b) or Secret(w) or Secret(h) then return end
+    if w <= 4 or h <= 4 or w >= sw * 0.8 or b >= sh * 0.45 then return end
+    local _, name = pcall(f.GetName, f)
+    if type(name) == "string" and name:find("^PetSkillScout") then return end
+    local pname
+    local okP, parent = pcall(f.GetParent, f)
+    if okP and parent then local _, pn = pcall(parent.GetName, parent); pname = pn end
+    local _, kind = pcall(f.GetObjectType, f)
+    local _, prot = pcall(f.IsProtected, f)
+    local action
+    if f.GetAttribute then local _, a = pcall(f.GetAttribute, f, "action"); action = a end
+    local tex
+    local icon = rawget(f, "icon") or rawget(f, "Icon")
+    if type(icon) == "table" and icon.GetTexture then local _, t = pcall(icon.GetTexture, icon); tex = t end
+    out[#out + 1] = string.format("%s|%s|%s|%d,%d %dx%d|%s|%s|%s", tostring(name), tostring(pname), tostring(kind),
+      math.floor(l + 0.5), math.floor(b + 0.5), math.floor(w + 0.5), math.floor(h + 0.5),
+      prot and "P" or "-", tostring(action), tostring(tex))
   end
+  local ok, e = pcall(function()
+    local f = EnumerateFrames()
+    local n = 0
+    while f and n < 40000 and #out < 1500 do
+      n = n + 1
+      pcall(one, f)
+      local okN, nxt = pcall(EnumerateFrames, f)
+      f = okN and nxt or nil
+    end
+  end)
+  if not ok then err = tostring(e) end
   table.sort(out)
   if PetSkillScoutDB then
-    PetSkillScoutDB.gamepadDiag = {t = time and time() or 0, screen = string.format("%.0fx%.0f", sw, sh),
-      scale = UIParent:GetEffectiveScale(), enabled = self:Enabled(), inUse = self:InUse(), frames = out}
+    PetSkillScoutDB.gamepadDiag = {t = time and time() or 0, screen = string.format("%dx%d", math.floor(sw), math.floor(sh)),
+      enabled = self:Enabled(), inUse = self:InUse(), err = err, frames = out}
   end
-  return #out
+  return #out, err
 end
 
 -- /pss gamepad
 function GP:Print()
-  local dumped = self:Dump()
-  PSS:Print("gamepad: saved " .. dumped .. " frames of the lower screen for the layout (do /reload to write them to disk)")
+  local okD, dumped, derr = pcall(self.Dump, self)
+  if not okD then derr, dumped = tostring(dumped), 0 end
+  PSS:Print("gamepad: saved " .. tostring(dumped) .. " frames of the lower screen" ..
+    (derr and (" (error: " .. derr .. ")") or "") .. " - do /reload to write them to disk")
   local api = C_GamePad and "yes" or "no"
   local dev = C_GamePad and C_GamePad.GetActiveDeviceID and Plain(Call(C_GamePad.GetActiveDeviceID))
   local devs = C_GamePad and C_GamePad.GetAllDeviceIDs and Call(C_GamePad.GetAllDeviceIDs)

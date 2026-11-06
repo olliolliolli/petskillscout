@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.4.5
+- /pss gamepad: the frame dump is fail-safe (every step protected, partial result and the error
+  are saved) and prints how many frames were saved.
+
 3.4.4
 - /pss gamepad also saves a dump of the gamepad interface frames (names, sizes, positions) to
   the saved variables - groundwork for the themed, compact gamepad button layout.
