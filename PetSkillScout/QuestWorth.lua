@@ -36,7 +36,27 @@ W.MOUNT_LEVEL = 40
 W.RIDE = 660            -- yards per minute mounted
 W.DUNGEON_MIN = 35
 
-function W:Record(id) return PSS.QuestDB and PSS.QuestDB[id] end
+-- Database record, with the giver position players confirmed in game
+-- (QuestLearn) when it differs from the database (the giver stands elsewhere
+-- or appears only after some condition). Cached per quest.
+local learnedCache = {}
+function W:Record(id)
+  local r = PSS.QuestDB and PSS.QuestDB[id]
+  local QLm = PSS.QuestLearn
+  local rec = QLm and QLm.Records and DB().questObs and QLm:Records()[id]
+  if not (rec and QLm:Confirmed(rec)) then return r end
+  local p = QLm:Best(rec)
+  if not (p and p.m and p.x) then return r end
+  if r and r.m == p.m and r.x and math.abs(r.x - p.x) <= 3 and math.abs(r.y - p.y) <= 3 then return r end
+  local c = learnedCache[id]
+  if c and c.m == p.m and c.x == p.x and c.y == p.y then return c end
+  c = {}
+  for k, v in pairs(r or {}) do c[k] = v end
+  c.m, c.x, c.y, c.g, c.learned = p.m, p.x, p.y, rec.g or c.g, true
+  c.n = c.n or rec.n
+  learnedCache[id] = c
+  return c
+end
 function W:NPCName(npc) return npc and PSS.QuestNPC and PSS.QuestNPC[npc] end
 
 -- Player ------------------------------------------------------------------
@@ -325,7 +345,13 @@ W.HEX = {great = "|cffbd73ff", ok = "|cffffd100", skip = "|cff8c8c8c"}
 function W:Index()
   if self.byMap then return end
   self.byMap, self.byGiver = {}, {}
-  for id, r in pairs(PSS.QuestDB or {}) do
+  local ids = {}
+  for id in pairs(PSS.QuestDB or {}) do ids[id] = true end
+  -- Quests learned in game (also ones the database does not have).
+  local QLm = PSS.QuestLearn
+  if QLm and QLm.Records and DB().questObs then for id in pairs(QLm:Records()) do ids[id] = true end end
+  for id in pairs(ids) do
+    local r = self:Record(id) or {}
     if r.m and r.x then
       self.byMap[r.m] = self.byMap[r.m] or {}
       table.insert(self.byMap[r.m], id)

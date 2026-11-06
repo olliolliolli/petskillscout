@@ -56,9 +56,17 @@ end
 
 -- Is this quest worth learning: unknown to the database, no giver position
 -- there, or rewards the database does not list.
-function QL:Wanted(id, items)
+-- here: {m, x, y} where you stand now. A database position more than 3 %
+-- of the map away (or on another map) is worth a record too: the giver may
+-- appear elsewhere, or only after some condition.
+function QL:Wanted(id, items, here)
   local r = PSS.QuestDB and PSS.QuestDB[id]
   if not (r and r.m and r.x) then return true end
+  if here and here.m and here.x then
+    if here.m ~= r.m then return true end
+    local dx, dy = here.x - r.x, here.y - r.y
+    if dx * dx + dy * dy > 9 then return true end
+  end
   local known = {}
   for _, i in ipairs(r.i or {}) do known[i] = true end
   for _, i in ipairs(items or {}) do if not known[i] then return true end end
@@ -118,6 +126,10 @@ function QL:Add(id, data, who)
   if data.g then rec.g = data.g end
   if data.gn and data.gn ~= "" then rec.gn = tostring(data.gn):sub(1, 40) end
   if data.f then rec.f = data.f end
+  if data.pre and data.pre ~= "" then
+    rec.pre = rec.pre or {}
+    rec.pre[who] = tostring(data.pre):gsub("[^%d,]", ""):sub(1, 40)
+  end
   if data.m and data.x and data.y then
     local reporters = 0
     for _ in pairs(rec.r) do reporters = reporters + 1 end
@@ -133,6 +145,9 @@ function QL:Add(id, data, who)
   rec.t = Now()
   if who == Me() then rec.me = true end
   self.changed = true
+  -- Map pins use confirmed positions: rebuild the quest index.
+  if PSS.QuestWorth then PSS.QuestWorth.byMap = nil end
+  if PSS.QuestPins and PSS.QuestPins.Refresh then PSS.QuestPins:Refresh() end
   return rec
 end
 
@@ -155,9 +170,24 @@ function QL:Message(id, rec)
   local p = self:Best(rec) or {}
   local items = table.concat(rec.i or {}, ",")
   local title = tostring(rec.n or ""):gsub(SEP, " ")
-  local msg = table.concat({"O", id, rec.g or "", p.m or "", p.x or "", p.y or "", rec.f or "", items, title}, SEP)
+  local pre = rec.pre and (rec.pre[Me()] or select(2, next(rec.pre))) or ""
+  local msg = table.concat({"O", id, rec.g or "", p.m or "", p.x or "", p.y or "", rec.f or "", items, title, pre}, SEP)
   if #msg > 250 then msg = msg:sub(1, 250) end
   return msg
+end
+
+-- Quests handed in lately (newest first), "id,id,id".
+function QL:RecentDone()
+  local d = DB()
+  return d and table.concat(d.questRecentDone or {}, ",") or ""
+end
+function QL:OnTurnedIn(id)
+  local d = DB()
+  id = tonumber(id)
+  if not (d and id) then return end
+  d.questRecentDone = d.questRecentDone or {}
+  table.insert(d.questRecentDone, 1, id)
+  while #d.questRecentDone > 3 do table.remove(d.questRecentDone) end
 end
 
 local function Share(id, rec)
@@ -172,15 +202,21 @@ function QL:OnDetail()
   local id = tonumber(Call(GetQuestID))
   if not id or id <= 0 then return end
   local items = RewardItems()
-  if not self:Wanted(id, items) then return end
+  local here
+  if PSS.Nav then
+    local mapID, x, y = PSS.Nav:PlayerPos()
+    if mapID and x and y then here = {m = mapID, x = x * 100, y = y * 100} end
+  end
+  if not self:Wanted(id, items, here) then return end
   local data = {n = Call(GetTitleText), i = items, f = Faction()}
   local npc = NpcID("npc")
   if npc then
     data.g, data.gn = npc, Call(UnitName, "npc")
-    local mapID, x, y
-    if PSS.Nav then mapID, x, y = PSS.Nav:PlayerPos() end
-    if mapID and x and y then data.m, data.x, data.y = mapID, x * 100, y * 100 end
+    if here then data.m, data.x, data.y = here.m, here.x, here.y end
   end
+  -- Context for quests that appear only after a condition: the quests you
+  -- handed in last (newest first) and your level.
+  data.pre = self:RecentDone()
   local rec = self:Add(id, data, Me())
   if rec then Share(id, rec) end
   return rec
@@ -206,10 +242,10 @@ end
 
 local function OnRecord(parts, who)
   if not QL:Enabled() then return end
-  local _, id, npc, map, x, y, fac, items, title = unpack(parts)
+  local _, id, npc, map, x, y, fac, items, title, pre = unpack(parts)
   id = Num(id)
   if not id then return end
-  local data = {g = Num(npc), m = Num(map), x = Coord(x), y = Coord(y), n = title}
+  local data = {g = Num(npc), m = Num(map), x = Coord(x), y = Coord(y), n = title, pre = pre}
   if fac == "A" or fac == "H" then data.f = fac end
   data.i = {}
   for item in tostring(items or ""):gmatch("%d+") do
@@ -282,10 +318,14 @@ end
 local ev = CreateFrame("Frame")
 QL._frame = ev
 ev:RegisterEvent("QUEST_DETAIL")
+pcall(ev.RegisterEvent, ev, "QUEST_TURNED_IN")
 ev:RegisterEvent("QUEST_COMPLETE")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
-ev:SetScript("OnEvent", function(_, event)
-  if event == "QUEST_DETAIL" then pcall(QL.OnDetail, QL)
+ev:SetScript("OnEvent", function(_, event, ...)
+  if event == "QUEST_TURNED_IN" then
+    local a1 = ...
+    if not (PSS.IsSecret and PSS.IsSecret(a1)) then pcall(QL.OnTurnedIn, QL, a1) end
+  elseif event == "QUEST_DETAIL" then pcall(QL.OnDetail, QL)
   elseif event == "QUEST_COMPLETE" then pcall(QL.OnComplete, QL)
   elseif event == "PLAYER_ENTERING_WORLD" then
     -- Ask the network once per session, after the channel had time to join.

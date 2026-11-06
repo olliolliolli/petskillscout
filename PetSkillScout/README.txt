@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.2.2
+- Quest learning: a quest opened at an NPC more than 3 % of the map away from the database
+  position (or on another map) is recorded and shared too, with the last three quests you
+  handed in (a hint for quests that appear only after a condition). Once two players (or you)
+  confirm the spot, the map pin moves there; a pin hidden with right click comes back at the
+  new spot.
+
 3.2.1
 - Quest pins: right-click a quest pin (world map or minimap) to hide it when the giver is not
   there (wrong position in the database, or the NPC appears only in some phase). /pss pinsreset

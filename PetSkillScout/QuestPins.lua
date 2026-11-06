@@ -73,15 +73,20 @@ end
 -- Givers the player marked as "not here" (right click on the pin): the
 -- database position is wrong or the NPC appears only in some phase.
 -- Key: npc:mapID. /pss pinsreset brings them back.
-local function GiverKey(npc, mapID) return tostring(npc or 0) .. ":" .. tostring(mapID or 0) end
-function QP:IsHiddenGiver(npc, mapID)
+-- The key includes the rounded position: when players later find the giver
+-- somewhere else (QuestLearn), the new pin is not hidden.
+local function GiverKey(npc, mapID, x, y)
+  return string.format("%s:%s:%d:%d", tostring(npc or 0), tostring(mapID or 0),
+    math.floor((x or 0) / 2 + 0.5), math.floor((y or 0) / 2 + 0.5))
+end
+function QP:IsHiddenGiver(npc, mapID, x, y)
   local h = DB().questPinHidden
-  return h and h[GiverKey(npc, mapID)] ~= nil
+  return h and h[GiverKey(npc, mapID, x, y)] ~= nil
 end
 function QP:HideGiver(g)
   if not PetSkillScoutDB then return end
   PetSkillScoutDB.questPinHidden = PetSkillScoutDB.questPinHidden or {}
-  PetSkillScoutDB.questPinHidden[GiverKey(g.npc, g.mapID)] = time and time() or 0
+  PetSkillScoutDB.questPinHidden[GiverKey(g.npc, g.mapID, g.x, g.y)] = time and time() or 0
   if GameTooltip then GameTooltip:Hide() end
   PSS:Print(string.format(PSS:L("qPinHidden"), PSS.QuestWorth:NPCName(g.npc) or "?"))
   QP:Refresh()
@@ -96,7 +101,7 @@ function QP:Groups(mapID, level)
   local groups, byKey = {}, {}
   for _, x in ipairs(W:OnMap(mapID, level)) do
     local r = x.r
-    if not QP:IsHiddenGiver(r.g, mapID) then
+    if not QP:IsHiddenGiver(r.g, mapID, r.x, r.y) then
     local key = (r.g or 0) .. ":" .. r.x .. ":" .. r.y
     local g = byKey[key]
     if not g then

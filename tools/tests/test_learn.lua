@@ -37,8 +37,16 @@ local knownID
 for id, r in pairs(PSS.QuestDB) do if r.m and r.x and not r.i then knownID = id; break end end
 GetQuestID = function() return knownID end
 GetNumQuestChoices = function() return 0 end
+local kr = PSS.QuestDB[knownID]
+PSS.Nav.PlayerPos = function() return kr.m, kr.x / 100, kr.y / 100 end
 MOCK.Fire("QUEST_DETAIL")
 ok(QL:Records()[knownID] == nil, "known quest not recorded")
+-- The same quest far from the database position is recorded (giver elsewhere).
+PSS.Nav.PlayerPos = function() return kr.m, (kr.x > 50 and kr.x - 20 or kr.x + 20) / 100, kr.y / 100 end
+MOCK.Fire("QUEST_DETAIL")
+ok(QL:Records()[knownID] ~= nil, "known quest at another spot is recorded")
+QL:Records()[knownID] = nil
+PSS.Nav.PlayerPos = function() return 1438, 0.556, 0.412 end
 -- ... but a new reward on it is.
 GetNumQuestChoices = function() return 1 end
 MOCK.Fire("QUEST_COMPLETE")
