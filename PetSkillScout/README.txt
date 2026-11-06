@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.9
+- Auto Shot bar: the real time between shots is measured (shortest of the last three) and used
+  when the game's speed value is hidden or stale, e.g. after switching to a faster gun. The
+  measurement restarts on a weapon change or speed buff.
+
 3.1.8
 - Theme: "blocked: MicroMenuContainer:SetPointBase()" on level up. The micro menu and bag row
   are no longer anchored to the addon's info bar; they get a screen position instead, so the

@@ -29,12 +29,23 @@ function ST:Enabled()
 end
 
 -- Ranged attack speed; the last good value is kept for secret values.
-local lastSpeed = 2.8
+-- The game value can be hidden (secret) or stale after a weapon swap, so the
+-- real time between Auto Shots is measured too: the shortest of the last
+-- three intervals (longer ones include moving or casting) wins when it is
+-- clearly shorter than the game value, or when there is no game value.
+local lastSpeed, apiFresh = 2.8, false
+local recent = {}
 function ST:Speed()
   local s = Plain(Call(UnitRangedDamage, "player"))
-  if type(s) == "number" and s > 0.5 and s < 6 then lastSpeed = s end
+  if type(s) == "number" and s > 0.5 and s < 6 then lastSpeed, apiFresh = s, true else apiFresh = false end
+  local measured
+  for _, v in ipairs(recent) do if not measured or v < measured then measured = v end end
+  if measured and (#recent >= 2 or not apiFresh) and (not apiFresh or measured < lastSpeed - 0.12) then
+    return measured
+  end
   return lastSpeed
 end
+function ST:ResetMeasure() for i = #recent, 1, -1 do recent[i] = nil end end
 
 local function AutoShotName()
   local name = C_Spell and C_Spell.GetSpellName and Call(C_Spell.GetSpellName, AUTO_SHOT)
@@ -96,7 +107,15 @@ end
 ST.shooting, ST.last = false, nil
 
 function ST:Shot()
-  self.last = Now()
+  local now = Now()
+  if self.last and self.shooting then
+    local dt = now - self.last
+    if dt > 0.8 and dt < 6 then
+      recent[#recent + 1] = dt
+      while #recent > 3 do table.remove(recent, 1) end
+    end
+  end
+  self.last = now
   self.speed = self:Speed()
   self:Show()
 end
@@ -157,10 +176,16 @@ function ST:OnUpdate()
 end
 
 ST.frame = CreateFrame("Frame")
-for _, e in ipairs({"START_AUTOREPEAT_SPELL", "STOP_AUTOREPEAT_SPELL", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_ENTERING_WORLD"}) do
+for _, e in ipairs({"START_AUTOREPEAT_SPELL", "STOP_AUTOREPEAT_SPELL", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_ENTERING_WORLD",
+    "UNIT_INVENTORY_CHANGED", "UNIT_RANGEDDAMAGE", "PLAYER_EQUIPMENT_CHANGED"}) do
   pcall(ST.frame.RegisterEvent, ST.frame, e)
 end
 ST.frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
+  if event == "UNIT_INVENTORY_CHANGED" or event == "UNIT_RANGEDDAMAGE" or event == "PLAYER_EQUIPMENT_CHANGED" then
+    -- New weapon or speed buff: measure again.
+    if event == "PLAYER_EQUIPMENT_CHANGED" or unit == "player" then ST:ResetMeasure(); ST.speed = ST:Speed() end
+    return
+  end
   if event == "START_AUTOREPEAT_SPELL" then
     ST.shooting = true
     ST:Show()
