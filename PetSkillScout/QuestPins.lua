@@ -65,7 +65,7 @@ local function Ensure(i, canvas)
     pins[i] = pin
   end
   if pin:GetParent() ~= canvas then pin:SetParent(canvas) end
-  if PSS.Map.RaisePin then PSS.Map:RaisePin(pin, 9400) end
+  QP.Lower(pin, canvas)
   return pin
 end
 
@@ -94,6 +94,23 @@ end
 function QP:ResetHidden()
   if PetSkillScoutDB then PetSkillScoutDB.questPinHidden = nil end
   QP:Refresh()
+end
+
+-- Our quest pins sit under the game's own quest icons (turn-in "?" and
+-- available "!"), so those are never covered: same strata as the map pins,
+-- frame level of the area-POI layer (below quests), or just above the canvas.
+function QP.Lower(pin, canvas)
+  local strata = canvas.GetFrameStrata and canvas:GetFrameStrata()
+  if strata then pin:SetFrameStrata(strata) end
+  local level
+  local mgr = WorldMapFrame and WorldMapFrame.GetPinFrameLevelsManager and WorldMapFrame:GetPinFrameLevelsManager()
+  if mgr and mgr.GetValidFrameLevel then
+    for _, k in ipairs({"PIN_FRAME_LEVEL_AREA_POI", "PIN_FRAME_LEVEL_FLIGHT_POINT", "PIN_FRAME_LEVEL_DIG_SITE"}) do
+      local ok, v = pcall(mgr.GetValidFrameLevel, mgr, k)
+      if ok and type(v) == "number" then level = v break end
+    end
+  end
+  pin:SetFrameLevel(level or ((canvas.GetFrameLevel and canvas:GetFrameLevel() or 1) + 20))
 end
 
 function QP:Groups(mapID, level)
