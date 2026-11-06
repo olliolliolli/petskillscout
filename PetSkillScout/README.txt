@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.4.2
+- Gamepad layout matched to the game's own gamepad interface: player frame left above the left
+  button cluster, target mirrored on the right, cast bar above the centre buttons.
+
 3.4.1
 - Gamepad, step 2 (separate file GamepadTheme.lua, only while a gamepad is in use): the theme's
   player and target frames move up above the gamepad button clusters (unless you placed them

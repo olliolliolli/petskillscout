@@ -11,7 +11,10 @@ PSS.GamepadTheme = {}
 local GT = PSS.GamepadTheme
 
 -- Heights above the screen bottom (UI units) in gamepad mode.
-GT.UNIT_Y, GT.CAST_Y = 360, 320
+-- Matched to the game's own gamepad layout: the player frame sits left above
+-- the left button cluster (target mirrored on the right), the cast bar
+-- above the centre buttons.
+GT.UNIT_Y, GT.UNIT_X, GT.CAST_Y = 300, 290, 360
 
 local function InCombat() return InCombatLockdown and InCombatLockdown() end
 local function LY() return PSS.Layout end
@@ -25,7 +28,7 @@ end
 local function PlaceUnits(active)
   local L = LY()
   if not (L and L.units) then return end
-  for key, x in pairs({player = -250, target = 250}) do
+  for key, x in pairs({player = -GT.UNIT_X, target = GT.UNIT_X}) do
     local f = L.units[key]
     if f and Free(key) then
       pcall(f.ClearAllPoints, f)
