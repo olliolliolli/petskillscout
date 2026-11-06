@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.0
+- Minimap: pins are placed from the game's world coordinates (exact for every zone, any zoom
+  or rotation) and the client's own minimap view radius, not from estimated zone sizes.
+- Quest pins: givers standing almost on the same spot share one pin (names listed in the
+  tooltip).
+- Quest objectives: a small mark at the first objective of each unfinished quest in your log
+  (from the quest database; Settings > Quests, on by default), under the game's own icons.
+
 3.2.4
 - Quest pins: drawn under the game's own quest icons on the world map, so turn-in "?" and the
   game's "!" are never covered.

@@ -29,7 +29,12 @@ function QP.Tooltip(pin)
   if not (g and GameTooltip) then return end
   local W = PSS.QuestWorth
   GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
-  GameTooltip:AddLine(PSS:Safe(W:NPCName(g.npc) or PSS:L("qwGiverUnknown")), 1, 0.82, 0)
+  local names = {}
+  for _, npc in ipairs(g.npcs or {g.npc}) do
+    local n = W:NPCName(npc)
+    if n then names[#names + 1] = n end
+  end
+  GameTooltip:AddLine(PSS:Safe(#names > 0 and table.concat(names, ", ") or PSS:L("qwGiverUnknown")), 1, 0.82, 0, true)
   for _, x in ipairs(g.quests) do
     local c = W.COLORS[x.rate.verdict]
     GameTooltip:AddLine(PSS:Safe(W:Title(x.id) .. "  (" .. PSS:L("qw_" .. x.rate.verdict) .. ")"), c[1], c[2], c[3])
@@ -130,7 +135,24 @@ function QP:Groups(mapID, level)
     if ORDER[x.rate.verdict] < ORDER[g.best] then g.best = x.rate.verdict end
     end
   end
-  return groups
+  -- Givers standing almost on the same spot share one pin (less clutter).
+  local merged = {}
+  for _, g in ipairs(groups) do
+    local into
+    for _, m in ipairs(merged) do
+      local dx, dy = g.x - m.x, g.y - m.y
+      if dx * dx + dy * dy < 1.0 then into = m break end
+    end
+    if into then
+      for _, q in ipairs(g.quests) do into.quests[#into.quests + 1] = q end
+      if ORDER[g.best] < ORDER[into.best] then into.best = g.best end
+      into.npcs = into.npcs or {into.npc}
+      into.npcs[#into.npcs + 1] = g.npc
+    else
+      merged[#merged + 1] = g
+    end
+  end
+  return merged
 end
 
 -- Our "!" sits a little up and right of the giver (the game draws its own "!"
@@ -191,8 +213,70 @@ local function Update()
     end
   end
   QP.shown = used
+  QP:UpdateObjectives(canvas, mapID, width, height, scale)
 end
 QP.Update = Update
+
+-- Objectives of quests in your log (first objective position from the
+-- database): a small target mark, under the game's own quest icons.
+local objPins = {}
+function QP:ObjectivesOn() return QP:Enabled() and DB().questObjPins ~= false end
+function QP:LogQuests()
+  local out = {}
+  local api = C_QuestLog
+  if api and api.GetNumQuestLogEntries and api.GetInfo then
+    local n = tonumber(PSS.IsSecret(api.GetNumQuestLogEntries()) and 0 or api.GetNumQuestLogEntries()) or 0
+    for i = 1, n do
+      local ok, info = pcall(api.GetInfo, i)
+      if ok and type(info) == "table" and not info.isHeader and info.questID and not PSS.IsSecret(info.questID) then
+        local done = api.IsComplete and select(2, pcall(api.IsComplete, info.questID))
+        out[#out + 1] = {id = info.questID, done = done == true, title = info.title}
+      end
+    end
+  elseif GetNumQuestLogEntries and GetQuestLogTitle then
+    local n = tonumber((GetNumQuestLogEntries())) or 0
+    for i = 1, n do
+      local title, _, _, header, _, complete, _, id = GetQuestLogTitle(i)
+      if not header and id then out[#out + 1] = {id = id, done = complete == 1, title = title} end
+    end
+  end
+  return out
+end
+function QP:UpdateObjectives(canvas, mapID, width, height, scale)
+  for _, p in ipairs(objPins) do p:Hide() end
+  if not self:ObjectivesOn() then return end
+  local used = 0
+  for _, q in ipairs(self:LogQuests()) do
+    local r = PSS.QuestDB and PSS.QuestDB[q.id]
+    if r and r.om == mapID and r.ox and not q.done then
+      used = used + 1
+      local pin = objPins[used]
+      if not pin then
+        pin = CreateFrame("Frame", nil, canvas)
+        pin:SetSize(14, 14)
+        pin.icon = pin:CreateTexture(nil, "ARTWORK")
+        pin.icon:SetAllPoints(pin)
+        pin.icon:SetTexture("Interface/TargetingFrame/UI-RaidTargetingIcon_8")
+        pin:EnableMouse(true)
+        pin:SetScript("OnEnter", function(self)
+          if not GameTooltip then return end
+          GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+          GameTooltip:AddLine(PSS:Safe(self.title or "?"), 1, 0.82, 0)
+          GameTooltip:AddLine(PSS:Safe(PSS:L("qObjective")), 0.8, 0.8, 0.8)
+          GameTooltip:Show()
+        end)
+        pin:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+        objPins[used] = pin
+      end
+      if pin:GetParent() ~= canvas then pin:SetParent(canvas) end
+      QP.Lower(pin, canvas)
+      pin.title = q.title or (PSS.QuestWorth and PSS.QuestWorth:Title(q.id)) or r.n
+      PSS.Map:Place(pin, canvas, r.ox, r.oy, width, height, scale)
+      pin:SetAlpha(0.85)
+      pin:Show()
+    end
+  end
+end
 
 local driver = CreateFrame("Frame")
 PSS:OnlyWithWorldMap(driver)
@@ -205,7 +289,8 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   if not ok then QP._lastError = tostring(err) end
 end)
 local ev = CreateFrame("Frame")
-for _, e in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "PLAYER_LEVEL_UP", "PLAYER_EQUIPMENT_CHANGED"}) do
+for _, e in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "PLAYER_LEVEL_UP", "PLAYER_EQUIPMENT_CHANGED",
+    "UNIT_QUEST_LOG_CHANGED"}) do
   pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function() QP:Refresh() end)

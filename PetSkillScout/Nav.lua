@@ -57,6 +57,10 @@ end
 -- Offset to a point (percent coordinates) in yards east/south. Without a size
 -- API, zone maps are 3:2, so percent units are scaled to keep the angle right.
 function Nav:Offset(mapID, px, py, tx, ty)
+  -- Exact: both points in world yards (world X points north, Y points west).
+  local c1, x1, y1 = self:World(mapID, px, py)
+  local c2, x2, y2 = self:World(mapID, tx / 100, ty / 100)
+  if c1 and c2 and c1 == c2 then return -(y2 - y1), -(x2 - x1), true end
   local w, h = self:MapSize(mapID)
   if w then return (tx / 100 - px) * w, (ty / 100 - py) * h, true end
   return (tx / 100 - px) * 150, (ty / 100 - py) * 100, false
@@ -73,8 +77,21 @@ function Nav:Nearest(target, mapID, px, py)
 end
 
 -- World position (continent ID, yards) of a zone-map point; x, y are 0..1.
+local worldMemo, worldMemoN = {}, 0
 function Nav:World(mapID, x, y)
   if not (mapID and C_Map and C_Map.GetWorldPosFromMapPos and CreateVector2D) then return nil end
+  local key = mapID .. ":" .. x .. ":" .. y
+  local m = worldMemo[key]
+  if m then return m[1], m[2], m[3] end
+  local c, wx, wy = self:WorldRaw(mapID, x, y)
+  if c then
+    worldMemoN = worldMemoN + 1
+    if worldMemoN > 2000 then worldMemo, worldMemoN = {}, 0 end
+    worldMemo[key] = {c, wx, wy}
+  end
+  return c, wx, wy
+end
+function Nav:WorldRaw(mapID, x, y)
   local cont, pos = safe(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(x, y))
   if not (cont and pos and pos.GetXY) then return nil end
   local wx, wy = safe(pos.GetXY, pos)
@@ -524,7 +541,9 @@ local function UpdateMinimap()
   cached.state = {px = px, py = py, zoom = zoom, mapID = mapID, facing = facingNow, n = #cached.list,
     focus = PSS.RareMap and PSS.RareMap.focus}
   cached.fresh = false
-  local radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2
+  -- The client knows the exact view radius (yards); the zoom table is the fallback.
+  local radius = Minimap.GetViewRadius and tonumber(safe(Minimap.GetViewRadius, Minimap))
+  if not (radius and radius > 0) then radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2 end
   local scale = (Minimap:GetWidth() / 2) / radius
   local facing = GetPlayerFacing and GetPlayerFacing() or 0
   local rotate = GetCVar and GetCVar("rotateMinimap") == "1"

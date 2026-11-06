@@ -4255,6 +4255,8 @@ local SETTINGS = {
     {key="questLearn", label="optQuestLearn", hint="optQuestLearnHint", kind="toggle", default=true},
     {key="questMinimap", label="optQuestMinimap", hint="optQuestMinimapHint", kind="toggle", default=true,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
+    {key="questObjPins", label="optQuestObj", hint="optQuestObjHint", kind="toggle", default=true,
+      apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questAuto", label="optQuestAuto", hint="optQuestAutoHint", kind="choice", default="off",
       options={{"off","qAutoOff"},{"worth","qAutoWorth"},{"all","qAutoAll"}}},
     {key="questTurnIn", label="optQuestTurnIn", hint="optQuestTurnInHint", kind="toggle", default=false},
