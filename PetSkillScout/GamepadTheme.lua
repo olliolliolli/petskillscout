@@ -14,7 +14,7 @@ local GT = PSS.GamepadTheme
 -- Matched to the game's own gamepad layout: the player frame sits left above
 -- the left button cluster (target mirrored on the right), the cast bar
 -- above the centre buttons.
-GT.UNIT_Y, GT.UNIT_X, GT.CAST_Y = 300, 290, 360
+GT.UNIT_Y, GT.UNIT_X, GT.CAST_Y = 300, 325, 360
 
 local function InCombat() return InCombatLockdown and InCombatLockdown() end
 local function LY() return PSS.Layout end
@@ -54,7 +54,9 @@ local function SyncStrips()
     local f = _G[name]
     if f and strip.SetShown then
       local ok, shown = pcall(f.IsVisible, f)
-      strip:SetShown(ok and shown and true or false)
+      -- Gamepad mode: the bars are replaced by the gamepad interface (the bag
+      -- bar can stay "visible" with its buttons gone) - no backing at all.
+      strip:SetShown(ok and shown and not GT.active and true or false)
       if not hooked[f] and f.HookScript then
         hooked[f] = true
         pcall(f.HookScript, f, "OnShow", function() if PSS.GamepadTheme then PSS.GamepadTheme.Sync() end end)

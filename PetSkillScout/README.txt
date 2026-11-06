@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.4.3
+- Gamepad layout: player / target frames a little further out (clear of the centre buttons);
+  the bag and micro menu backings are always hidden in gamepad mode.
+
 3.4.2
 - Gamepad layout matched to the game's own gamepad interface: player frame left above the left
   button cluster, target mirrored on the right, cast bar above the centre buttons.
