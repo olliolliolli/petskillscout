@@ -55,6 +55,7 @@ local function Tooltip(pin)
   local shared = PSS.Sync and PSS.Sync:Text(e)
   if shared then GameTooltip:AddLine(PSS:Safe(shared), 0.56, 0.78, 1) end
   GameTooltip:AddLine(PSS:Safe(PSS:L("rareMapHint")), 0.6, 0.6, 0.6, true)
+  GameTooltip:AddLine(PSS:Safe(PSS:L("annSpotHint")), 0.6, 0.6, 0.6, true)
   GameTooltip:Show()
 end
 
@@ -82,6 +83,8 @@ local function EnsureIcon(i, canvas)
       if not e then return end
       if button == "RightButton" then
         if RM.focus == e.beast.npcID then RM.focus = nil end
+      elseif IsAltKeyDown and IsAltKeyDown() then
+        if PSS.Announce then PSS.Announce:ShareRare(e) end
       elseif IsControlKeyDown and IsControlKeyDown() then
         if PSS.Nav then PSS.Nav:SetTarget(PSS.Nav:TargetFromBeast(e.beast)) end
       elseif IsShiftKeyDown and IsShiftKeyDown() then

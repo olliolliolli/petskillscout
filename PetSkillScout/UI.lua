@@ -4294,6 +4294,10 @@ local SETTINGS = {
         if not N then return "" end
         return PSS:Safe(string.format(L("netInfo"), N:OnlineCount(), N:ChannelID() and L("netConnected") or L("netOffline")))
       end},
+    {key="announceOn", label="optAnn", hint="optAnnHint", kind="toggle", default=true},
+    {key="announceRare", label="optAnnRare", hint="", kind="toggle", default=true},
+    {key="announceRank", label="optAnnRank", hint="", kind="toggle", default=true},
+    {key="announceMilestone", label="optAnnMile", hint="", kind="toggle", default=true},
     {key="showcaseShare", label="optShowcase", hint="optShowcaseHint", kind="toggle", default=true,
       apply=function() if PSS.Showcase and PetSkillScoutDB.showcaseShare ~= false then PSS.Showcase:Send() end end},
     {key="queueEnabled", label="optQueue", hint="optQueueHint", kind="toggle", default=true,

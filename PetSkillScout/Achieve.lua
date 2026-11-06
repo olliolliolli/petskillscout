@@ -146,7 +146,10 @@ function A:Check()
       if value >= goal then
         done[def[1]] = Now()
         new = true
-        if not quiet then Toast(def) end
+        if not quiet then
+          Toast(def)
+          if PSS.Announce then pcall(PSS.Announce.Achievement, PSS.Announce, def[1]) end
+        end
       end
     end
   end

@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.6.7"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.0"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -322,6 +322,10 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if PSS.Holidays then PSS.Holidays:Print() end
         return
     end
+    if msg == "announce" then
+        if PSS.Announce then PSS.Announce:SendLast() end
+        return
+    end
     if msg == "netlist" then
         -- Network members as whisper targets, and who the server said is not online.
         local N = PSS.Net
@@ -435,6 +439,7 @@ blockWatch:SetScript("OnEvent", function(_, event, addon, func)
     log[tostring(func)] = e
     PetSkillScoutDB.blockedLog = log
   end
+  if tostring(func):find("SendChatMessage") and PetSkillScoutDB then PetSkillScoutDB.announceBlocked = true end
   if blockSeen[tostring(func)] then return end
   blockSeen[tostring(func)] = true
   PSS:Print("blocked: " .. tostring(func) .. " (" .. tostring(event) .. ") - please report this")

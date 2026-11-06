@@ -224,7 +224,10 @@ local function OnPet()
     PSS:Print(string.format(L("timerCollected"), entry.name))
   end
   local now = GetTime and GetTime() or 0
-  if now - lastTame < 90 then T:MarkGone(entry, "tame") end
+  if now - lastTame < 90 then
+    T:MarkGone(entry, "tame")
+    if PSS.Announce then pcall(PSS.Announce.Rare, PSS.Announce, entry) end
+  end
   Refresh()
 end
 
