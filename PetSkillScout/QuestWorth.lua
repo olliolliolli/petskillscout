@@ -42,6 +42,14 @@ W.DUNGEON_MIN = 35
 local learnedCache = {}
 function W:Record(id)
   local r = PSS.QuestDB and PSS.QuestDB[id]
+  -- Not in the database (or without a position) but offered by an NPC in game.
+  local off = DB().questOffered and DB().questOffered[id]
+  if off and off.m and off.x and not (r and r.m and r.x) then
+    local c = {}
+    for k, v in pairs(r or {}) do c[k] = v end
+    c.m, c.x, c.y, c.g, c.learned = off.m, off.x, off.y, c.g or off.g, true
+    return c
+  end
   local QLm = PSS.QuestLearn
   local rec = QLm and QLm.Records and DB().questObs and QLm:Records()[id]
   if not (rec and QLm:Confirmed(rec)) then return r end
@@ -101,6 +109,53 @@ end
 -- Can this character pick the quest up? (ignores reputation and professions,
 -- which the database cannot check: those quests count as not available)
 -- Returns ok, reason ("done" | "log" | "side" | "race" | "class" | "level" | "prev" | "other").
+-- Quests the game offered at an NPC: remembered (with where you stood) so
+-- the map shows them even if the database conditions disagree.
+function W:Offered(id, npc)
+  id = tonumber(id)
+  if not (id and PetSkillScoutDB) then return end
+  PetSkillScoutDB.questOffered = PetSkillScoutDB.questOffered or {}
+  if PetSkillScoutDB.questOffered[id] then return end
+  local rec = {t = time and time() or 0, g = npc}
+  if PSS.Nav then
+    local m, x, y = PSS.Nav:PlayerPos()
+    if m and x then rec.m, rec.x, rec.y = m, math.floor(x * 1000 + 0.5) / 10, math.floor(y * 1000 + 0.5) / 10 end
+  end
+  PetSkillScoutDB.questOffered[id] = rec
+  self.byMap = nil
+  if PSS.QuestPins and PSS.QuestPins.Refresh then PSS.QuestPins:Refresh() end
+end
+
+-- /pss questwhy: database quests near you and why each has no pin.
+function W:Why(radius)
+  radius = radius or 4
+  local m, px, py
+  if PSS.Nav then m, px, py = PSS.Nav:PlayerPos() end
+  if not m then PSS:Print("questwhy: no position") return end
+  px, py = px * 100, py * 100
+  local level = self:PlayerLevel()
+  local rows = {}
+  for id, r in pairs(PSS.QuestDB or {}) do
+    if r.m == m and r.x and math.abs(r.x - px) <= radius and math.abs(r.y - py) <= radius then
+      local ok, why = self:Available(id, level)
+      if ok then
+        if not (r.g or r.ob) then why = "no giver"
+        elseif r.hol and not (PSS.Holidays and PSS.Holidays:IsActive(r.hol)) then why = "holiday"
+        elseif PSS.QuestPins and PSS.QuestPins:IsHiddenGiver(r.g, m, r.x, r.y) then why = "hidden by you"
+        else why = "PIN" end
+      end
+      if why == "level" then why = "level " .. tostring(r.l) end
+      if why == "prev" then why = "needs " .. table.concat(r.p or {}, ",") end
+      if why ~= "done" and why ~= "log" then
+        rows[#rows + 1] = string.format("%d %s (%.1f,%.1f): %s", id, tostring(r.n or "?"), r.x, r.y, why)
+      end
+    end
+  end
+  table.sort(rows)
+  PSS:Print(string.format("questwhy: map %d at %.1f,%.1f, level %d, %d quests (done / in log not listed)", m, px, py, level, #rows))
+  for _, line in ipairs(rows) do PSS:Print("  " .. line) end
+end
+
 -- Skill lines you have (professions, Cooking, Fishing, First Aid...), by ID.
 local skillCache, skillAt = nil, -1e9
 function W:Skills()
@@ -162,6 +217,9 @@ function W:Available(id, level)
     for _, x in ipairs(r.cl) do if x == cls then ok = true end end
     if cls and not ok then return false, "class" end
   end
+  -- The game offered this quest to you at an NPC (gossip / greeting window):
+  -- whatever the database says about conditions, it is available.
+  if DB().questOffered and DB().questOffered[id] then return true end
   if r.sk and not self:HasSkill(r.sk) then return false, "skill" end
   if r.mr and not self:HasRep(r.mr) then return false, "rep" end
   if r.p then
@@ -394,6 +452,7 @@ function W:Index()
   -- Quests learned in game (also ones the database does not have).
   local QLm = PSS.QuestLearn
   if QLm and QLm.Records and DB().questObs then for id in pairs(QLm:Records()) do ids[id] = true end end
+  for id in pairs(DB().questOffered or {}) do ids[id] = true end
   for id in pairs(ids) do
     local r = self:Record(id) or {}
     if r.m and r.x then

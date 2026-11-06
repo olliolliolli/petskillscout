@@ -66,7 +66,26 @@ local function Skip()
   return QA:Mode() == "off" or (IsShiftKeyDown and IsShiftKeyDown()) or false
 end
 
+-- Every quest an NPC offers you is remembered as available (map pins).
+function QA:NoteOffered()
+  local W = PSS.QuestWorth
+  if not (W and W.Offered) then return end
+  local npc
+  local guid = Plain(Call(UnitGUID, "npc"))
+  if type(guid) == "string" then npc = tonumber((select(6, strsplit("-", guid)))) end
+  local G = C_GossipInfo
+  if G and G.GetAvailableQuests then
+    for _, q in ipairs(Call(G.GetAvailableQuests) or {}) do W:Offered(Plain(q.questID), npc) end
+  end
+  local n = tonumber(Plain(Call(GetNumAvailableQuests))) or 0
+  for i = 1, n do
+    local id = Plain(select(5, Call(GetAvailableQuestInfo, i)))
+    if id then W:Offered(id, npc) end
+  end
+end
+
 function QA:OnGossip()
+  pcall(self.NoteOffered, self)
   if Skip() then return end
   local G = C_GossipInfo
   if not (G and G.GetAvailableQuests and G.SelectAvailableQuest) then return end
@@ -80,6 +99,7 @@ function QA:OnGossip()
 end
 
 function QA:OnGreeting()
+  pcall(self.NoteOffered, self)
   if Skip() then return end
   local n = tonumber(Plain(Call(GetNumAvailableQuests))) or 0
   for i = 1, n do
@@ -94,6 +114,10 @@ end
 
 function QA:OnDetail()
   local id = tonumber(Plain(Call(GetQuestID)))
+  if id and PSS.QuestWorth and PSS.QuestWorth.Offered then
+    local guid = Plain(Call(UnitGUID, "npc"))
+    pcall(PSS.QuestWorth.Offered, PSS.QuestWorth, id, type(guid) == "string" and tonumber((select(6, strsplit("-", guid)))) or nil)
+  end
   self:ShowRating(id)
   if Skip() or not id then return end
   if Plain(Call(QuestGetAutoAccept)) then return end

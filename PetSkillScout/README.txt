@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.8
+- Quest pins: every quest an NPC actually offers you (gossip, greeting or quest window) is
+  remembered as available - its pin shows even when the database conditions (level,
+  previous quests, skill) disagree, and quests the database lacks get a pin at the NPC.
+- /pss questwhy lists the database quests near you and why each one has no pin (level N,
+  needs <quest>, skill, rep, side, race, class, holiday, no giver, hidden by you) - for
+  reporting mismatches with the game's "!".
+
 3.3.7
 - Quest pins sit right on the giver again (no offset), under the game's own quest icons on the
   world map, so a turn-in "?" is always on top.
