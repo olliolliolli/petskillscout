@@ -36,6 +36,7 @@ function QP.Tooltip(pin)
     GameTooltip:AddLine(PSS:Safe("   " .. W:Summary(x.rate)), 0.85, 0.85, 0.85)
   end
   GameTooltip:AddLine(PSS:Safe(PSS:L("qwPinHint")), 0.6, 0.6, 0.6, true)
+  GameTooltip:AddLine(PSS:Safe(PSS:L("qPinHideHint")), 0.6, 0.6, 0.6, true)
   GameTooltip:Show()
 end
 
@@ -49,8 +50,13 @@ local function Ensure(i, canvas)
     pin.icon:SetTexture(ICON)
     pin:SetScript("OnEnter", QP.Tooltip)
     pin:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
-    pin:SetScript("OnClick", function(self)
+    pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    pin:SetScript("OnClick", function(self, button)
       local g = self.group
+      if button == "RightButton" then
+        if g then QP:HideGiver(g) end
+        return
+      end
       if g and PSS.Nav then
         PSS.Nav:SetTarget({name = PSS.QuestWorth:NPCName(g.npc) or PSS.QuestWorth:Title(g.quests[1].id),
           mapID = g.mapID, points = {{g.x, g.y}}})
@@ -64,11 +70,33 @@ local function Ensure(i, canvas)
 end
 
 -- Group the available quests of a map by quest giver position.
+-- Givers the player marked as "not here" (right click on the pin): the
+-- database position is wrong or the NPC appears only in some phase.
+-- Key: npc:mapID. /pss pinsreset brings them back.
+local function GiverKey(npc, mapID) return tostring(npc or 0) .. ":" .. tostring(mapID or 0) end
+function QP:IsHiddenGiver(npc, mapID)
+  local h = DB().questPinHidden
+  return h and h[GiverKey(npc, mapID)] ~= nil
+end
+function QP:HideGiver(g)
+  if not PetSkillScoutDB then return end
+  PetSkillScoutDB.questPinHidden = PetSkillScoutDB.questPinHidden or {}
+  PetSkillScoutDB.questPinHidden[GiverKey(g.npc, g.mapID)] = time and time() or 0
+  if GameTooltip then GameTooltip:Hide() end
+  PSS:Print(string.format(PSS:L("qPinHidden"), PSS.QuestWorth:NPCName(g.npc) or "?"))
+  QP:Refresh()
+end
+function QP:ResetHidden()
+  if PetSkillScoutDB then PetSkillScoutDB.questPinHidden = nil end
+  QP:Refresh()
+end
+
 function QP:Groups(mapID, level)
   local W = PSS.QuestWorth
   local groups, byKey = {}, {}
   for _, x in ipairs(W:OnMap(mapID, level)) do
     local r = x.r
+    if not QP:IsHiddenGiver(r.g, mapID) then
     local key = (r.g or 0) .. ":" .. r.x .. ":" .. r.y
     local g = byKey[key]
     if not g then
@@ -78,6 +106,7 @@ function QP:Groups(mapID, level)
     end
     g.quests[#g.quests + 1] = x
     if ORDER[x.rate.verdict] < ORDER[g.best] then g.best = x.rate.verdict end
+    end
   end
   return groups
 end

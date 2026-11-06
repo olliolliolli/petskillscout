@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.2.1
+- Quest pins: right-click a quest pin (world map or minimap) to hide it when the giver is not
+  there (wrong position in the database, or the NPC appears only in some phase). /pss pinsreset
+  shows hidden pins again.
+
 3.2.0
 - Gear: crafted items of your professions (Leatherworking, Blacksmithing, Tailoring,
   Engineering, Alchemy, Enchanting) are recommended like quest and dungeon gear when they are

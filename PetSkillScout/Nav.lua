@@ -304,6 +304,8 @@ local function Pin(i)
     p:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     p:SetScript("OnClick", function(self, button)
       if button == "RightButton" then
+        -- Quest giver: right click hides the pin ("giver not here").
+        if self.group and PSS.QuestPins then PSS.QuestPins:HideGiver(self.group); return end
         -- Tracked beast: right click stops tracking it.
         if self.beastID then
           PSS:SetTracked(self.beastID, false)
