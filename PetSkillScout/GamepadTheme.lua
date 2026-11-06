@@ -84,6 +84,28 @@ local function Regions(f)
   local ok, list = pcall(function() return {f:GetRegions()} end)
   return ok and list or {}
 end
+-- Button glyphs: the game draws them into the round backing art, which is
+-- hidden, so each button gets a small label in its corner. In every group of
+-- 8 buttons: 1-4 = d-pad (left, up, right, down), 5-8 = face buttons
+-- (X left, Y up, B right, A down) - read from the gamepad frame layout.
+local GLYPH = {
+  {"\226\134\144", {0.85, 0.85, 0.85}}, {"\226\134\145", {0.85, 0.85, 0.85}},
+  {"\226\134\146", {0.85, 0.85, 0.85}}, {"\226\134\147", {0.85, 0.85, 0.85}},
+  {"X", {0.35, 0.6, 1}}, {"Y", {1, 0.85, 0.2}}, {"B", {1, 0.35, 0.3}}, {"A", {0.4, 0.9, 0.35}},
+}
+local function Label(b, index)
+  local g = GLYPH[index]
+  if not g or b.pssGlyph then return end
+  local fs = b:CreateFontString(nil, "OVERLAY")
+  -- Noto Sans (shipped with the addon) has the arrow characters.
+  local font = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
+  pcall(fs.SetFont, fs, font, 10, "OUTLINE")
+  fs:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+  fs:SetText(g[1])
+  fs:SetTextColor(g[2][1], g[2][2], g[2][3], 1)
+  b.pssGlyph = fs
+end
+
 local function SkinTree(f, depth)
   if depth > 6 then return end
   for _, c in ipairs(Children(f)) do
@@ -93,6 +115,8 @@ local function SkinTree(f, depth)
       if not skinned[c] and PSS.Skin and PSS.Skin.SkinActionButton then
         skinned[c] = true
         pcall(PSS.Skin.SkinActionButton, c)
+        local idx = tonumber(name:match("Bar[A-Za-z]*ActionButton(%d+)$"))
+        if idx then pcall(Label, c, idx) end
       end
     elseif kind == "Frame" and not name then
       -- Unnamed art frames: the round backings (256x128) are faded; small ones

@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.5.2
+- Gamepad bar: every button shows a small glyph in its corner - d-pad arrows and the face
+  buttons X / Y / B / A in their colours (the game drew them into the hidden round backings).
+
 3.5.1
 - Gamepad bar: the button glyphs (A, B, X, Y, LT, RT...) are back - only the big round art of
   the backings is hidden.
