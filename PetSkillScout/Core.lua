@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.13"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.14"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -256,6 +256,24 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
             if type(line) == "number" then list[#list + 1] = tostring((W.SKILL_EN or {})[line] or line) .. " " .. tostring(rank) end
         end
         table.sort(list)
+        -- Raw sources, to see where each skill comes from.
+        if type(GetProfessions) == "function" then
+            local idx = {GetProfessions()}
+            for i = 1, 6 do
+                if idx[i] and GetProfessionInfo then
+                    local n, _, rank, maxr, _, _, line = GetProfessionInfo(idx[i])
+                    PSS:Print(string.format("  GetProfessions[%d]: %s %s/%s line %s", i, tostring(n), tostring(rank), tostring(maxr), tostring(line)))
+                end
+            end
+        end
+        if type(GetNumSkillLines) == "function" and GetSkillLineInfo then
+            local parts = {}
+            for i = 1, (GetNumSkillLines() or 0) do
+                local n, header, _, rank = GetSkillLineInfo(i)
+                if n and not header then parts[#parts + 1] = tostring(n) .. " " .. tostring(rank) end
+            end
+            PSS:Print("  skill list: " .. table.concat(parts, ", "))
+        end
         PSS:Print("skills: " .. (#list > 0 and table.concat(list, ", ") or "none") ..
             " (GetProfessions " .. tostring(type(GetProfessions) == "function") .. ", skill list " ..
             tostring(type(GetSkillLineInfo) == "function") .. ")")

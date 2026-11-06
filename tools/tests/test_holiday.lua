@@ -47,6 +47,14 @@ local t0 = GetTime()
 GetTime = function() return t0 + 100 end -- skip the skill cache
 check("fishing seen from skill list", W:HasSkill(356))
 check("no cooking: cooking quest hidden", not W:HasSkill(185))
+-- GetProfessions has only the main profession; Fishing comes from the skill list with its rank.
+GetProfessions = function() return 1 end
+GetProfessionInfo = function() return "Leatherworking", nil, 60, 75, nil, nil, 165 end
+GetNumSkillLines = function() return 1 end
+GetSkillLineInfo = function() return "Fishing", nil, nil, 75 end
+GetTime = function() return t0 + 200 end
+check("fishing rank from the skill list next to GetProfessions", W:Skills()[356] == 75 and W:Skills()[165] == 60)
+GetProfessions = nil
 -- Skills from the spell book when no skill list has them (WoW Forever).
 GetNumSkillLines = function() return 0 end
 local oldBook = PSS.SpellBar and PSS.SpellBar.Book

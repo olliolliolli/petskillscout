@@ -229,7 +229,10 @@ function W:Skills()
   end
   -- Classic-style clients: the character's skill list. Names are localised,
   -- so each skill line is matched by the name of its base spell.
-  if not next(out) and type(GetNumSkillLines) == "function" and type(GetSkillLineInfo) == "function" then
+  -- The character's skill list is always read too: GetProfessions can hold
+  -- only the two main professions while Fishing / Cooking / First Aid (with
+  -- their ranks) are only in this list. Lines already found keep their rank.
+  if type(GetNumSkillLines) == "function" and type(GetSkillLineInfo) == "function" then
     local byName = {}
     local spellName = (C_Spell and C_Spell.GetSpellName) or GetSpellInfo
     for line, spell in pairs(W.SKILL_SPELLS) do
@@ -241,7 +244,9 @@ function W:Skills()
     for i = 1, n do
       local name, header, _, rank = Call(GetSkillLineInfo, i)
       name = Plain(name)
-      if name and not Plain(header) and byName[name] then out[byName[name]] = tonumber(Plain(rank)) or 1 end
+      if name and not Plain(header) and byName[name] and not out[byName[name]] then
+        out[byName[name]] = tonumber(Plain(rank)) or 1
+      end
     end
     out.listRead = n > 0 or nil
   end

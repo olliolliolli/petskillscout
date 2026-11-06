@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.14
+- Skills: the character's skill list is always read, not only when GetProfessions returns
+  nothing - Fishing, Cooking and First Aid (with their ranks) are often only there, so
+  skill quests and their minimum levels work again. /pss skills shows every source.
+
 3.3.13
 - Quest pins: skill quests (e.g. Gaffer Jacks - Fishing) were hidden although you have the
   skill: on WoW Forever secondary skills can be missing from the skill lists. The profession
