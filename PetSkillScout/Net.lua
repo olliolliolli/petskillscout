@@ -331,7 +331,9 @@ function N:AddMember(who, target, guid)
     local ok, v = pcall(Ambiguate, t, "none")
     if ok and type(v) == "string" then t = v end
   end
-  self.members[who] = {target = t, t = Now()}
+  local m = self.members[who] or {}
+  m.target, m.t = t, Now()
+  self.members[who] = m
 end
 -- Whisper targets the server says are not online ("No player named X is
 -- currently playing": other connected realm, logged out). They are dropped
@@ -353,11 +355,20 @@ function N:IsTarget(name)
   if self.sentTo and self.sentTo[name] then return name end
 end
 function N:OnNotFound(text)
+  if type(text) ~= "string" or (PSS.IsSecret and PSS.IsSecret(text)) then return false end
   local pat = NotFoundPattern()
-  if not pat or type(text) ~= "string" or (PSS.IsSecret and PSS.IsSecret(text)) then return false end
-  local name = text:match(pat)
-  if not name then return false end
-  local who = self:IsTarget(name)
+  local name = pat and text:match(pat)
+  local who = name and self:IsTarget(name)
+  if not who then
+    -- The client's wording may differ from the global string: any system
+    -- line naming someone we whispered in the last 15 seconds is ours.
+    local now = Now()
+    for target, t in pairs(self.sentTo or {}) do
+      if now - t < 15 and text:find(target, 1, true) then who = self:IsTarget(target) or target break end
+      local short = target:match("^[^-]+")
+      if now - t < 15 and short and text:find(short, 1, true) then who = self:IsTarget(target) or short break end
+    end
+  end
   if not who then return false end
   self.members[who] = nil
   self.unreachable[who] = Now()
@@ -374,12 +385,24 @@ function N:NoteWhisper(target)
   self.sentTo[target] = Now()
 end
 
-function N:Members()
+-- kind: message kind ("H" hello...). Members that never answered get only
+-- one hello per 30 minutes (discovery); everything else goes to members who
+-- have sent us something (confirmed PetSkillScout users we can reach).
+function N:Confirm(who)
+  local m = self.members[who]
+  if m then m.ok = true end
+  self.unreachable[who] = nil
+end
+function N:Members(kind)
   local list = {}
   local now = Now()
   for who, m in pairs(self.members) do
     local bad = self.unreachable[who]
-    if not (bad and now - bad < 1800) then list[#list + 1] = {who = who, target = m.target, t = m.t} end
+    local want = m.ok or (kind == "H" and now - (m.probed or 0) >= 1800)
+    if want and not (bad and now - bad < 1800) then
+      if not m.ok then m.probed = now end
+      list[#list + 1] = {who = who, target = m.target, t = m.t}
+    end
   end
   table.sort(list, function(a, b) return a.t > b.t end)
   for i = #list, self.MAX_MEMBERS + 1, -1 do list[i] = nil end

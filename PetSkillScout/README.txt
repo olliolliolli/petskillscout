@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.7
+- Network: "player not found" lines are hidden whatever the client's wording (any system line
+  naming someone the network whispered in the last 15 s). Channel members who never answered
+  get only one hello per 30 minutes; other messages go only to hunters who have answered.
+
 3.1.6
 - Network: whisper names include the realm when the player is on another connected realm (from
   the player GUID). Members are also read from the client's channel roster.

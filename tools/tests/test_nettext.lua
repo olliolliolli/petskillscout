@@ -24,6 +24,9 @@ C_ChatInfo.SendAddonMessage = function(p, m, d, t) sent[#sent + 1] = {m, d, t} e
 SendChatMessage = function() sent.chat = true end
 if C_ChatInfo.SendChatMessage then C_ChatInfo.SendChatMessage = function() sent.chat = true end end
 S:Send("H~x", "CHANNEL", 7)
+local before = #sent
+S:Send("X~1", "CHANNEL", 7)
+check("non-hello not sent to unconfirmed", #sent == before)
 local targets = {}
 for _, x in ipairs(sent) do if x[2] == "WHISPER" and x[1] == "H~x" then targets[x[3]] = true end end
 check("broadcast whispers each member", targets["Freya Laroux"] and targets["Sei Fy"])
@@ -33,8 +36,13 @@ check("not-found line hidden", N:OnNotFound("No player named 'Sei Fy' is current
 check("unreachable dropped", N.members["Sei Fy"] == nil)
 check("other system lines kept", N:OnNotFound("No player named 'Stranger' is currently playing.") == false)
 sent = {}
+N:Confirm("Freya Laroux")
 S:Send("H~y", "CHANNEL", 7)
 local again = {}
 for _, x in ipairs(sent) do if x[2] == "WHISPER" then again[x[3]] = true end end
 check("unreachable not whispered again", not again["Sei Fy"] and again["Freya Laroux"])
+sent = {}
+N:NoteWhisper("Wipe Nonmio")
+N.members["Wipe Nonmio"] = {target = "Wipe Nonmio", t = 0}
+check("odd wording still hidden", N:OnNotFound("Гравця на ім'я «Wipe Nonmio» зараз немає в грі.") == true)
 print(string.format("passed %d, failed %d", passes, fails))
