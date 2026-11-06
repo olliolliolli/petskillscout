@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.0
+- Hunter network works on WoW: Forever. The server accepts addon messages in chat channels
+  but never delivers them (/pss netdiag), so the realm network now sends short hidden text
+  lines "PSS~..." in its channel (hidden from all chat windows, at most one line per 3 s
+  after a burst of 3). Guild, party and whisper still use addon messages. Hunters on older
+  versions cannot be heard until they update.
+
 3.0.13
 - Network: /pss netdiag also tests a whisper by full name, the logged addon message and plain
   hidden text in the channel.

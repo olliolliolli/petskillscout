@@ -31,7 +31,20 @@ S.Register = Register
 
 -- Sending with a small token bucket so bursts never hit the server throttle.
 local queue, tokens, lastRefill = {}, 8, nil
+-- WoW Forever does not relay addon messages in chat channels (the server says
+-- "Success" but nobody gets them, /pss netdiag). The realm network therefore
+-- sends plain text "PSS~<message>" in its channel; the addon hides that text
+-- from every chat window. Guild / party / whisper keep addon messages.
+S.TEXT_TAG = "PSS" .. SEP
 local function RawSend(msg, dist, target)
+  if dist == "CHANNEL" then
+    local say = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+    if type(say) == "function" then
+      S:NoteSent(msg)
+      pcall(say, S.TEXT_TAG .. (msg:gsub("|", "")), "CHANNEL", nil, target)
+    end
+    return
+  end
   local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
   if type(fn) == "function" then S:NoteSent(msg); pcall(fn, PREFIX, msg, dist, target) end
 end
@@ -40,8 +53,27 @@ local function Refill()
   if lastRefill then tokens = math.min(8, tokens + (now - lastRefill)) end
   lastRefill = now
 end
+-- Channel text has its own slow bucket: chat lines too fast get the player
+-- muted for spam. Burst 3, then one line every 3 seconds.
+local textQueue, textTokens, textRefill = {}, 3, nil
+local function TextRefill()
+  local now = Now()
+  if textRefill then textTokens = math.min(3, textTokens + (now - textRefill) / 3) end
+  textRefill = now
+end
 function S:Send(msg, dist, target)
-  if type(msg) ~= "string" or #msg > 250 or not Register() then return end
+  if type(msg) ~= "string" or #msg > 250 then return end
+  if dist == "CHANNEL" then
+    TextRefill()
+    if textTokens >= 1 and #textQueue == 0 then
+      textTokens = textTokens - 1
+      RawSend(msg, dist, target)
+    elseif #textQueue < 20 then
+      textQueue[#textQueue + 1] = {msg, dist, target}
+    end
+    return
+  end
+  if not Register() then return end
   Refill()
   if tokens >= 1 and #queue == 0 then
     tokens = tokens - 1
@@ -330,16 +362,31 @@ function S:Diag()
   if C_Timer and C_Timer.After then C_Timer.After(6, report) end
 end
 
-S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
+function S:OnChannelText(text, author, ...)
+  -- ... = arg3 onwards of CHAT_MSG_CHANNEL (language, channelString, target, flags, zone, number, baseName)
+  local chanString, baseName = select(2, ...), select(7, ...)
+  local net = PSS.Net and PSS.Net.CHANNEL or "PSSNet1"
+  local ok = false
+  for _, v in ipairs({chanString, baseName}) do
+    if type(v) == "string" and not (PSS.IsSecret and PSS.IsSecret(v)) and v:lower():find(net:lower(), 1, true) then ok = true end
+  end
+  if not ok or type(author) ~= "string" then return end
+  local body = text:sub(#self.TEXT_TAG + 1)
+  if diag and body == "D" .. SEP .. diag.nonce then diag.got["CHANNEL text"] = true return end
+  if body:sub(1, 2) == "D" .. SEP then return end
+  pcall(CountRaw, "CHANNEL text")
+  self:Receive(body, "CHANNEL", author)
+end
+
+S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender, ...)
   if event == "PLAYER_LOGIN" then Register() return end
   if event == "CHAT_MSG_CHANNEL" then
-    -- Chat text: arg1 message, arg9 channel name. Only the diagnostics text.
-    local text = prefix
-    if diag and type(text) == "string" and not (PSS.IsSecret and PSS.IsSecret(text))
-       and text == "PSS" .. SEP .. "D" .. SEP .. diag.nonce then
-      diag.got["CHANNEL text"] = true
-    end
-    return
+    -- Network lines "PSS~..." in our channel (see RawSend).
+    local text, author = prefix, msg
+    if type(text) ~= "string" or (PSS.IsSecret and PSS.IsSecret(text)) then return end
+    if text:sub(1, #S.TEXT_TAG) ~= S.TEXT_TAG then return end
+    -- Only our network channel (arg9 = channel base name, arg4 = "7. PSSNet1").
+    return S:OnChannelText(text, author, channel, sender, ...)
   end
   if prefix ~= PREFIX then return end
   pcall(CountRaw, channel)
@@ -352,6 +399,14 @@ S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
   S:Receive(msg, channel, sender)
 end)
 S.frame:SetScript("OnUpdate", function()
+  if #textQueue > 0 then
+    TextRefill()
+    while textTokens >= 1 and #textQueue > 0 do
+      local m = table.remove(textQueue, 1)
+      textTokens = textTokens - 1
+      RawSend(m[1], m[2], m[3])
+    end
+  end
   if #queue == 0 then return end
   Refill()
   while tokens >= 1 and #queue > 0 do
