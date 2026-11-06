@@ -1251,7 +1251,10 @@ function LY:SkinMenus()
       end
       pcall(strip.SetFrameStrata, strip, f:GetFrameStrata())
       pcall(strip.SetFrameLevel, strip, math.max(0, (f:GetFrameLevel() or 1) - 1))
-      strip:Show()
+      -- No backing in gamepad mode (GamepadTheme.lua) or when the bar is hidden.
+      local gp = PSS.GamepadTheme and PSS.GamepadTheme.active
+      local okV, vis = pcall(f.IsVisible, f)
+      strip:SetShown((not gp) and okV and vis and true or false)
       for _, r in ipairs({f:GetRegions()}) do
         if r.GetObjectType and r:GetObjectType() == "Texture" then S.Fade(r) end
       end

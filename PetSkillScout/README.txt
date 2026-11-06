@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.6.4
+- Gamepad: the keyboard-and-mouse backing behind the bags no longer pops up again when the
+  theme re-skins the bags and micro menu (it stays hidden in gamepad mode and when the bars
+  are hidden).
+
 3.6.3
 - Gamepad: records the frames of the radial "Main Menu" (Start button) when it is open, to add
   a PetSkillScout entry there later. The button is under the classic game menu ("Game Menu"
