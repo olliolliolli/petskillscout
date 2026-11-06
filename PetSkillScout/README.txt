@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.6
+- Network: whisper names include the realm when the player is on another connected realm (from
+  the player GUID). Members are also read from the client's channel roster.
+
 3.1.5
 - Network: /pss netlist shows the network members (whisper targets) and who was not found.
 

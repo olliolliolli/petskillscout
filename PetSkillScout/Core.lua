@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.1.5"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.1.6"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -255,6 +255,9 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         PSS:Print("netlist: list API " .. tostring(type(ListChannelByName) == "function") .. ", my name " ..
             tostring(GetUnitName and GetUnitName("player", true)) .. ", realm " ..
             tostring(GetNormalizedRealmName and GetNormalizedRealmName()))
+        local idx = N.DisplayIndex and N:DisplayIndex()
+        PSS:Print("netlist: channel list index " .. tostring(idx) .. ", roster read " ..
+            tostring(N.ReadRoster and N:ReadRoster(idx)))
         local n = 0
         for who, m in pairs(N.members or {}) do
             n = n + 1

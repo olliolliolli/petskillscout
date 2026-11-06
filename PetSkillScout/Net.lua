@@ -312,10 +312,21 @@ end
 -- chat), join / leave notices and anyone who sent us something.
 N.members = {}
 N.MAX_MEMBERS = 40
-function N:AddMember(who, target)
+-- Full whisper name from a player GUID: "Name-Realm" when the player is on
+-- another (connected) realm - WoW Forever realms are clustered.
+local function FromGUID(guid)
+  if type(guid) ~= "string" or guid == "" or type(GetPlayerInfoByGUID) ~= "function" then return nil end
+  if PSS.IsSecret and PSS.IsSecret(guid) then return nil end
+  local ok, _, _, _, _, _, name, realm = pcall(GetPlayerInfoByGUID, guid)
+  if not ok or type(name) ~= "string" or name == "" then return nil end
+  if type(realm) == "string" and realm ~= "" then return name .. "-" .. realm end
+  return name
+end
+N.FromGUID = FromGUID
+function N:AddMember(who, target, guid)
   if type(who) ~= "string" or who == "" then return end
   if PSS.Sync and PSS.Sync.IsMe and PSS.Sync:IsMe(who) then return end
-  local t = type(target) == "string" and target ~= "" and target or who
+  local t = FromGUID(guid) or (type(target) == "string" and target ~= "" and target) or who
   if Ambiguate and t:find("-", 1, true) then
     local ok, v = pcall(Ambiguate, t, "none")
     if ok and type(v) == "string" then t = v end
@@ -375,9 +386,48 @@ function N:Members()
   return list
 end
 function N:RequestList()
-  if not self:ChannelID() or type(ListChannelByName) ~= "function" then return end
+  if not self:ChannelID() then return end
   self.listWanted = Now()
-  pcall(ListChannelByName, self.CHANNEL)
+  if type(ListChannelByName) == "function" then pcall(ListChannelByName, self.CHANNEL) end
+  -- Modern clients: the channel roster (filled after CHANNEL_ROSTER_UPDATE).
+  local idx = self:DisplayIndex()
+  if idx and type(SetSelectedDisplayChannel) == "function" then pcall(SetSelectedDisplayChannel, idx) end
+  self:ReadRoster()
+end
+-- Index of our channel in the client's channel list (not the chat number).
+function N:DisplayIndex()
+  if type(GetNumDisplayChannels) ~= "function" or type(GetChannelDisplayInfo) ~= "function" then return nil end
+  local ok, n = pcall(GetNumDisplayChannels)
+  for i = 1, (ok and tonumber(n)) or 0 do
+    local ok2, name = pcall(GetChannelDisplayInfo, i)
+    if ok2 and type(name) == "string" and name:lower():find(self.CHANNEL:lower(), 1, true) then return i end
+  end
+end
+function N:ReadRoster(idx)
+  idx = idx or self:DisplayIndex()
+  local info = (C_ChatInfo and C_ChatInfo.GetChannelRosterInfo) or GetChannelRosterInfo
+  if not idx or type(info) ~= "function" then return 0 end
+  local count = 0
+  if type(GetNumChannelMembers) == "function" then
+    local ok, c = pcall(GetNumChannelMembers, idx); count = ok and tonumber(c) or 0
+  end
+  if count == 0 then
+    local ok, _, _, _, c = pcall(GetChannelDisplayInfo, idx); count = ok and tonumber(c) or 0
+  end
+  local added = 0
+  for i = 1, math.min(count, 200) do
+    local ok, name, _, _, guid = pcall(info, idx, i)
+    if ok and type(name) == "string" and name ~= "" and not (PSS.IsSecret and PSS.IsSecret(name)) then
+      local who = CleanName(name)
+      if who then
+        self:AddMember(who, name, guid)
+        if not Peers()[who] then self:Seen(who) end
+        added = added + 1
+      end
+    end
+  end
+  self.rosterSeen = added
+  return added
 end
 function N:OnChannelList(text, ...)
   if not IsOurs(select(2, ...), select(7, ...)) then return false end
@@ -402,7 +452,7 @@ function N:OnChannelMember(event, ...)
   if not who then return end
   if event == "CHAT_MSG_CHANNEL_JOIN" then
     self:Seen(who)
-    self:AddMember(who, sender)
+    self:AddMember(who, sender, select(12, ...))
     self.helloSoon = 2 + math.random() * 4
   else
     self.members[who] = nil
@@ -417,6 +467,7 @@ N.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 pcall(N.frame.RegisterEvent, N.frame, "CHAT_MSG_CHANNEL_JOIN")
 pcall(N.frame.RegisterEvent, N.frame, "CHAT_MSG_CHANNEL_LEAVE")
 pcall(N.frame.RegisterEvent, N.frame, "CHAT_MSG_CHANNEL_LIST")
+pcall(N.frame.RegisterEvent, N.frame, "CHANNEL_ROSTER_UPDATE")
 pcall(N.frame.RegisterEvent, N.frame, "PLAYER_REGEN_ENABLED")
 local promptIn, helloIn = nil, nil
 N.frame:SetScript("OnEvent", function(_, event, ...)
@@ -424,6 +475,9 @@ N.frame:SetScript("OnEvent", function(_, event, ...)
     pcall(N.OnChannelMember, N, event, ...)
   elseif event == "CHAT_MSG_CHANNEL_LIST" then
     pcall(N.OnChannelList, N, ...)
+  elseif event == "CHANNEL_ROSTER_UPDATE" then
+    local idx = ...
+    if idx and idx == N:DisplayIndex() then pcall(N.ReadRoster, N, idx) end
   elseif event == "PLAYER_ENTERING_WORLD" then
     if not N.started then
       N.started = true
