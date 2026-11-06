@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.13
+- Quest pins: skill quests (e.g. Gaffer Jacks - Fishing) were hidden although you have the
+  skill: on WoW Forever secondary skills can be missing from the skill lists. The profession
+  spells in your spell book (Fishing, Cooking, First Aid, Skinning, crafts) count now.
+
 3.3.12
 - Quest pins checked at the NPC also when the NPC has a single quest for you (the game opens
   that quest directly, without a list): its other database quests lose their pin, so the pin

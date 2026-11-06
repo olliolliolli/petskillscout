@@ -47,6 +47,15 @@ local t0 = GetTime()
 GetTime = function() return t0 + 100 end -- skip the skill cache
 check("fishing seen from skill list", W:HasSkill(356))
 check("no cooking: cooking quest hidden", not W:HasSkill(185))
+-- Skills from the spell book when no skill list has them (WoW Forever).
+GetNumSkillLines = function() return 0 end
+local oldBook = PSS.SpellBar and PSS.SpellBar.Book
+PSS.SpellBar = PSS.SpellBar or {}
+PSS.SpellBar.Book = function() return {Fishing = {rank = 1}, Cooking = {rank = 1}} end
+GetTime = function() return t0 + 300 end
+check("fishing from the spell book", W:HasSkill(356))
+check("no first aid in the book", not W:HasSkill(129))
+PSS.SpellBar.Book = oldBook
 -- Talking to the giver: quests the NPC did not offer lose their pin.
 PetSkillScoutDB.questNotOffered = nil
 local npc = PSS.QuestDB[963].g

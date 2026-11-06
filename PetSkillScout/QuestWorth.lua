@@ -245,6 +245,20 @@ function W:Skills()
     end
     out.listRead = n > 0 or nil
   end
+  -- WoW Forever: skills may be missing from both lists, but the profession
+  -- spells are in your spell book ("Fishing", "Cooking", "First Aid"...).
+  -- Rank unknown there (0): the skill counts as learned.
+  local book = PSS.SpellBar and PSS.SpellBar.Book and select(2, pcall(PSS.SpellBar.Book, PSS.SpellBar))
+  if type(book) == "table" and next(book) then
+    local spellName = (C_Spell and C_Spell.GetSpellName) or GetSpellInfo
+    for line, spell in pairs(W.SKILL_SPELLS) do
+      if out[line] == nil then
+        local loc = Plain(Call(spellName, spell))
+        if (loc and book[loc]) or book[W.SKILL_EN[line]] then out[line] = 0 end
+      end
+    end
+    out.listRead = true
+  end
   skillCache, skillAt = out, now
   return out
 end
@@ -337,7 +351,8 @@ function W:Available(id, level)
   local no = DB().questNotOffered and DB().questNotOffered[id]
   if no and no.lv == self:PlayerLevel() and no.sk == self:SkillKey() then return false, "npc" end
   local minSkill = W.SKILL_MIN[id]
-  if r.sk and minSkill and (self:Skills()[r.sk] or 0) < minSkill then return false, "skill " .. minSkill end
+  local rank = self:Skills()[r.sk or 0]
+  if r.sk and minSkill and rank and rank > 0 and rank < minSkill then return false, "skill " .. minSkill end
   if r.sk and not self:HasSkill(r.sk) then return false, "skill" end
   if r.mr and not self:HasRep(r.mr) then return false, "rep" end
   if r.p then
