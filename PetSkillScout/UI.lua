@@ -2118,8 +2118,9 @@ function UI:BuildGear()
       end
       local W = PSS.QuestWorth
       local giver = (W and W:NPCName(r.g)) or r.gn
-      if PSS.Nav then PSS.Nav:SetTarget({name = giver or r.n, mapID = r.m, points = {{r.x, r.y}}}) end
-      UI:OpenQuestMap(nil, r.m)
+      local t = {name = giver or r.n, mapID = r.m, points = {{r.x, r.y}}}
+      if PSS.Nav then PSS.Nav:SetTarget(t) end
+      UI:OpenQuestMap(nil, r.m, t)
     end, function(b)
       local r = b.quest
       if not (r and r.m and r.x) then return string.format(L("gearQuestUnknown"), b.qname or "?") end
@@ -2652,7 +2653,8 @@ function UI:BuildQuests()
     row.map = IconButton(row, TEX .. "Rare_map", 28, function(b)
       local r = b:GetParent().data
       if not r then return end
-      if r.e then UI:OpenQuestMap(r.e) else UI:OpenQuestMap(nil, r.r and r.r.m) end
+      if r.e then UI:OpenQuestMap(r.e, nil, r.target)
+      else UI:OpenQuestMap(nil, r.r and r.r.m, r.target or (r.r and r.r.x and {name = r.r.n, mapID = r.r.m, points = {{r.r.x, r.r.y}}})) end
     end, function() return L("qMap") end)
     row.map:SetPoint("RIGHT", row.hide, "LEFT", -6, 0)
     row.arrow = IconButton(row, "Interface\\Minimap\\MinimapArrow", 28, function(b)
@@ -2678,8 +2680,9 @@ function UI:BuildQuests()
 end
 
 -- World map on a zone (not in combat: the map is a protected panel then).
-function UI:OpenQuestMap(e, mapID)
-  if e then mapID = PSS.Quests:ZoneMapID(e) end
+-- target (optional): {name, mapID, points} - pinged on the map for a few seconds.
+function UI:OpenQuestMap(e, mapID, target)
+  if e then mapID = PSS.Quests:ZoneMapID(e); target = target or PSS.Quests:Target(e) end
   if not mapID then PSS:Print(string.format(L("qNoMap"), e and PSS.Quests:Info(e).zone or "?")); return end
   if InCombatLockdown and InCombatLockdown() then PSS:Print(L("qMapCombat")); return end
   if OpenWorldMap then pcall(OpenWorldMap, mapID)
@@ -2687,6 +2690,7 @@ function UI:OpenQuestMap(e, mapID)
     if ShowUIPanel then pcall(ShowUIPanel, WorldMapFrame) end
     pcall(WorldMapFrame.SetMapID, WorldMapFrame, mapID)
   end
+  if target and target.mapID == mapID and PSS.Map and PSS.Map.Ping then pcall(PSS.Map.Ping, PSS.Map, target) end
 end
 
 local STATUS_COLOR = {done = "green", active = "gold", ready = "green", outgrown = "muted", soon = "cream", later = "muted"}

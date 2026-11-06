@@ -264,3 +264,56 @@ pinDriver:SetScript("OnUpdate", function(_, elapsed)
 end)
 pinDriver.pssKey = "Map pins"
 PSS:Every(pinDriver, 0.25)
+
+-- Ping: a pulsing gold ring with a label at a point of the world map for a
+-- few seconds (e.g. "show the quest giver"), so it is easy to spot.
+local ping
+local PING_TIME = 8
+function PSS.Map:Ping(target)
+  if not (target and target.mapID and target.points and target.points[1]) then return end
+  if not ping then
+    ping = CreateFrame("Frame", nil, UIParent)
+    ping:SetSize(40, 40)
+    ping:EnableMouse(false)
+    ping.ring = ping:CreateTexture(nil, "OVERLAY")
+    ping.ring:SetTexture("Interface\\Cooldown\\star4")
+    ping.ring:SetBlendMode("ADD")
+    ping.ring:SetPoint("CENTER")
+    ping.dot = ping:CreateTexture(nil, "OVERLAY")
+    ping.dot:SetTexture("Interface\\Minimap\\Ping\\ping5")
+    ping.dot:SetBlendMode("ADD")
+    ping.dot:SetPoint("CENTER")
+    ping.dot:SetSize(26, 26)
+    ping.mark = ping:CreateTexture(nil, "OVERLAY")
+    ping.mark:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
+    ping.mark:SetPoint("CENTER")
+    ping.mark:SetSize(18, 18)
+    ping.label = ping:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ping.label:SetPoint("BOTTOM", ping, "TOP", 0, 2)
+    ping.label:SetTextColor(1, 0.85, 0.2)
+    if ping.label.SetFont then
+      local font, size = GameFontNormal:GetFont()
+      ping.label:SetFont(font, (size or 12) + 1, "OUTLINE")
+    end
+    ping:SetScript("OnUpdate", function(self, elapsed)
+      self.left = (self.left or 0) - (elapsed or 0)
+      local canvas, mapID, width, height, scale = PSS.Map:GetCanvasInfo()
+      if self.left <= 0 or not canvas then self:Hide(); return end
+      if mapID ~= self.target.mapID then self:SetAlpha(0); return end
+      if self:GetParent() ~= canvas then self:SetParent(canvas) end
+      PSS.Map:RaisePin(self, 9800)
+      local p = self.target.points[1]
+      PSS.Map:Place(self, canvas, p[1], p[2], width, height, scale)
+      -- Pulse: the ring grows and fades once per second; fades out at the end.
+      local t = (GetTime and GetTime() or 0) % 1
+      self.ring:SetSize(30 + 50 * t, 30 + 50 * t)
+      self.ring:SetVertexColor(1, 0.82, 0.2, 1 - t)
+      self:SetAlpha(math.min(1, self.left))
+    end)
+  end
+  ping.target = target
+  ping.left = PING_TIME
+  ping.label:SetText(PSS:Safe(target.name or ""))
+  ping:SetAlpha(0)
+  ping:Show()
+end

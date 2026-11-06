@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.2
+- Quests / Gear: "Open the zone map of the quest giver" now also marks the giver on the map
+  for 8 seconds (pulsing gold ring with the name).
+
 3.1.1
 - Gear: empty slots get a recommendation. If nothing practical exists at your level, rare drops
   are offered too; if the database has nothing for the slot yet at your level (rings start at
