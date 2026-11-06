@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.6.1
+- Gamepad: two ways to open the window without key bindings - a "PetSkillScout" button under
+  the game menu (Start / Menu button, pick it with the gamepad cursor), and holding both
+  sticks (L3 + R3) for half a second (the addon only reads the button state). /pss gamepad
+  shows whether both are available.
+
 3.6.0
 - Gamepad control of the window (GamepadNav.lua, only in gamepad mode while the window is
   open): LB / RB switch tabs, the d-pad moves a gold selection frame to the nearest button,

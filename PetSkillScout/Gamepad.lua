@@ -134,6 +134,9 @@ function GP:Print()
     cvars[#cvars + 1] = k .. "=" .. tostring(GetCVar and Plain(Call(GetCVar, k)))
   end
   PSS:Print("gamepad cvars: " .. table.concat(cvars, ", "))
+  local GN = PSS.GamepadNav
+  PSS:Print("gamepad: open combo L3+R3 " .. tostring(GN and GN:ComboAvailable()) .. ", game menu button " ..
+    tostring(_G.PetSkillScoutGameMenuButton ~= nil))
   local frames = self:Frames()
   PSS:Print("gamepad frames on screen (" .. #frames .. "): " .. (#frames > 0 and table.concat(frames, ", ", 1, math.min(#frames, 25)) or "none"))
 end
