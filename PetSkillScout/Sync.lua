@@ -263,9 +263,66 @@ end
 S.frame = CreateFrame("Frame")
 pcall(S.frame.RegisterEvent, S.frame, "CHAT_MSG_ADDON")
 pcall(S.frame.RegisterEvent, S.frame, "PLAYER_LOGIN")
+-- Diagnostics (/pss netdiag) ------------------------------------------------
+-- Every incoming message of our prefix is counted by distribution (also our
+-- own echoes), so the saved file shows whether the realm channel delivers.
+local diag
+local function CountRaw(channel)
+  local d = PetSkillScoutDB
+  if not d then return end
+  d.netRaw = d.netRaw or {}
+  local k = tostring(channel or "?")
+  d.netRaw[k] = (d.netRaw[k] or 0) + 1
+end
+local function ResultName(r)
+  if type(r) == "number" and Enum and type(Enum.SendAddonMessageResult) == "table" then
+    for name, v in pairs(Enum.SendAddonMessageResult) do if v == r then return name .. " (" .. r .. ")" end end
+  end
+  return tostring(r)
+end
+function S:Diag()
+  local P = function(t) PSS:Print("netdiag: " .. t) end
+  local isReg = C_ChatInfo and C_ChatInfo.IsAddonMessagePrefixRegistered
+  P("prefix " .. PREFIX .. " registered=" .. tostring(Register()) ..
+    (isReg and (" / client=" .. tostring(select(2, pcall(isReg, PREFIX)))) or ""))
+  local id = PSS.Net and PSS.Net:ChannelIDRaw()
+  P("channel " .. (PSS.Net and PSS.Net.CHANNEL or "?") .. " id=" .. tostring(id) ..
+    " network on=" .. tostring(PSS.Net and PSS.Net.Enabled and PSS.Net.Enabled()))
+  local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
+  if type(fn) ~= "function" then P("SendAddonMessage missing") return end
+  local nonce = tostring(math.random(100000, 999999))
+  diag = {nonce = nonce, t = Now(), got = {}}
+  local dists = {}
+  if id then dists[#dists + 1] = {"CHANNEL", id} end
+  if IsInGuild and IsInGuild() then dists[#dists + 1] = {"GUILD"} end
+  if IsInGroup and IsInGroup() then dists[#dists + 1] = {"PARTY"} end
+  dists[#dists + 1] = {"WHISPER", UnitName and UnitName("player")}
+  for _, d in ipairs(dists) do
+    local ok, r = pcall(fn, PREFIX, "D" .. SEP .. nonce, d[1], d[2])
+    P(string.format("send %s -> %s", d[1], ok and ResultName(r) or ("error " .. tostring(r))))
+  end
+  local raw = {}
+  for k, v in pairs(PetSkillScoutDB and PetSkillScoutDB.netRaw or {}) do raw[#raw + 1] = k .. "=" .. v end
+  P("received so far by type: " .. (#raw > 0 and table.concat(raw, ", ") or "none"))
+  local function report()
+    local got = {}
+    for k in pairs(diag.got) do got[#got + 1] = k end
+    table.sort(got)
+    P("echo back after 6 s: " .. (#got > 0 and table.concat(got, ", ") or "NONE") ..
+      (id and not diag.got.CHANNEL and "  -> the realm channel does not deliver addon messages" or ""))
+  end
+  if C_Timer and C_Timer.After then C_Timer.After(6, report) end
+end
+
 S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
   if event == "PLAYER_LOGIN" then Register() return end
-  if prefix == PREFIX then S:Receive(msg, channel, sender) end
+  if prefix ~= PREFIX then return end
+  pcall(CountRaw, channel)
+  if type(msg) == "string" and msg:sub(1, 2) == "D" .. SEP then
+    if diag and msg:sub(3) == diag.nonce then diag.got[tostring(channel)] = true end
+    return
+  end
+  S:Receive(msg, channel, sender)
 end)
 S.frame:SetScript("OnUpdate", function()
   if #queue == 0 then return end

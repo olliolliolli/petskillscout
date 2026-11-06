@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.12
+- Network: /pss netdiag tests whether addon messages reach the realm channel (send result and
+  echo per channel type); incoming messages are counted by type in the saved file.
+
 3.0.11
 - Quests: optional auto turn-in (Settings > Quests, off by default). Finished quests are handed
   in at the NPC; when there is a choice of rewards the window stays open for you. Shift skips.
