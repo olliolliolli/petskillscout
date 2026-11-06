@@ -7,7 +7,7 @@ local PSS = PetSkillScout
 PSS.Net = {}
 local N = PSS.Net
 N.CHANNEL = "PSSNet1"
-local HELLO_EVERY, PEER_ONLINE, PEER_KEEP = 1200, 1800, 7 * 86400
+local HELLO_EVERY, PEER_ONLINE, PEER_KEEP = 600, 1800, 7 * 86400
 
 local function Now() return time and time() or 0 end
 local function Enabled()
@@ -44,7 +44,7 @@ local function NoticeFilter(_, _, ...)
 end
 if ChatFrame_AddMessageEventFilter then
   for _, e in ipairs({"CHAT_MSG_CHANNEL_NOTICE", "CHAT_MSG_CHANNEL_NOTICE_USER", "CHAT_MSG_CHANNEL",
-      "CHAT_MSG_CHANNEL_JOIN", "CHAT_MSG_CHANNEL_LEAVE"}) do
+      "CHAT_MSG_CHANNEL_JOIN", "CHAT_MSG_CHANNEL_LEAVE", "CHAT_MSG_CHANNEL_LIST"}) do
     pcall(ChatFrame_AddMessageEventFilter, e, PSS:Timed("chat filter", NoticeFilter))
   end
 end
@@ -305,6 +305,50 @@ local function CleanName(sender)
   if who == "" or (PSS.Sync and PSS.Sync.IsMe and PSS.Sync:IsMe(who)) then return nil end
   return who
 end
+-- Members of the network channel: short name -> whisper target. Forever does
+-- not relay addon messages in channels and lets addons write channel text
+-- only during a key press, so broadcasts go as addon whispers to each member
+-- (Sync.lua). Members come from the channel list (/chatlist, hidden from
+-- chat), join / leave notices and anyone who sent us something.
+N.members = {}
+N.MAX_MEMBERS = 40
+function N:AddMember(who, target)
+  if type(who) ~= "string" or who == "" then return end
+  if PSS.Sync and PSS.Sync.IsMe and PSS.Sync:IsMe(who) then return end
+  local t = type(target) == "string" and target ~= "" and target or who
+  if Ambiguate and t:find("-", 1, true) then
+    local ok, v = pcall(Ambiguate, t, "none")
+    if ok and type(v) == "string" then t = v end
+  end
+  self.members[who] = {target = t, t = Now()}
+end
+function N:Members()
+  local list = {}
+  for who, m in pairs(self.members) do list[#list + 1] = {who = who, target = m.target, t = m.t} end
+  table.sort(list, function(a, b) return a.t > b.t end)
+  for i = #list, self.MAX_MEMBERS + 1, -1 do list[i] = nil end
+  return list
+end
+function N:RequestList()
+  if not self:ChannelID() or type(ListChannelByName) ~= "function" then return end
+  self.listWanted = Now()
+  pcall(ListChannelByName, self.CHANNEL)
+end
+function N:OnChannelList(text, ...)
+  if not IsOurs(select(2, ...), select(7, ...)) then return false end
+  if type(text) ~= "string" or (PSS.IsSecret and PSS.IsSecret(text)) then return true end
+  for raw in text:gmatch("[^,]+") do
+    local name = raw:gsub("^%s+", ""):gsub("%s+$", ""):gsub("^[%*@#]+", "")
+    local who = CleanName(name)
+    if who then
+      self:AddMember(who, name)
+      if not Peers()[who] then self:Seen(who) end
+    end
+  end
+  if PSS.UI and PSS.UI.view == "network" and PSS.UI.UpdateNetwork then pcall(PSS.UI.UpdateNetwork, PSS.UI) end
+  return true
+end
+
 function N:OnChannelMember(event, ...)
   if not (PetSkillScoutDB and Enabled()) then return end
   local sender = select(2, ...)
@@ -313,8 +357,10 @@ function N:OnChannelMember(event, ...)
   if not who then return end
   if event == "CHAT_MSG_CHANNEL_JOIN" then
     self:Seen(who)
+    self:AddMember(who, sender)
     self.helloSoon = 2 + math.random() * 4
   else
+    self.members[who] = nil
     local p = Peers()[who]
     if p and p.t then p.t = math.min(p.t, Now() - PEER_ONLINE) end
   end
@@ -325,11 +371,14 @@ N.frame = CreateFrame("Frame")
 N.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 pcall(N.frame.RegisterEvent, N.frame, "CHAT_MSG_CHANNEL_JOIN")
 pcall(N.frame.RegisterEvent, N.frame, "CHAT_MSG_CHANNEL_LEAVE")
+pcall(N.frame.RegisterEvent, N.frame, "CHAT_MSG_CHANNEL_LIST")
 pcall(N.frame.RegisterEvent, N.frame, "PLAYER_REGEN_ENABLED")
 local promptIn, helloIn = nil, nil
 N.frame:SetScript("OnEvent", function(_, event, ...)
   if event == "CHAT_MSG_CHANNEL_JOIN" or event == "CHAT_MSG_CHANNEL_LEAVE" then
     pcall(N.OnChannelMember, N, event, ...)
+  elseif event == "CHAT_MSG_CHANNEL_LIST" then
+    pcall(N.OnChannelList, N, ...)
   elseif event == "PLAYER_ENTERING_WORLD" then
     if not N.started then
       N.started = true
@@ -367,7 +416,8 @@ N.frame:SetScript("OnUpdate", function(_, elapsed)
       if N:ChannelID() then
         if connect and not InCombat() then connect:Hide() end
         PSS:Print(PSS:L("netJoined"))
-        pcall(N.Hello, N, true)
+        pcall(N.RequestList, N)
+        N.helloSoon = 3
       end
     end
   end
@@ -375,7 +425,8 @@ N.frame:SetScript("OnUpdate", function(_, elapsed)
     helloIn = helloIn - elapsed
     if helloIn <= 0 then
       helloIn = HELLO_EVERY + math.random(0, 120)
-      pcall(N.Hello, N, true)
+      pcall(N.RequestList, N)
+      N.helloSoon = 3
     end
   end
 end)

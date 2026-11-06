@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.3
+- Hunter network: channel text from addons is only allowed during a key press on WoW: Forever,
+  so automatic messages were blocked (ADDON_ACTION_BLOCKED). The network now sends addon
+  whispers to each member of the network channel (members from the hidden channel list, join
+  notices and incoming messages; up to 40, paced). Hello every 10 minutes.
+
 3.1.2
 - Quests / Gear: "Open the zone map of the quest giver" now also marks the giver on the map
   for 8 seconds (pulsing gold ring with the name).

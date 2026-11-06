@@ -1,24 +1,31 @@
--- Realm network over channel text (3.1.0): receive "PSS~..." lines, send via SendChatMessage.
+-- Realm network on WoW Forever (3.1.3): channel members from the hidden channel
+-- list / join notices; broadcasts go as addon whispers to each member.
 local dir = arg[1]
 dofile((arg[0]:match("(.*/)") or "") .. "load.lua")
 local PSS = PetSkillScout
 PetSkillScoutDB = {language = "en"}; PSS:InitializeDB()
 MOCK.Fire("ADDON_LOADED", "PetSkillScout")
-local S = PSS.Sync
-local f = S.frame:GetScript("OnEvent")
+local S, N = PSS.Sync, PSS.Net
 local fails, passes = 0, 0
 local function check(name, ok) if ok then passes = passes + 1 else fails = fails + 1; print("FAIL " .. name) end end
 PetSkillScoutDB.peers = {}
-f(S.frame, "CHAT_MSG_CHANNEL", "PSS~H~3.1.0~5~1~2~3~", "Freya Laroux-Forever", "", "7. PSSNet1", "", "", 0, 7, "PSSNet1")
-local p = PetSkillScoutDB.peers["Freya Laroux"]
-check("hello from channel text", p and p.v == "3.1.0" and p.score == 5)
-f(S.frame, "CHAT_MSG_CHANNEL", "PSS~H~9.9~5~1~2~3~", "Bob", "", "1. General", "", "", 0, 1, "General")
-check("other channels ignored", PetSkillScoutDB.peers["Bob"] == nil)
-f(S.frame, "CHAT_MSG_CHANNEL", "hello all", "Carl", "", "7. PSSNet1", "", "", 0, 7, "PSSNet1")
-check("plain chat ignored", PetSkillScoutDB.peers["Carl"] == nil)
+local nf = N.frame:GetScript("OnEvent")
+nf(N.frame, "CHAT_MSG_CHANNEL_LIST", "*Freya Laroux, @Sei Fy, Jack Crow", "", "", "7. PSSNet1", "", "", 0, 7, "PSSNet1")
+check("members from channel list", N.members["Freya Laroux"] and N.members["Sei Fy"] and N.members["Jack Crow"])
+check("listed members count as online", PetSkillScoutDB.peers["Jack Crow"] ~= nil)
+nf(N.frame, "CHAT_MSG_CHANNEL_LIST", "Bob", "", "", "1. General", "", "", 0, 1, "General")
+check("other channel lists ignored", N.members["Bob"] == nil)
+nf(N.frame, "CHAT_MSG_CHANNEL_LEAVE", "", "Jack Crow", "", "7. PSSNet1", "", "", 0, 7, "PSSNet1")
+check("leave removes member", N.members["Jack Crow"] == nil)
 local sent = {}
 C_ChatInfo = C_ChatInfo or {}
-C_ChatInfo.SendChatMessage = function(m, t, l, id) sent[#sent + 1] = {m, t, id} end
+C_ChatInfo.RegisterAddonMessagePrefix = C_ChatInfo.RegisterAddonMessagePrefix or function() return true end
+C_ChatInfo.SendAddonMessage = function(p, m, d, t) sent[#sent + 1] = {m, d, t} end
+SendChatMessage = function() sent.chat = true end
+if C_ChatInfo.SendChatMessage then C_ChatInfo.SendChatMessage = function() sent.chat = true end end
 S:Send("H~x", "CHANNEL", 7)
-check("sent as channel text", sent[1] and sent[1][1] == "PSS~H~x" and sent[1][2] == "CHANNEL" and sent[1][3] == 7)
+local targets = {}
+for _, x in ipairs(sent) do if x[2] == "WHISPER" and x[1] == "H~x" then targets[x[3]] = true end end
+check("broadcast whispers each member", targets["Freya Laroux"] and targets["Sei Fy"])
+check("no channel text sent", not sent.chat)
 print(string.format("passed %d, failed %d", passes, fails))

@@ -31,20 +31,7 @@ S.Register = Register
 
 -- Sending with a small token bucket so bursts never hit the server throttle.
 local queue, tokens, lastRefill = {}, 8, nil
--- WoW Forever does not relay addon messages in chat channels (the server says
--- "Success" but nobody gets them, /pss netdiag). The realm network therefore
--- sends plain text "PSS~<message>" in its channel; the addon hides that text
--- from every chat window. Guild / party / whisper keep addon messages.
-S.TEXT_TAG = "PSS" .. SEP
 local function RawSend(msg, dist, target)
-  if dist == "CHANNEL" then
-    local say = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
-    if type(say) == "function" then
-      S:NoteSent(msg)
-      pcall(say, S.TEXT_TAG .. (msg:gsub("|", "")), "CHANNEL", nil, target)
-    end
-    return
-  end
   local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
   if type(fn) == "function" then S:NoteSent(msg); pcall(fn, PREFIX, msg, dist, target) end
 end
@@ -53,24 +40,16 @@ local function Refill()
   if lastRefill then tokens = math.min(8, tokens + (now - lastRefill)) end
   lastRefill = now
 end
--- Channel text has its own slow bucket: chat lines too fast get the player
--- muted for spam. Burst 3, then one line every 3 seconds.
-local textQueue, textTokens, textRefill = {}, 3, nil
-local function TextRefill()
-  local now = Now()
-  if textRefill then textTokens = math.min(3, textTokens + (now - textRefill) / 3) end
-  textRefill = now
-end
+-- WoW Forever accepts addon messages in chat channels but never delivers
+-- them, and channel text from addons is only allowed during a key press
+-- (/pss netdiag). The realm network therefore whispers each member of the
+-- network channel (Net.lua keeps the list); the token bucket below paces it.
 function S:Send(msg, dist, target)
   if type(msg) ~= "string" or #msg > 250 then return end
   if dist == "CHANNEL" then
-    TextRefill()
-    if textTokens >= 1 and #textQueue == 0 then
-      textTokens = textTokens - 1
-      RawSend(msg, dist, target)
-    elseif #textQueue < 20 then
-      textQueue[#textQueue + 1] = {msg, dist, target}
-    end
+    local N = PSS.Net
+    if not (N and N.Members) then return end
+    for _, m in ipairs(N:Members()) do self:Send(msg, "WHISPER", m.target) end
     return
   end
   if not Register() then return end
@@ -78,7 +57,7 @@ function S:Send(msg, dist, target)
   if tokens >= 1 and #queue == 0 then
     tokens = tokens - 1
     RawSend(msg, dist, target)
-  elseif #queue < 40 then
+  elseif #queue < 120 then
     table.insert(queue, {msg, dist, target})
   end
 end
@@ -254,6 +233,7 @@ function S:Receive(msg, channel, sender)
   local parts = {strsplit(SEP, msg)}
   local kind = parts[1]
   if PSS.Net and PSS.Net.Seen then PSS.Net:Seen(who, channel) end
+  if channel == "WHISPER" and PSS.Net and PSS.Net.AddMember then PSS.Net:AddMember(who, sender) end
   if PSS.NetFeed then pcall(PSS.NetFeed.OnMessage, PSS.NetFeed, parts, who) end
   local handler = self.handlers[kind]
   if handler then
@@ -362,31 +342,12 @@ function S:Diag()
   if C_Timer and C_Timer.After then C_Timer.After(6, report) end
 end
 
-function S:OnChannelText(text, author, ...)
-  -- ... = arg3 onwards of CHAT_MSG_CHANNEL (language, channelString, target, flags, zone, number, baseName)
-  local chanString, baseName = select(2, ...), select(7, ...)
-  local net = PSS.Net and PSS.Net.CHANNEL or "PSSNet1"
-  local ok = false
-  for _, v in ipairs({chanString, baseName}) do
-    if type(v) == "string" and not (PSS.IsSecret and PSS.IsSecret(v)) and v:lower():find(net:lower(), 1, true) then ok = true end
-  end
-  if not ok or type(author) ~= "string" then return end
-  local body = text:sub(#self.TEXT_TAG + 1)
-  if diag and body == "D" .. SEP .. diag.nonce then diag.got["CHANNEL text"] = true return end
-  if body:sub(1, 2) == "D" .. SEP then return end
-  pcall(CountRaw, "CHANNEL text")
-  self:Receive(body, "CHANNEL", author)
-end
-
 S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender, ...)
   if event == "PLAYER_LOGIN" then Register() return end
   if event == "CHAT_MSG_CHANNEL" then
-    -- Network lines "PSS~..." in our channel (see RawSend).
-    local text, author = prefix, msg
-    if type(text) ~= "string" or (PSS.IsSecret and PSS.IsSecret(text)) then return end
-    if text:sub(1, #S.TEXT_TAG) ~= S.TEXT_TAG then return end
-    -- Only our network channel (arg9 = channel base name, arg4 = "7. PSSNet1").
-    return S:OnChannelText(text, author, channel, sender, ...)
+    -- Only the /pss netdiag text test (sent from the slash command).
+    if diag and prefix == "PSS" .. SEP .. "D" .. SEP .. diag.nonce then diag.got["CHANNEL text"] = true end
+    return
   end
   if prefix ~= PREFIX then return end
   pcall(CountRaw, channel)
@@ -399,14 +360,6 @@ S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender, ..
   S:Receive(msg, channel, sender)
 end)
 S.frame:SetScript("OnUpdate", function()
-  if #textQueue > 0 then
-    TextRefill()
-    while textTokens >= 1 and #textQueue > 0 do
-      local m = table.remove(textQueue, 1)
-      textTokens = textTokens - 1
-      RawSend(m[1], m[2], m[3])
-    end
-  end
   if #queue == 0 then return end
   Refill()
   while tokens >= 1 and #queue > 0 do
