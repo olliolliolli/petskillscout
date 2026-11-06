@@ -192,3 +192,77 @@ watch:SetScript("OnUpdate", function(_, e)
   end
   PetSkillScoutDB.gamepadMenus = seen
 end)
+
+-- Radial menu internals (undocumented): while GamepadRadial is open, one
+-- snapshot per distinct page goes to PetSkillScoutDB.gamepadRadial: its Lua
+-- fields, the frame tree and visible texts, so an entry can be added properly.
+local function RadialSnap(root)
+  local lines, texts = {}, {}
+  local function Fields(f)
+    local out = {}
+    local ok = pcall(function()
+      for k, v in pairs(f) do
+        if type(k) == "string" and k ~= "0" then
+          local tv = type(v)
+          if tv == "table" or tv == "function" then out[#out + 1] = k .. ":" .. tv:sub(1, 1)
+          else out[#out + 1] = k .. "=" .. tostring(v) end
+        end
+        if #out >= 80 then break end
+      end
+    end)
+    table.sort(out)
+    return ok and table.concat(out, " ") or "?"
+  end
+  local function Walk(f, depth, path)
+    if #lines >= 250 then return end
+    local _, kind = pcall(f.GetObjectType, f)
+    local _, vis = pcall(f.IsVisible, f)
+    local _, w = pcall(f.GetWidth, f)
+    local _, h = pcall(f.GetHeight, f)
+    lines[#lines + 1] = string.format("%s %s vis=%s %dx%d | %s", path, tostring(kind), tostring(vis),
+      tonumber(w) or 0, tonumber(h) or 0, Fields(f))
+    local okR, regs = pcall(function() return {f:GetRegions()} end)
+    for _, r in ipairs(okR and regs or {}) do
+      local _, rk = pcall(r.GetObjectType, r)
+      if rk == "FontString" then
+        local _, t = pcall(r.GetText, r)
+        local _, rv = pcall(r.IsVisible, r)
+        if type(t) == "string" and t ~= "" and rv then texts[#texts + 1] = t end
+      end
+    end
+    if depth >= 3 then return end
+    local okC, ch = pcall(function() return {f:GetChildren()} end)
+    for i, c in ipairs(okC and ch or {}) do Walk(c, depth + 1, path .. "." .. i) end
+  end
+  Walk(root, 0, "R")
+  table.sort(texts)
+  return table.concat(texts, ","), lines
+end
+
+local radialWatch, radialAcc = CreateFrame("Frame"), 0
+radialWatch:SetScript("OnUpdate", function(_, e)
+  radialAcc = radialAcc + (e or 0)
+  if radialAcc < 0.4 then return end
+  radialAcc = 0
+  local r = _G.GamepadRadial
+  if not (r and PetSkillScoutDB) then return end
+  local okV, vis = pcall(r.IsVisible, r)
+  if not (okV and vis) then return end
+  local ok, key, lines = pcall(RadialSnap, r)
+  local db = PetSkillScoutDB.gamepadRadial or {pages = {}, count = 0}
+  if ok and not db.pages[key] and db.count < 8 then
+    db.pages[key] = lines
+    db.count = db.count + 1
+    if not db.globals then
+      local g = {}
+      pcall(function()
+        for k in pairs(_G) do
+          if type(k) == "string" and (k:find("Radial") or k:find("MainMenuWheel")) then g[#g + 1] = k end
+          if #g >= 100 then break end
+        end
+      end)
+      db.globals = g
+    end
+  elseif not ok then db.err = tostring(key) end
+  PetSkillScoutDB.gamepadRadial = db
+end)
