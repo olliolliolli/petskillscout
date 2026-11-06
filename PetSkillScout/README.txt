@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.7
+- Quest pins sit right on the giver again (no offset), under the game's own quest icons on the
+  world map, so a turn-in "?" is always on top.
+
 3.3.6
 - Quest pins: quests started from an object (wanted posters, books, plaques - 293 in the
   database) get pins again; the database now stores the start object. Before, every quest

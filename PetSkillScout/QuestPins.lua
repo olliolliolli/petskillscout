@@ -174,10 +174,9 @@ function QP:Groups(mapID, level)
   return merged
 end
 
--- Our "!" sits a little up and right of the giver (the game draws its own "!"
--- right on the giver) on a round backing in the rating colour, so a grey
--- "not worth it" pin is readable even next to the game's yellow one.
-QP.OFFSET = 6
+-- Our "!" sits right on the giver, on a round backing in the rating colour,
+-- under the game's own quest icons (turn-in "?" stays on top, see QP.Lower).
+QP.OFFSET = 0
 local DISC = "Interface/CHARACTERFRAME/TempPortraitAlphaMask"
 local function Backing(pin)
   if pin.disc then return end
