@@ -69,8 +69,50 @@ function GP:Frames()
   return out
 end
 
+-- Full dump of the gamepad interface for building the themed layout:
+-- every visible frame near the bottom of the screen (action buttons and
+-- their holders): name, parent, type, size, position, protected, icon.
+-- Saved to PetSkillScoutDB.gamepadDiag (read from disk after /reload).
+function GP:Dump()
+  local out = {}
+  local sw, sh = UIParent:GetWidth(), UIParent:GetHeight()
+  local f = EnumerateFrames and EnumerateFrames()
+  local n = 0
+  while f and n < 40000 do
+    n = n + 1
+    local okV, vis = pcall(f.IsVisible, f)
+    if okV and vis then
+      local okB, l, b, w, h = pcall(f.GetRect, f)
+      if okB and l and b and w and h and w > 4 and h > 4 and w < sw * 0.8 and b < sh * 0.45 then
+        local okN, name = pcall(f.GetName, f)
+        local parent = f.GetParent and f:GetParent()
+        local pname = parent and select(2, pcall(parent.GetName, parent))
+        local okT, kind = pcall(f.GetObjectType, f)
+        local prot = f.IsProtected and select(2, pcall(f.IsProtected, f))
+        local action = f.GetAttribute and select(2, pcall(f.GetAttribute, f, "action"))
+        local icon = f.icon or f.Icon
+        local tex = icon and icon.GetTexture and select(2, pcall(icon.GetTexture, icon))
+        if not (type(name) == "string" and name:find("^PetSkillScout")) then
+          out[#out + 1] = string.format("%s|%s|%s|%.0f,%.0f %.0fx%.0f|%s|%s|%s",
+            tostring(name), tostring(pname), tostring(okT and kind), l, b, w, h,
+            prot and "P" or "-", tostring(action), tostring(tex))
+        end
+      end
+    end
+    f = EnumerateFrames(f)
+  end
+  table.sort(out)
+  if PetSkillScoutDB then
+    PetSkillScoutDB.gamepadDiag = {t = time and time() or 0, screen = string.format("%.0fx%.0f", sw, sh),
+      scale = UIParent:GetEffectiveScale(), enabled = self:Enabled(), inUse = self:InUse(), frames = out}
+  end
+  return #out
+end
+
 -- /pss gamepad
 function GP:Print()
+  local dumped = self:Dump()
+  PSS:Print("gamepad: saved " .. dumped .. " frames of the lower screen for the layout (do /reload to write them to disk)")
   local api = C_GamePad and "yes" or "no"
   local dev = C_GamePad and C_GamePad.GetActiveDeviceID and Plain(Call(C_GamePad.GetActiveDeviceID))
   local devs = C_GamePad and C_GamePad.GetAllDeviceIDs and Call(C_GamePad.GetAllDeviceIDs)

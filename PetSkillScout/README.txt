@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.4.4
+- /pss gamepad also saves a dump of the gamepad interface frames (names, sizes, positions) to
+  the saved variables - groundwork for the themed, compact gamepad button layout.
+
 3.4.3
 - Gamepad layout: player / target frames a little further out (clear of the centre buttons);
   the bag and micro menu backings are always hidden in gamepad mode.
