@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.2.0
+- Gear: crafted items of your professions (Leatherworking, Blacksmithing, Tailoring,
+  Engineering, Alchemy, Enchanting) are recommended like quest and dungeon gear when they are
+  better. Items you can already wear are shown even if your skill is still too low ("your skill
+  20" in red, "you can make it" in green); the tooltip lists the skill needed and reagents.
+  Data: 244 Classic crafted hunter items from wow-classic-items (MIT), tools/gear/gencraft.py.
+  Recipes added only in WoW Forever are not in this data.
+
 3.1.13
 - Quest pins: holiday quests are shown again while their holiday is on, read from the game
   calendar (Lunar Festival, Hallow's End, Darkmoon Faire...). The quest database stores the

@@ -59,10 +59,14 @@ local byId, bySlot
 local function Index()
   if byId then return end
   byId, bySlot = {}, {}
-  for _, rec in ipairs(PSS.GearData or {}) do
-    byId[rec.id] = rec
-    bySlot[rec.slot] = bySlot[rec.slot] or {}
-    table.insert(bySlot[rec.slot], rec)
+  for _, list in ipairs({PSS.GearData or {}, PSS.CraftData or {}}) do
+    for _, rec in ipairs(list) do
+      if not byId[rec.id] then
+        byId[rec.id] = rec
+        bySlot[rec.slot] = bySlot[rec.slot] or {}
+        table.insert(bySlot[rec.slot], rec)
+      end
+    end
   end
 end
 function G:Get(id) Index(); return byId[id] end
@@ -203,14 +207,74 @@ function G:Sources(rec)
   local fac = Faction()
   local out = {}
   for _, s in ipairs(rec.src or {}) do
-    if not (s.t == "q" and s.f and fac and s.f ~= fac) then table.insert(out, s) end
+    if s.t == "c" then
+      -- Crafted: only for your own professions (also when the skill is still too low).
+      if self:ProfSkill(s.p) then table.insert(out, s) end
+    elseif not (s.t == "q" and s.f and fac and s.f ~= fac) then
+      table.insert(out, s)
+    end
   end
   return out
 end
 
+-- Professions -------------------------------------------------------------------
+-- Learned professions and skill, by English name (skill line IDs are the same
+-- in every language). Cached for 10 s.
+G.PROF_LINES = {[165] = "Leatherworking", [164] = "Blacksmithing", [197] = "Tailoring",
+  [202] = "Engineering", [171] = "Alchemy", [333] = "Enchanting"}
+local PROF_EN = {}
+for _, n in pairs(G.PROF_LINES) do PROF_EN[n] = true end
+local profCache, profAt = nil, -1e9
+function G:Professions()
+  local now = GetTime and GetTime() or 0
+  if profCache and now - profAt < 10 then return profCache end
+  local out = {}
+  if type(GetProfessions) == "function" and type(GetProfessionInfo) == "function" then
+    local list = {Call(GetProfessions)}
+    for i = 1, 2 do
+      local idx = Plain(list[i])
+      if idx then
+        local _, _, rank, maxRank, _, _, line = Call(GetProfessionInfo, idx)
+        local name = self.PROF_LINES[tonumber(Plain(line)) or 0]
+        if name then out[name] = {rank = tonumber(Plain(rank)) or 0, max = tonumber(Plain(maxRank)) or 0} end
+      end
+    end
+  end
+  if not next(out) and type(GetNumSkillLines) == "function" and type(GetSkillLineInfo) == "function" then
+    -- Older clients: the skill list (English names only; other languages
+    -- fall back to the localised names below).
+    local n = tonumber(Plain(Call(GetNumSkillLines))) or 0
+    for i = 1, n do
+      local name, header, _, rank, _, _, maxRank = Call(GetSkillLineInfo, i)
+      name = Plain(name)
+      if name and not Plain(header) then
+        local en = PROF_EN[name] and name
+        if not en then
+          for line, eng in pairs(self.PROF_LINES) do
+            local loc = C_TradeSkillUI and C_TradeSkillUI.GetTradeSkillDisplayName and Call(C_TradeSkillUI.GetTradeSkillDisplayName, line)
+            if Plain(loc) == name then en = eng end
+          end
+        end
+        if en then out[en] = {rank = tonumber(Plain(rank)) or 0, max = tonumber(Plain(maxRank)) or 0} end
+      end
+    end
+  end
+  profCache, profAt = out, now
+  return out
+end
+function G:ProfSkill(name)
+  local p = self:Professions()[name]
+  return p and p.rank
+end
+function G:ProfName(en)
+  local k = "prof" .. tostring(en)
+  local t = L(k)
+  return t ~= k and t or tostring(en)
+end
+
 function G:Practical(rec)
   for _, s in ipairs(self:Sources(rec)) do
-    if s.t == "q" or s.t == "v" then return true end
+    if s.t == "q" or s.t == "v" or s.t == "c" then return true end
     if s.t == "d" and (s.c or 0) >= self.MIN_CHANCE then return true end
   end
   return false
@@ -445,6 +509,12 @@ function G:SourceShort(rec)
     return s.n, L("gearKindQuest") .. where .. rep .. tail
   elseif s.t == "v" then
     return s.n, L("gearKindVendor") .. (s.i and ("  ·  " .. s.i) or "") .. rep .. tail
+  elseif s.t == "c" then
+    local have = self:ProfSkill(s.p) or 0
+    local need = tonumber(s.s) or 1
+    local state = have >= need and ("|cff70d070" .. L("gearCraftReady") .. "|r")
+      or ("|cffff7a5a" .. string.format(L("gearCraftNeed"), have) .. "|r")
+    return self:ProfName(s.p) .. " " .. need, L("gearKindCraft") .. "  ·  " .. state .. tail
   end
 end
 
@@ -495,6 +565,16 @@ function G:SourceLines(rec)
       end
     elseif s.t == "v" then
       table.insert(lines, string.format(L("gearSrcVendor"), s.n .. (s.i and (" (" .. s.i .. ")") or "")))
+    elseif s.t == "c" then
+      local have = self:ProfSkill(s.p) or 0
+      table.insert(lines, string.format(L("gearSrcCraft"), self:ProfName(s.p), tonumber(s.s) or 1, have))
+      local parts = {}
+      for _, r in ipairs(s.r or {}) do
+        local name = C_Item and C_Item.GetItemNameByID and Call(C_Item.GetItemNameByID, r[1])
+        if not Plain(name) and C_Item and C_Item.RequestLoadItemDataByID then Call(C_Item.RequestLoadItemDataByID, r[1]) end
+        parts[#parts + 1] = (r[2] or 1) .. "x " .. (Plain(name) or ("#" .. r[1]))
+      end
+      if #parts > 0 then table.insert(lines, L("gearReagents") .. ": " .. table.concat(parts, ", ")) end
     end
   end
   return lines
