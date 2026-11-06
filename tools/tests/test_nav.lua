@@ -17,12 +17,12 @@ local east, south, exact = Nav:Offset(1438, 0.5, 0.5, 60, 50)
 check("exact offset east", exact and math.abs(east - 300) < 0.01 and math.abs(south) < 0.01)
 east, south = Nav:Offset(1438, 0.5, 0.5, 50, 40)
 check("exact offset north is negative south", math.abs(east) < 0.01 and math.abs(south + 200) < 0.01)
--- Clustering: two givers 0.5 % apart share one pin.
+-- Clustering: two givers 0.2 % apart share one pin.
 local W = PSS.QuestWorth
 local oldOnMap = W.OnMap
 W.OnMap = function() return {
   {id = 1, r = {g = 10, x = 40, y = 40}, rate = {verdict = "ok"}},
-  {id = 2, r = {g = 11, x = 40.5, y = 40.2}, rate = {verdict = "great"}},
+  {id = 2, r = {g = 11, x = 40.2, y = 40.1}, rate = {verdict = "great"}},
   {id = 3, r = {g = 12, x = 60, y = 60}, rate = {verdict = "skip"}},
 } end
 local groups = QP:Groups(1438, 20)

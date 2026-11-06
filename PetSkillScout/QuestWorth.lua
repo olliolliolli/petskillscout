@@ -101,6 +101,49 @@ end
 -- Can this character pick the quest up? (ignores reputation and professions,
 -- which the database cannot check: those quests count as not available)
 -- Returns ok, reason ("done" | "log" | "side" | "race" | "class" | "level" | "prev" | "other").
+-- Skill lines you have (professions, Cooking, Fishing, First Aid...), by ID.
+local skillCache, skillAt = nil, -1e9
+function W:Skills()
+  local now = GetTime and GetTime() or 0
+  if skillCache and now - skillAt < 10 then return skillCache end
+  local out = {}
+  if type(GetProfessions) == "function" and type(GetProfessionInfo) == "function" then
+    local list = {Call(GetProfessions)}
+    for i = 1, 6 do
+      local idx = Plain(list[i])
+      if idx then
+        local _, _, rank, _, _, _, line = Call(GetProfessionInfo, idx)
+        line = tonumber(Plain(line))
+        if line then out[line] = tonumber(Plain(rank)) or 1 end
+      end
+    end
+  end
+  skillCache, skillAt = out, now
+  return out
+end
+-- Unknown (no API): true, the quest is shown.
+function W:HasSkill(line)
+  if type(GetProfessions) ~= "function" then return true end
+  return self:Skills()[tonumber(line) or 0] ~= nil
+end
+-- mr = {faction ID, reputation value}; unreadable reputation: only common
+-- thresholds (up to friendly) are assumed to be met.
+function W:HasRep(mr)
+  local fac, need = tonumber(mr[1]), tonumber(mr[2]) or 0
+  if not fac or fac == 0 then return true end
+  local value
+  if C_Reputation and C_Reputation.GetFactionDataByID then
+    local d = Call(C_Reputation.GetFactionDataByID, fac)
+    if type(d) == "table" then value = tonumber(Plain(d.currentStanding)) end
+  end
+  if not value and type(GetFactionInfoByID) == "function" then
+    local _, _, _, _, _, bar = Call(GetFactionInfoByID, fac)
+    value = tonumber(Plain(bar))
+  end
+  if not value then return need <= 3000 end
+  return value >= need
+end
+
 function W:Available(id, level)
   local r = self:Record(id)
   if not r then return false, "other" end
@@ -119,7 +162,8 @@ function W:Available(id, level)
     for _, x in ipairs(r.cl) do if x == cls then ok = true end end
     if cls and not ok then return false, "class" end
   end
-  if r.sk or r.mr then return false, "other" end
+  if r.sk and not self:HasSkill(r.sk) then return false, "skill" end
+  if r.mr and not self:HasRep(r.mr) then return false, "rep" end
   if r.p then
     local need, have = r.pn or #r.p, 0
     for _, p in ipairs(r.p) do if self:Done(p) then have = have + 1 end end

@@ -62,7 +62,10 @@ for _, id in ipairs(ids) do
     if n.isBreadcrumb then f[#f + 1] = "b=1" end
     if n.repeatable then f[#f + 1] = "r=1" end
     if tonumber(n.requireSkill) then f[#f + 1] = "sk=" .. tonumber(n.requireSkill) end
-    if n.minReputation then f[#f + 1] = "mr=1" end
+    -- Reputation needed: {faction ID, reputation value} (e.g. 3000 = friendly).
+    if type(n.minReputation) == "table" and tonumber(n.minReputation[1]) then
+      f[#f + 1] = "mr={" .. tonumber(n.minReputation[1]) .. "," .. (tonumber(n.minReputation[2]) or 0) .. "}"
+    elseif n.minReputation then f[#f + 1] = "mr={0,0}" end
     if ctx.inst or ctx.root == "Instances" then f[#f + 1] = "d=1" end
     -- Objectives (n kill, i item, o object, other) and the first objective position; rewards.
     local obj, ox, items = {}, nil, {}
@@ -99,7 +102,7 @@ fh:write("-- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/
 fh:write("-- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.\n")
 fh:write("-- Source commit " .. (arg[3] or "?") .. ". Fields: g quest giver NPC, x/y/m giver position (0-100, uiMapID),\n")
 fh:write("-- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),\n")
-fh:write("-- a alternative quests, b breadcrumb, r repeatable, sk profession, mr reputation, d dungeon / raid,\n")
+fh:write("-- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,\n")
 fh:write("-- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.\n")
 fh:write("local PSS = PetSkillScout\nPSS.QuestDB = {\n")
 fh:write(table.concat(lines, "\n"))

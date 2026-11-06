@@ -135,13 +135,13 @@ function QP:Groups(mapID, level)
     if ORDER[x.rate.verdict] < ORDER[g.best] then g.best = x.rate.verdict end
     end
   end
-  -- Givers standing almost on the same spot share one pin (less clutter).
+  -- Givers standing on practically the same spot share one pin.
   local merged = {}
   for _, g in ipairs(groups) do
     local into
     for _, m in ipairs(merged) do
       local dx, dy = g.x - m.x, g.y - m.y
-      if dx * dx + dy * dy < 1.0 then into = m break end
+      if dx * dx + dy * dy < 0.09 then into = m break end -- 0.3 %: practically the same spot
     end
     if into then
       for _, q in ipairs(g.quests) do into.quests[#into.quests + 1] = q end

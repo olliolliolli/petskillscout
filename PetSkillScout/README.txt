@@ -206,6 +206,15 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.3
+- Quest pins: many available quests were missing. Quests needing a profession or secondary
+  skill (Cooking, Fishing, First Aid...) are shown when you have that skill, and reputation
+  quests when your standing is enough (the database now stores the faction and value) -
+  before, all of them were hidden. Givers are merged into one pin only when they stand on
+  practically the same spot (0.3 % instead of 1 %: in towns, different NPCs were merged).
+- Data update 2026-11-06: quest database regenerated from AllTheThings b50b6d8 with
+  reputation requirements; learned data from play (+1 quest, +4 ammo vendors, +2 rare spots).
+
 3.3.2
 - Quest pins: when the game reports the quests you can take on a map (C_QuestLine, the "!" of
   the game's map), that list is used - with the game's own giver positions - and rated as before.
