@@ -401,6 +401,17 @@ local function Candidates(mapID)
       end
     end
   end
+  -- Objectives of quests in your log (same marks as on the world map).
+  if QP and QP.MinimapEnabled and QP:MinimapEnabled() and QP.ObjectivesOn and QP:ObjectivesOn() then
+    local ok, quests = pcall(QP.LogQuests, QP)
+    for _, q in ipairs(ok and quests or {}) do
+      local r = PSS.QuestDB and PSS.QuestDB[q.id]
+      if r and r.om == mapID and r.ox and not q.done then
+        table.insert(list, {obj = true, icon = "Interface/TargetingFrame/UI-RaidTargetingIcon_8",
+          label = q.title or r.n, sub = PSS:L("qObjective"), target = {name = q.title or r.n, mapID = mapID, points = {{r.ox, r.oy}}}})
+      end
+    end
+  end
   if Nav.target and Nav.target.mapID == mapID then
     table.insert(list, {target = Nav.target, icon = "Interface\\Icons\\Ability_Hunter_Pathfinding",
       color = {0.95, 0.77, 0.30}, label = Nav.target.name, sub = PSS:L("arrowTarget"), edge = true})
@@ -576,6 +587,16 @@ local function UpdateMinimap()
           local sz = c.verdict == "great" and 16 or 13
           p.disc:SetSize(sz, sz); p.discEdge:SetSize(sz + 3, sz + 3)
           if not onMap then p:SetAlpha(0.6) end
+        elseif c.obj then
+          -- Quest objective: small mark, no ring.
+          p:SetSize(11, 11)
+          if p.disc then p.disc:Hide(); p.discEdge:Hide() end
+          p.ring:Hide()
+          p.icon:SetDesaturated(false)
+          p.icon:SetVertexColor(1, 1, 1)
+          p.icon:SetTexCoord(0, 1, 0, 1)
+          p.icon:SetTexture(c.icon)
+          p:SetAlpha(onMap and 0.85 or 0.5)
         else
           p:SetSize(14, 14)
           if p.disc then p.disc:Hide(); p.discEdge:Hide() end

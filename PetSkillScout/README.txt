@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.1
+- Minimap: quest objective marks too (same as the world map), next to the merged quest giver
+  pins and exact placement from 3.3.0.
+
 3.3.0
 - Minimap: pins are placed from the game's world coordinates (exact for every zone, any zoom
   or rotation) and the client's own minimap view radius, not from estimated zone sizes.
