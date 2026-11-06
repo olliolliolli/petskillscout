@@ -41,6 +41,14 @@ for _, id in ipairs(ids) do
     local f = {}
     local g = n.qg or (type(n.qgs) == "table" and n.qgs[1])
     if g then f[#f + 1] = "g=" .. g; used[g] = true end
+    -- Started from an object (wanted poster, book...): ob = object ID.
+    if not g then
+      local pvs = type(n.providers) == "table" and n.providers or {}
+      if type(n.provider) == "table" then pvs = {n.provider} end
+      for _, pv in ipairs(pvs) do
+        if type(pv) == "table" and pv[1] == "o" and tonumber(pv[2]) then f[#f + 1] = "ob=" .. tonumber(pv[2]); break end
+      end
+    end
     local c = n.coord or (type(n.coords) == "table" and n.coords[1])
     if type(c) == "table" and type(c[1]) == "table" then c = c[1] end
     if type(c) == "table" and (type(c[1]) ~= "number" or type(c[2]) ~= "number" or type(c[3]) ~= "number") then c = nil end
@@ -100,7 +108,7 @@ local fh = assert(io.open(out, "w"))
 fh:write("-- Quests of WoW Forever (generated, do not edit by hand).\n")
 fh:write("-- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/AllTheThings),\n")
 fh:write("-- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.\n")
-fh:write("-- Source commit " .. (arg[3] or "?") .. ". Fields: g quest giver NPC, x/y/m giver position (0-100, uiMapID),\n")
+fh:write("-- Source commit " .. (arg[3] or "?") .. ". Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),\n")
 fh:write("-- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),\n")
 fh:write("-- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,\n")
 fh:write("-- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.\n")

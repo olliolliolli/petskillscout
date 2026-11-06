@@ -34,7 +34,8 @@ function QP.Tooltip(pin)
     local n = W:NPCName(npc)
     if n then names[#names + 1] = n end
   end
-  GameTooltip:AddLine(PSS:Safe(#names > 0 and table.concat(names, ", ") or PSS:L("qwGiverUnknown")), 1, 0.82, 0, true)
+  local head = #names > 0 and table.concat(names, ", ") or (g.ob and PSS:L("qwObject")) or PSS:L("qwGiverUnknown")
+  GameTooltip:AddLine(PSS:Safe(head), 1, 0.82, 0, true)
   for _, x in ipairs(g.quests) do
     local c = W.COLORS[x.rate.verdict]
     GameTooltip:AddLine(PSS:Safe(W:Title(x.id) .. "  (" .. PSS:L("qw_" .. x.rate.verdict) .. ")"), c[1], c[2], c[3])
@@ -132,10 +133,10 @@ function QP:Groups(mapID, level)
   for _, x in ipairs(W:OnMap(mapID, level)) do
     local r = x.r
     if not QP:IsHiddenGiver(r.g, mapID, r.x, r.y) then
-    local key = (r.g or 0) .. ":" .. r.x .. ":" .. r.y
+    local key = (r.g or ("o" .. tostring(r.ob or 0))) .. ":" .. r.x .. ":" .. r.y
     local g = byKey[key]
     if not g then
-      g = {npc = r.g, x = r.x, y = r.y, mapID = mapID, quests = {}, best = "skip"}
+      g = {npc = r.g, ob = (not r.g) and r.ob or nil, x = r.x, y = r.y, mapID = mapID, quests = {}, best = "skip"}
       byKey[key] = g
       groups[#groups + 1] = g
     end
@@ -151,7 +152,8 @@ function QP:Groups(mapID, level)
     local into
     for _, m in ipairs(merged) do
       local dx, dy = g.x - m.x, g.y - m.y
-      if g.npc and m.npc == g.npc and dx * dx + dy * dy < 1.0 then into = m break end
+      local same = (g.npc and m.npc == g.npc) or (g.ob and m.ob == g.ob)
+      if same and dx * dx + dy * dy < 1.0 then into = m break end
     end
     if into then
       for _, q in ipairs(g.quests) do into.quests[#into.quests + 1] = q end

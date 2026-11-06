@@ -20,4 +20,8 @@ check("pin while the holiday runs", onMap(8721))
 H.active = {[1] = true}
 check("other holiday does not count", not onMap(8721))
 check("unknown holiday never active", not H:IsActive(-1))
+-- Quests started from an object (wanted poster) get a pin.
+local found = false
+for _, x in ipairs(W:OnMap(1439, 15)) do if x.id == 4740 then found = true end end
+check("wanted poster quest on the map", found)
 print(string.format("passed %d, failed %d", passes, fails))

@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.6
+- Quest pins: quests started from an object (wanted posters, books, plaques - 293 in the
+  database) get pins again; the database now stores the start object. Before, every quest
+  without an NPC giver was left off the map.
+
 3.3.5
 - Quest pins smaller: world map 12-14 px (was 18-22), minimap 9-10 px (was 13-16), smaller
   offset and spread ring, so the game's own quest icons stay visible.

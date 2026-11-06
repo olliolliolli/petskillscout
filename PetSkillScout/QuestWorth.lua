@@ -473,7 +473,7 @@ function W:OnMap(mapID, level)
     -- marked for later expansions ("[CATA+]") do not exist in Forever.
     local rec = self:Record(id)
     local holidayOff = rec and rec.hol and not (PSS.Holidays and PSS.Holidays:IsActive(rec.hol))
-    local pinnable = rec and rec.g and not holidayOff and not (rec.n and rec.n:find("%[%u+%+%]"))
+    local pinnable = rec and (rec.g or rec.ob) and not holidayOff and not (rec.n and rec.n:find("%[%u+%+%]"))
     if pinnable and self:Available(id, level) then
       local rate = self:Rate(id, level)
       out[#out + 1] = {id = id, r = self:Record(id), rate = rate}
