@@ -1085,8 +1085,39 @@ end
 -- Micro menu and bag buttons above the right info bar.
 -- Bags right above the info bar, micro menu above the bags (both right
 -- aligned), so they never overlap each other or the bar.
+-- The game moves the bag row / micro menu back to its own spot after some
+-- events (level up, new spells, Edit Mode). Their SetPoint is watched: when
+-- someone else moves them, ours is put back (after combat if needed).
+local placingMenus, menusHooked = false, false
+local function MenusMoved()
+  if placingMenus or not LY.applied.chat then return end
+  if InCombat() then LY.pendingMenus = true return end
+  PSS:Soon("place-menus", function() LY:PlaceMenus() end, 0.2)
+end
+local function HookMenus()
+  if menusHooked then return end
+  menusHooked = true
+  for _, n in ipairs({"BagsBar", "MicroMenuContainer"}) do
+    local f = G(n)
+    if f then
+      for _, m in ipairs({"SetPoint", "ClearAllPoints", "SetPointBase"}) do
+        if type(f[m]) == "function" then pcall(PSS.HookSecure, f, m, MenusMoved) end
+      end
+    end
+  end
+end
+
 function LY:PlaceMenus()
-  if not rightBar or InCombat() then return end
+  if not rightBar then return end
+  if InCombat() then self.pendingMenus = true return end
+  HookMenus()
+  placingMenus = true
+  local ok, err = pcall(self.DoPlaceMenus, self)
+  placingMenus = false
+  if not ok then self.menuError = tostring(err) end
+end
+
+function LY:DoPlaceMenus()
   pcall(self.SkinMenus, self)
   local bags = G("BagsBar") or G("MainMenuBarBackpackButton")
   local micro = G("MicroMenuContainer") or G("MicroMenu") or G("CharacterMicroButton")
@@ -2046,6 +2077,7 @@ LY.frame:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_REGEN_ENABLED" then
     if LY.pending then pcall(LY.Apply, LY) end
     if LY.pendingLayout then LY.pendingLayout = false; pcall(LY.LayoutBars, LY); PlaceCastBar(); pcall(LY.FitChatFrame, LY) end
+    if LY.pendingMenus then LY.pendingMenus = false; pcall(LY.PlaceMenus, LY) end
   elseif event == "UPDATE_CHAT_WINDOWS" then
     if LY.applied.chat then pcall(LY.PlaceChat, LY) end
   else

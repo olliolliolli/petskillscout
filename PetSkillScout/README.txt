@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.2.3
+- Theme: the bag row (and micro menu) jumped to the middle of the screen on level up - the game
+  moved it back to its own spot. When the game moves them now, they are put back above the
+  info bar (right after combat if it happens in a fight).
+
 3.2.2
 - Quest learning: a quest opened at an NPC more than 3 % of the map away from the database
   position (or on another map) is recorded and shared too, with the last three quests you
