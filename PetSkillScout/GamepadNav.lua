@@ -230,56 +230,8 @@ local function MenuButton()
 end
 GN.MenuButton = MenuButton
 
--- 2) Both sticks pressed (L3 + R3) for half a second toggles the window.
---    The addon only reads the button state (C_GamePad), nothing is taken
---    from the game.
-GN.COMBO = {"PADLSTICK", "PADRSTICK"}
-GN.HOLD = 0.5
-local comboIdx, held, fired = nil, 0, false
-local function ComboIndexes()
-  if comboIdx ~= nil then return comboIdx end
-  comboIdx = false
-  local api = C_GamePad
-  if not (api and api.ButtonBindingToIndex) then return false end
-  local t = {}
-  for _, b in ipairs(GN.COMBO) do
-    local ok, i = pcall(api.ButtonBindingToIndex, b)
-    if ok and type(i) == "number" then t[#t + 1] = i end
-  end
-  if #t == #GN.COMBO then comboIdx = t end
-  return comboIdx
-end
-function GN:ComboAvailable()
-  return C_GamePad and C_GamePad.GetDeviceMappedState and ComboIndexes() and true or false
-end
-local poll = CreateFrame("Frame")
-GN.poll = poll
-local acc = 0
-poll:SetScript("OnUpdate", function(_, elapsed)
-  acc = acc + (elapsed or 0)
-  if acc < 0.1 then return end
-  local dt = acc; acc = 0
-  if not (PSS.Gamepad and PSS.Gamepad.active) then held, fired = 0, false return end
-  local idx = ComboIndexes()
-  if not idx then return end
-  local okD, dev = pcall(C_GamePad.GetActiveDeviceID)
-  local okS, st = pcall(C_GamePad.GetDeviceMappedState, okD and dev or nil)
-  if not (okS and type(st) == "table" and type(st.buttons) == "table") then return end
-  local all = true
-  for _, i in ipairs(idx) do
-    -- buttons[] is 1-based on modern clients; indexes are 0-based.
-    if not (st.buttons[i + 1] or st.buttons[i]) then all = false break end
-  end
-  if all then
-    held = held + dt
-    if held >= GN.HOLD and not fired then
-      fired = true
-      PetSkillScout_ToggleWindow()
-    end
-  else
-    held, fired = 0, false
-  end
-end)
+-- (A stick combo was tried in 3.6.1; only the menu button is kept.)
+function GN:ComboAvailable() return false end
 
 local ev2 = CreateFrame("Frame")
 ev2:RegisterEvent("PLAYER_ENTERING_WORLD")

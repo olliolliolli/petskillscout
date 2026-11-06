@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.6.2
+- Gamepad: the window opens from the "PetSkillScout" button under the game menu; the L3 + R3
+  combo is removed.
+
 3.6.1
 - Gamepad: two ways to open the window without key bindings - a "PetSkillScout" button under
   the game menu (Start / Menu button, pick it with the gamepad cursor), and holding both
