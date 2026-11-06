@@ -262,6 +262,8 @@ end
 
 S.frame = CreateFrame("Frame")
 pcall(S.frame.RegisterEvent, S.frame, "CHAT_MSG_ADDON")
+pcall(S.frame.RegisterEvent, S.frame, "CHAT_MSG_ADDON_LOGGED")
+pcall(S.frame.RegisterEvent, S.frame, "CHAT_MSG_CHANNEL")
 pcall(S.frame.RegisterEvent, S.frame, "PLAYER_LOGIN")
 -- Diagnostics (/pss netdiag) ------------------------------------------------
 -- Every incoming message of our prefix is counted by distribution (also our
@@ -296,10 +298,24 @@ function S:Diag()
   if id then dists[#dists + 1] = {"CHANNEL", id} end
   if IsInGuild and IsInGuild() then dists[#dists + 1] = {"GUILD"} end
   if IsInGroup and IsInGroup() then dists[#dists + 1] = {"PARTY"} end
-  dists[#dists + 1] = {"WHISPER", UnitName and UnitName("player")}
+  -- Whisper to yourself by the full name (Forever names are "First Last").
+  local full = GetUnitName and GetUnitName("player", true) or (UnitName and UnitName("player"))
+  dists[#dists + 1] = {"WHISPER", full}
   for _, d in ipairs(dists) do
     local ok, r = pcall(fn, PREFIX, "D" .. SEP .. nonce, d[1], d[2])
-    P(string.format("send %s -> %s", d[1], ok and ResultName(r) or ("error " .. tostring(r))))
+    P(string.format("send %s -> %s", d[1] .. (d[1] == "WHISPER" and (" " .. tostring(d[2])) or ""), ok and ResultName(r) or ("error " .. tostring(r))))
+  end
+  -- Logged variant of the addon message (some servers only relay that one).
+  local logged = C_ChatInfo and C_ChatInfo.SendAddonMessageLogged
+  if id and type(logged) == "function" then
+    local ok, r = pcall(logged, PREFIX, "D" .. SEP .. nonce .. SEP .. "L", "CHANNEL", id)
+    P("send CHANNEL logged -> " .. (ok and ResultName(r) or ("error " .. tostring(r))))
+  end
+  -- Plain chat text in the channel (hidden from chat by the addon's filter).
+  local say = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+  if id and type(say) == "function" then
+    local ok, r = pcall(say, "PSS" .. SEP .. "D" .. SEP .. nonce, "CHANNEL", nil, id)
+    P("send CHANNEL text -> " .. (ok and ("called " .. tostring(r)) or ("error " .. tostring(r))))
   end
   local raw = {}
   for k, v in pairs(PetSkillScoutDB and PetSkillScoutDB.netRaw or {}) do raw[#raw + 1] = k .. "=" .. v end
@@ -316,10 +332,21 @@ end
 
 S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
   if event == "PLAYER_LOGIN" then Register() return end
+  if event == "CHAT_MSG_CHANNEL" then
+    -- Chat text: arg1 message, arg9 channel name. Only the diagnostics text.
+    local text = prefix
+    if diag and type(text) == "string" and not (PSS.IsSecret and PSS.IsSecret(text))
+       and text == "PSS" .. SEP .. "D" .. SEP .. diag.nonce then
+      diag.got["CHANNEL text"] = true
+    end
+    return
+  end
   if prefix ~= PREFIX then return end
   pcall(CountRaw, channel)
   if type(msg) == "string" and msg:sub(1, 2) == "D" .. SEP then
-    if diag and msg:sub(3) == diag.nonce then diag.got[tostring(channel)] = true end
+    if diag and msg:sub(3, 2 + #diag.nonce) == diag.nonce then
+      diag.got[tostring(channel) .. (msg:find(SEP .. "L$") and " logged" or "")] = true
+    end
     return
   end
   S:Receive(msg, channel, sender)

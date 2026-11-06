@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.0.13
+- Network: /pss netdiag also tests a whisper by full name, the logged addon message and plain
+  hidden text in the channel.
+
 3.0.12
 - Network: /pss netdiag tests whether addon messages reach the realm channel (send result and
   echo per channel type); incoming messages are counted by type in the saved file.
