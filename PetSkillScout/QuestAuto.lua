@@ -73,15 +73,27 @@ function QA:NoteOffered()
   local npc
   local guid = Plain(Call(UnitGUID, "npc"))
   if type(guid) == "string" then npc = tonumber((select(6, strsplit("-", guid)))) end
+  local offered = {}
   local G = C_GossipInfo
   if G and G.GetAvailableQuests then
-    for _, q in ipairs(Call(G.GetAvailableQuests) or {}) do W:Offered(Plain(q.questID), npc) end
+    for _, q in ipairs(Call(G.GetAvailableQuests) or {}) do
+      local id = tonumber(Plain(q.questID))
+      if id then offered[id] = true; W:Offered(id, npc) end
+    end
+    -- Active quests (in your log) count as offered too.
+    for _, q in ipairs((G.GetActiveQuests and Call(G.GetActiveQuests)) or {}) do
+      local id = tonumber(Plain(q.questID))
+      if id then offered[id] = true end
+    end
   end
   local n = tonumber(Plain(Call(GetNumAvailableQuests))) or 0
   for i = 1, n do
-    local id = Plain(select(5, Call(GetAvailableQuestInfo, i)))
-    if id then W:Offered(id, npc) end
+    local id = tonumber(Plain(select(5, Call(GetAvailableQuestInfo, i))))
+    if id then offered[id] = true; W:Offered(id, npc) end
   end
+  -- Only when the window's quest list could be read at all.
+  local readable = (G and G.GetAvailableQuests) or type(GetNumAvailableQuests) == "function"
+  if npc and readable and W.NotOffered then W:NotOffered(npc, offered) end
 end
 
 function QA:OnGossip()

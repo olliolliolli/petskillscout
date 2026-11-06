@@ -47,5 +47,14 @@ local t0 = GetTime()
 GetTime = function() return t0 + 100 end -- skip the skill cache
 check("fishing seen from skill list", W:HasSkill(356))
 check("no cooking: cooking quest hidden", not W:HasSkill(185))
+-- Talking to the giver: quests the NPC did not offer lose their pin.
+PetSkillScoutDB.questNotOffered = nil
+local npc = PSS.QuestDB[963].g
+W.byMap = nil
+local okBefore = W:Available(963, 15)
+W:NotOffered(npc, {})
+check("not offered at the NPC: no pin", okBefore and not W:Available(963, 15))
+W:NotOffered(npc, {[963] = true})
+check("offered again: pin back", W:Available(963, 15))
 GetProfessions = oldGP
 print(string.format("passed %d, failed %d", passes, fails))

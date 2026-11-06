@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.11
+- Quest pins checked at the NPC: when you talk to a quest giver, its database quests that the
+  NPC does not offer (skill level too low, hidden condition) lose their pin until your level
+  or a skill changes; offered ones always keep it. The database only says which skill a quest
+  needs, not the level - known single cases are listed (Easy Strider Living: Cooking 10).
+
 3.3.10
 - Quest pins: quests that need a skill (e.g. Easy Strider Living - Cooking) showed even without
   the skill when the client has no GetProfessions. The character's skill list is read now

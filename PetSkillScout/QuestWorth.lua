@@ -248,6 +248,38 @@ function W:Skills()
   skillCache, skillAt = out, now
   return out
 end
+-- Skill level a quest needs, where known (single facts, e.g. Warcraft Wiki);
+-- the database only says which skill. Other cases are learned at the NPC.
+W.SKILL_MIN = {[2178] = 10}
+-- Changes whenever a skill rank changes (re-check quests the NPC refused).
+function W:SkillKey()
+  local t = {}
+  for line, rank in pairs(self:Skills()) do if type(line) == "number" then t[#t + 1] = line .. "=" .. tostring(rank) end end
+  table.sort(t)
+  return table.concat(t, ",")
+end
+-- Talking to an NPC: its database quests that look available but were not
+-- offered are remembered as not available (for your level and skills).
+function W:NotOffered(npc, offered)
+  if not (npc and PetSkillScoutDB) then return end
+  self:Index()
+  local level, key = self:PlayerLevel(), self:SkillKey()
+  local changed = false
+  for _, id in ipairs(self.byGiver[npc] or {}) do
+    if not offered[id] and not self:InLog(id) and not self:Done(id) then
+      local ok = self:Available(id, level)
+      if ok then
+        PetSkillScoutDB.questNotOffered = PetSkillScoutDB.questNotOffered or {}
+        PetSkillScoutDB.questNotOffered[id] = {lv = level, sk = key, t = time and time() or 0}
+        changed = true
+      end
+    elseif offered[id] and PetSkillScoutDB.questNotOffered then
+      PetSkillScoutDB.questNotOffered[id] = nil
+    end
+  end
+  if changed and PSS.QuestPins and PSS.QuestPins.Refresh then PSS.QuestPins:Refresh() end
+end
+
 -- Base spell and English name of each skill line (for the classic skill list).
 W.SKILL_SPELLS = {[185] = 2550, [356] = 7620, [129] = 3273, [182] = 2366, [186] = 2575, [393] = 8613,
   [165] = 2108, [164] = 2018, [197] = 3908, [202] = 4036, [171] = 2259, [333] = 7411}
@@ -300,6 +332,12 @@ function W:Available(id, level)
   -- The game offered this quest to you at an NPC (gossip / greeting window):
   -- whatever the database says about conditions, it is available.
   if DB().questOffered and DB().questOffered[id] then return true end
+  -- You talked to its giver and the NPC did not offer it (skill level,
+  -- hidden condition...): no pin until your level or skills change.
+  local no = DB().questNotOffered and DB().questNotOffered[id]
+  if no and no.lv == self:PlayerLevel() and no.sk == self:SkillKey() then return false, "npc" end
+  local minSkill = W.SKILL_MIN[id]
+  if r.sk and minSkill and (self:Skills()[r.sk] or 0) < minSkill then return false, "skill " .. minSkill end
   if r.sk and not self:HasSkill(r.sk) then return false, "skill" end
   if r.mr and not self:HasRep(r.mr) then return false, "rep" end
   if r.p then
