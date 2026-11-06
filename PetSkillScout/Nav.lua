@@ -583,8 +583,8 @@ local function UpdateMinimap()
           p.ring:Hide()
           PSS.QuestPins:Style(p, c.verdict)
           p.disc:Show(); p.discEdge:Show()
-          if c.verdict == "great" then p:SetSize(10, 10) else p:SetSize(9, 9) end
-          local sz = c.verdict == "great" and 10 or 9
+          if c.verdict == "ok" then p:SetSize(9, 9) else p:SetSize(10, 10) end
+          local sz = c.verdict == "ok" and 9 or 10
           p.disc:SetSize(sz, sz); p.discEdge:SetSize(sz + 2, sz + 2)
           if not onMap then p:SetAlpha(0.6) end
         elseif c.obj then
@@ -612,7 +612,7 @@ local function UpdateMinimap()
         p:ClearAllPoints()
         local off = 0 -- right on the giver, like the game's own "!"
         local sx, sy = 0, 0
-        if c.quest and PSS.QuestPins and PSS.QuestPins.SpreadOffset then sx, sy = PSS.QuestPins.SpreadOffset(c.quest.spread, 6) end
+        if c.quest and PSS.QuestPins and PSS.QuestPins.SpreadOffset then sx, sy = PSS.QuestPins.SpreadOffset(c.quest.spread, 4) end
         p:SetPoint("CENTER", Minimap, "CENTER", ex * scale + off + sx, ny * scale + off + sy)
         p:Show()
       end

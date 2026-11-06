@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.15
+- Quest pins: pins of nearby givers are spread only when they would really cover each other
+  (0.2 % instead of 0.6 %, smaller ring), so they stay on their NPC. Grey "not worth it" pins
+  are as big as purple ones, with a light edge and a light "!" on black - easier to see.
+
 3.3.14
 - Skills: the character's skill list is always read, not only when GetProfessions returns
   nothing - Fishing, Cooking and First Aid (with their ranks) are often only there, so

@@ -22,7 +22,7 @@ local W = PSS.QuestWorth
 local oldOnMap = W.OnMap
 W.OnMap = function() return {
   {id = 1, r = {g = 10, x = 40, y = 40}, rate = {verdict = "ok"}},
-  {id = 2, r = {g = 11, x = 40.2, y = 40.1}, rate = {verdict = "great"}},
+  {id = 2, r = {g = 11, x = 40.1, y = 40.1}, rate = {verdict = "great"}},
   {id = 3, r = {g = 12, x = 60, y = 60}, rate = {verdict = "skip"}},
   {id = 4, r = {g = 10, x = 40.3, y = 40}, rate = {verdict = "skip"}},
 } end

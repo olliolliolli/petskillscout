@@ -167,7 +167,7 @@ function QP:Groups(mapID, level)
     for k = 1, i2 - 1 do
       local m = merged[k]
       local dx, dy = g.x - m.x, g.y - m.y
-      if dx * dx + dy * dy < 0.36 then n = n + 1 end
+      if dx * dx + dy * dy < 0.04 then n = n + 1 end -- 0.2 %: pins would really cover each other
     end
     g.spread = n > 0 and n or nil
   end
@@ -190,20 +190,22 @@ end
 QP.Backing = Backing
 function QP:Style(pin, verdict)
   Backing(pin)
-  local size = verdict == "great" and 14 or 12
+  local size = verdict == "ok" and 12 or 14
   pin.discEdge:SetSize(size + 3, size + 3)
   pin.disc:SetSize(size, size)
   if verdict == "great" then
     pin.discEdge:SetVertexColor(0.74, 0.45, 1, 1); pin.disc:SetVertexColor(0.16, 0.06, 0.26, 0.95)
   elseif verdict == "skip" then
-    pin.discEdge:SetVertexColor(0.55, 0.55, 0.55, 1); pin.disc:SetVertexColor(0.08, 0.08, 0.08, 0.9)
+    pin.discEdge:SetVertexColor(0.85, 0.85, 0.85, 1); pin.disc:SetVertexColor(0.02, 0.02, 0.02, 0.95)
   else
     pin.discEdge:SetVertexColor(1, 0.82, 0, 1); pin.disc:SetVertexColor(0.18, 0.13, 0.02, 0.9)
   end
   pin.icon:SetDesaturated(verdict ~= "ok")
   local c = PSS.QuestWorth.COLORS[verdict]
-  if verdict == "ok" then pin.icon:SetVertexColor(1, 1, 1) else pin.icon:SetVertexColor(c[1] * 1.2, c[2] * 1.2, c[3] * 1.2) end
-  pin:SetSize(verdict == "great" and 14 or 12, verdict == "great" and 14 or 12)
+  if verdict == "ok" then pin.icon:SetVertexColor(1, 1, 1)
+  elseif verdict == "skip" then pin.icon:SetVertexColor(0.9, 0.9, 0.9) -- light grey "!" on black: readable
+  else pin.icon:SetVertexColor(c[1] * 1.2, c[2] * 1.2, c[3] * 1.2) end
+  pin:SetSize(size, size)
   pin:SetAlpha(1)
 end
 
@@ -226,7 +228,7 @@ local function Update()
       QP:Style(pin, g.best)
       PSS.Map:Place(pin, canvas, g.x, g.y, width, height, scale)
       local pt, rel, rp, x, y = pin:GetPoint(1)
-      local sx, sy = QP.SpreadOffset(g.spread, 10)
+      local sx, sy = QP.SpreadOffset(g.spread, 7)
       if pt then pin:SetPoint(pt, rel, rp, x + QP.OFFSET + sx, y + QP.OFFSET + sy) end
       pin:Show()
     end
