@@ -583,9 +583,9 @@ local function UpdateMinimap()
           p.ring:Hide()
           PSS.QuestPins:Style(p, c.verdict)
           p.disc:Show(); p.discEdge:Show()
-          if c.verdict == "great" then p:SetSize(16, 16) else p:SetSize(13, 13) end
-          local sz = c.verdict == "great" and 16 or 13
-          p.disc:SetSize(sz, sz); p.discEdge:SetSize(sz + 3, sz + 3)
+          if c.verdict == "great" then p:SetSize(10, 10) else p:SetSize(9, 9) end
+          local sz = c.verdict == "great" and 10 or 9
+          p.disc:SetSize(sz, sz); p.discEdge:SetSize(sz + 2, sz + 2)
           if not onMap then p:SetAlpha(0.6) end
         elseif c.obj then
           -- Quest objective: small mark, no ring.
@@ -610,9 +610,9 @@ local function UpdateMinimap()
         end
         p.label, p.sub, p.dist, p.target, p.beastID = c.label, c.sub, math.floor(dist), c.target, c.beastID
         p:ClearAllPoints()
-        local off = c.quest and 6 or 0 -- quest pins beside the game's own "!"
+        local off = c.quest and 5 or 0 -- quest pins beside the game's own "!"
         local sx, sy = 0, 0
-        if c.quest and PSS.QuestPins and PSS.QuestPins.SpreadOffset then sx, sy = PSS.QuestPins.SpreadOffset(c.quest.spread, 9) end
+        if c.quest and PSS.QuestPins and PSS.QuestPins.SpreadOffset then sx, sy = PSS.QuestPins.SpreadOffset(c.quest.spread, 6) end
         p:SetPoint("CENTER", Minimap, "CENTER", ex * scale + off + sx, ny * scale + off + sy)
         p:Show()
       end
