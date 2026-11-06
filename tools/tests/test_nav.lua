@@ -46,4 +46,12 @@ check("game quests listed", ids[98013] and ids[999991] and #list == 2)
 check("game position used", ids[98013] and math.abs(ids[98013].r.x - 40) < 0.01)
 check("missing quest kept for the data update", PetSkillScoutDB.gameQuests and PetSkillScoutDB.gameQuests[999991] ~= nil)
 C_QuestLine = nil
+-- Secret GUIDs (instances / combat) must not raise a string conversion error.
+do
+  local old = issecretvalue
+  issecretvalue = function() return true end
+  local ok, v = pcall(PSS.RareTracker and PSS.RareTracker.NpcIDFromGUID or PSS.RarePets.NpcIDFromGUID, "Creature-0-1-2-3-100-5")
+  issecretvalue = old
+  if ok and v == nil then passes = passes + 1 else fails = fails + 1; print("FAIL secret guid") end
+end
 print(string.format("passed %d, failed %d", passes, fails))

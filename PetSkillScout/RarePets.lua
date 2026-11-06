@@ -97,7 +97,8 @@ local catalogue = {
 -- Creature GUID: Creature-0-<server>-<instance>-<zoneUID>-<npcID>-<spawnUID>.
 -- The NPC ID is the 6th dash-separated field (Vehicle/Pet GUIDs use the same layout).
 local function NpcIDFromGUID(guid)
-  if type(guid) ~= "string" then return nil end
+  -- In instances and combat the client can hand out secret GUIDs: not readable.
+  if type(guid) ~= "string" or (PSS.IsSecret and PSS.IsSecret(guid)) then return nil end
   local unitType, _, _, _, _, npcID = strsplit("-", guid)
   if unitType ~= "Creature" and unitType ~= "Vehicle" then return nil end
   return tonumber(npcID)

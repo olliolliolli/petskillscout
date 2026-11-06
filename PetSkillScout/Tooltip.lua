@@ -104,7 +104,8 @@ end
 local function OnUnit(tooltip)
   if tooltip ~= GameTooltip or tooltip.pssDone or not Enabled() then return end
   local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
-  if not ok or not unit or not UnitExists(unit) or (UnitIsPlayer and UnitIsPlayer(unit)) then return end
+  if not ok or not unit or (PSS.IsSecret and PSS.IsSecret(unit)) then return end
+  if not UnitExists(unit) or (UnitIsPlayer and UnitIsPlayer(unit)) then return end
   local npc = NpcID(unit)
   if not npc then return end
   local lvl

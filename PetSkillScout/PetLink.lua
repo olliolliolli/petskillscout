@@ -31,7 +31,7 @@ function P:OwnCard()
   for _, s in ipairs(pet.spells or {}) do
     if s.key and PSS.Abilities[s.key] then table.insert(skills, {key = s.key, rank = s.rank}) end
   end
-  local guid = UnitGUID and UnitGUID("pet")
+  local guid = UnitGUID and PSS.Plain(UnitGUID("pet"))
   local npc = pet.npcID
   if not npc and type(guid) == "string" then
     local _, _, _, _, _, id = strsplit("-", guid)

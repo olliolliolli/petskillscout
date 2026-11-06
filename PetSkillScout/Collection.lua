@@ -127,7 +127,7 @@ end
 -- Pet log -----------------------------------------------------------------------
 -- PetSkillScoutDB.petLog[guid] = { first, zone, npc, family, name, level, tamed }
 local function PetGUID()
-  local guid = UnitGUID and UnitGUID("pet")
+  local guid = UnitGUID and PSS.Plain(UnitGUID("pet"))
   if type(guid) ~= "string" then return nil end
   local _, _, _, _, _, id = strsplit("-", guid)
   return guid, tonumber(id)

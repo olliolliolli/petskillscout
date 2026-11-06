@@ -57,7 +57,7 @@ function W:Decode(text)
 end
 
 local function ActiveLook()
-  local guid = UnitGUID and UnitGUID("pet")
+  local guid = UnitGUID and PSS.Plain(UnitGUID("pet"))
   if type(guid) ~= "string" or (PSS.IsSecret and PSS.IsSecret(guid)) then return 0 end
   local _, _, _, _, _, id = strsplit("-", guid)
   local C = PSS.Collection

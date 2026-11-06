@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.6.5"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.6.6"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -26,6 +26,12 @@ end
 
 -- The game's own fonts (tooltips, chat, raid warnings) lack some glyphs that the
 -- addon font has, e.g. the middle dot. Use plain equivalents there.
+-- A secret value (unreadable to addons) becomes nil.
+function PSS.Plain(v)
+    if PSS.IsSecret and PSS.IsSecret(v) then return nil end
+    return v
+end
+
 function PSS:Safe(text)
     if type(text) ~= "string" then return text end
     text = text:gsub("%s*\194\183%s*", ", ")      -- middle dot
@@ -419,7 +425,17 @@ pcall(blockWatch.RegisterEvent, blockWatch, "ADDON_ACTION_FORBIDDEN")
 pcall(blockWatch.RegisterEvent, blockWatch, "ADDON_ACTION_BLOCKED")
 local blockSeen = {}
 blockWatch:SetScript("OnEvent", function(_, event, addon, func)
-  if addon ~= PSS.name or blockSeen[tostring(func)] then return end
+  if addon ~= PSS.name then return end
+  -- Counted per function for the next check of the saved data.
+  if PetSkillScoutDB then
+    local log = PetSkillScoutDB.blockedLog or {}
+    local e = log[tostring(func)] or {n = 0}
+    e.n = e.n + 1
+    if not e.stack and debugstack then e.stack = debugstack(2, 8, 0) end
+    log[tostring(func)] = e
+    PetSkillScoutDB.blockedLog = log
+  end
+  if blockSeen[tostring(func)] then return end
   blockSeen[tostring(func)] = true
   PSS:Print("blocked: " .. tostring(func) .. " (" .. tostring(event) .. ") - please report this")
 end)

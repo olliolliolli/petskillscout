@@ -77,11 +77,15 @@ local function SpellName(id, fallback)
 end
 
 -- true = pet is far, false = near, nil = the client cannot tell.
+-- Exact distance where the client gives it, otherwise the 40 yd party range;
+-- the 28 yd interact range fired on any normal pull. See G.FAR_HOLD too.
+G.FAR_YARDS, G.FAR_HOLD = 70, 4
 local function PetFar()
-  local ok, near = pcall(CheckInteractDistance, "pet", 4)
-  near = ok and Plain(near)
-  if near ~= nil and near ~= false and near ~= true then near = nil end
-  if near ~= nil then return not near end
+  if UnitDistanceSquared then
+    local ok0, sq, seen = pcall(UnitDistanceSquared, "pet")
+    sq, seen = ok0 and Plain(sq), ok0 and Plain(seen)
+    if seen and type(sq) == "number" then return sq > G.FAR_YARDS * G.FAR_YARDS end
+  end
   local ok2, inRange, checked = pcall(UnitInRange, "pet")
   inRange, checked = ok2 and Plain(inRange), ok2 and Plain(checked)
   if checked then return not inRange end
@@ -391,7 +395,9 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   if Opt("guardAggro") and not G.flow and InDungeon() and HasPet() and Plain(safe(UnitAffectingCombat, "pet")) then
     local far = PetFar()
     if far == nil then far = not Plain(safe(UnitAffectingCombat, "player")) end
-    if far and now - lastAggroAlert > 15 then
+    -- Only a pet that stays away counts, not one running to a pull.
+    if not far then G.farSince = nil elseif not G.farSince then G.farSince = now end
+    if far and now - G.farSince >= G.FAR_HOLD and now - lastAggroAlert > 15 then
       lastAggroAlert = now
       G:Alert("aggro")
     end

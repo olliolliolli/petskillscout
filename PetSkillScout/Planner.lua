@@ -59,7 +59,7 @@ function P:Current(pet)
 end
 
 local function PlanKey(pet)
-  local guid = UnitGUID and UnitGUID("pet")
+  local guid = UnitGUID and PSS.Plain(UnitGUID("pet"))
   if type(guid) == "string" and not Secret(guid) then return guid end
   return pet and pet.name or "?"
 end

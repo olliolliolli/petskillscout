@@ -141,6 +141,9 @@ end
 function GT:SkinBar()
   local root = _G.GamepadMainActionBarFrame
   if not (root and PSS.Skin and PSS.Skin.active) then return false end
+  -- Protected buttons: never touched in combat, redone when combat ends.
+  if InCombat() then self.skinPending = true; return false end
+  self.skinPending = nil
   pcall(SkinTree, root, 0)
   if not InCombat() and root.SetScale then
     local want = (PetSkillScoutDB and tonumber(PetSkillScoutDB.gamepadScale)) or self.SCALE
@@ -174,6 +177,7 @@ for _, e in ipairs({"PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED"}) do pcall(e
 ev:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_REGEN_ENABLED" then
     if GT.pending ~= nil then GT:Apply(GT.pending) end
+    if GT.skinPending then pcall(GT.SkinBar, GT) end
     return
   end
   -- After the theme is built: apply the current mode once.

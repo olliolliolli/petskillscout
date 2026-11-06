@@ -201,7 +201,7 @@ end
 
 -- Pet GUID "Pet-0-...-<npcID>-<uid>"; returns the creature ID.
 local function PetNpc()
-  local guid = UnitGUID and UnitGUID("pet")
+  local guid = UnitGUID and PSS.Plain(UnitGUID("pet"))
   if type(guid) ~= "string" then return nil, nil end
   local _, _, _, _, _, id = strsplit("-", guid)
   return tonumber(id), guid
