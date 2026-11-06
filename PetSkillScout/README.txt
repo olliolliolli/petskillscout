@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.6.3
+- Gamepad: records the frames of the radial "Main Menu" (Start button) when it is open, to add
+  a PetSkillScout entry there later. The button is under the classic game menu ("Game Menu"
+  in the wheel).
+
 3.6.2
 - Gamepad: the window opens from the "PetSkillScout" button under the game menu; the L3 + R3
   combo is removed.

@@ -159,3 +159,36 @@ ev:SetScript("OnEvent", function(_, event, a1)
   end
   pcall(Update)
 end)
+
+-- The gamepad "Main Menu" is a radial wheel (Start button) whose frame names
+-- are not documented: while a gamepad is in use, visible top-level frames
+-- with menu-like names are recorded once (PetSkillScoutDB.gamepadMenus) with
+-- their children, so the addon can later add its own entry there.
+local watch = CreateFrame("Frame")
+local wacc = 0
+watch:SetScript("OnUpdate", function(_, e)
+  wacc = wacc + (e or 0)
+  if wacc < 1 then return end
+  wacc = 0
+  if not (GP.active and PetSkillScoutDB) then return end
+  local seen = PetSkillScoutDB.gamepadMenus or {}
+  local okK, kids = pcall(function() return {UIParent:GetChildren()} end)
+  for _, f in ipairs(okK and kids or {}) do
+    local okN, name = pcall(f.GetName, f)
+    local okV, vis = pcall(f.IsVisible, f)
+    if okN and type(name) == "string" and okV and vis and not seen[name]
+       and (name:find("Radial") or name:find("Wheel") or name:find("Ring") or name:find("MainMenu") or name:find("Gamepad")) then
+      local sub = {}
+      local okC, ch = pcall(function() return {f:GetChildren()} end)
+      for _, c in ipairs(okC and ch or {}) do
+        local _, cn = pcall(c.GetName, c)
+        local _, ck = pcall(c.GetObjectType, c)
+        sub[#sub + 1] = tostring(cn) .. ":" .. tostring(ck)
+        if #sub >= 40 then break end
+      end
+      local _, prot = pcall(f.IsProtected, f)
+      seen[name] = {t = time and time() or 0, protected = prot and true or false, children = sub}
+    end
+  end
+  PetSkillScoutDB.gamepadMenus = seen
+end)
