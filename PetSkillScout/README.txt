@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.4
+- Quest pins, all zones: one pin per quest giver. Different NPCs are never merged any more
+  (245 giver spots in the database were still swallowed at 0.3 %); pins that would overlap
+  are spread in a small ring around the spot, on the world map and the minimap.
+
 3.3.3
 - Quest pins: many available quests were missing. Quests needing a profession or secondary
   skill (Cooking, Fishing, First Aid...) are shown when you have that skill, and reputation

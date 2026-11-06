@@ -17,16 +17,21 @@ local east, south, exact = Nav:Offset(1438, 0.5, 0.5, 60, 50)
 check("exact offset east", exact and math.abs(east - 300) < 0.01 and math.abs(south) < 0.01)
 east, south = Nav:Offset(1438, 0.5, 0.5, 50, 40)
 check("exact offset north is negative south", math.abs(east) < 0.01 and math.abs(south + 200) < 0.01)
--- Clustering: two givers 0.2 % apart share one pin.
+-- Different givers on one spot keep their own pins (spread); one giver is merged.
 local W = PSS.QuestWorth
 local oldOnMap = W.OnMap
 W.OnMap = function() return {
   {id = 1, r = {g = 10, x = 40, y = 40}, rate = {verdict = "ok"}},
   {id = 2, r = {g = 11, x = 40.2, y = 40.1}, rate = {verdict = "great"}},
   {id = 3, r = {g = 12, x = 60, y = 60}, rate = {verdict = "skip"}},
+  {id = 4, r = {g = 10, x = 40.3, y = 40}, rate = {verdict = "skip"}},
 } end
 local groups = QP:Groups(1438, 20)
-check("close givers merged", #groups == 2 and #groups[1].quests == 2 and groups[1].best == "great")
+check("one pin per giver", #groups == 3)
+local g10, g11
+for _, g in ipairs(groups) do if g.npc == 10 then g10 = g elseif g.npc == 11 then g11 = g end end
+check("same giver merged", g10 and #g10.quests == 2)
+check("other giver spread", g11 and g11.spread == 1)
 W.OnMap = oldOnMap
 -- The game's own list of available quests wins over the database.
 C_QuestLine = {GetAvailableQuestLines = function(mapID)

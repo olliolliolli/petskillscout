@@ -611,7 +611,9 @@ local function UpdateMinimap()
         p.label, p.sub, p.dist, p.target, p.beastID = c.label, c.sub, math.floor(dist), c.target, c.beastID
         p:ClearAllPoints()
         local off = c.quest and 6 or 0 -- quest pins beside the game's own "!"
-        p:SetPoint("CENTER", Minimap, "CENTER", ex * scale + off, ny * scale + off)
+        local sx, sy = 0, 0
+        if c.quest and PSS.QuestPins and PSS.QuestPins.SpreadOffset then sx, sy = PSS.QuestPins.SpreadOffset(c.quest.spread, 9) end
+        p:SetPoint("CENTER", Minimap, "CENTER", ex * scale + off + sx, ny * scale + off + sy)
         p:Show()
       end
     end

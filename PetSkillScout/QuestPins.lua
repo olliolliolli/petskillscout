@@ -118,6 +118,14 @@ function QP.Lower(pin, canvas)
   pin:SetFrameLevel(level or ((canvas.GetFrameLevel and canvas:GetFrameLevel() or 1) + 20))
 end
 
+-- Ring slot n (1, 2, ...) -> pixel offset, radius r (6 slots per ring).
+function QP.SpreadOffset(n, r)
+  if not n then return 0, 0 end
+  local ring = math.floor((n - 1) / 6) + 1
+  local a = ((n - 1) % 6) * math.pi / 3 + (ring - 1) * math.pi / 6
+  return math.cos(a) * r * ring, math.sin(a) * r * ring
+end
+
 function QP:Groups(mapID, level)
   local W = PSS.QuestWorth
   local groups, byKey = {}, {}
@@ -135,22 +143,31 @@ function QP:Groups(mapID, level)
     if ORDER[x.rate.verdict] < ORDER[g.best] then g.best = x.rate.verdict end
     end
   end
-  -- Givers standing on practically the same spot share one pin.
+  -- One pin per quest giver: the same NPC listed at slightly different
+  -- spots is merged; different NPCs never are. Pins of different givers that
+  -- would overlap are spread around the spot (g.spread = 1, 2, ... = ring slot).
   local merged = {}
   for _, g in ipairs(groups) do
     local into
     for _, m in ipairs(merged) do
       local dx, dy = g.x - m.x, g.y - m.y
-      if dx * dx + dy * dy < 0.09 then into = m break end -- 0.3 %: practically the same spot
+      if g.npc and m.npc == g.npc and dx * dx + dy * dy < 1.0 then into = m break end
     end
     if into then
       for _, q in ipairs(g.quests) do into.quests[#into.quests + 1] = q end
       if ORDER[g.best] < ORDER[into.best] then into.best = g.best end
-      into.npcs = into.npcs or {into.npc}
-      into.npcs[#into.npcs + 1] = g.npc
     else
       merged[#merged + 1] = g
     end
+  end
+  for i2, g in ipairs(merged) do
+    local n = 0
+    for k = 1, i2 - 1 do
+      local m = merged[k]
+      local dx, dy = g.x - m.x, g.y - m.y
+      if dx * dx + dy * dy < 0.36 then n = n + 1 end
+    end
+    g.spread = n > 0 and n or nil
   end
   return merged
 end
@@ -208,7 +225,8 @@ local function Update()
       QP:Style(pin, g.best)
       PSS.Map:Place(pin, canvas, g.x, g.y, width, height, scale)
       local pt, rel, rp, x, y = pin:GetPoint(1)
-      if pt then pin:SetPoint(pt, rel, rp, x + QP.OFFSET, y + QP.OFFSET) end
+      local sx, sy = QP.SpreadOffset(g.spread, 14)
+      if pt then pin:SetPoint(pt, rel, rp, x + QP.OFFSET + sx, y + QP.OFFSET + sy) end
       pin:Show()
     end
   end
