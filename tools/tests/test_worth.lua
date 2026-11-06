@@ -43,6 +43,7 @@ MOCK.faction = "Alliance"
 MOCK.done[257] = true
 ok(select(2, W:Available(257, 12)) == "done", "done")
 MOCK.done[257] = nil
+PetSkillScoutDB.questDone = nil -- the test un-completes the quest
 MOCK.inlog[257] = 2
 ok(select(2, W:Available(257, 12)) == "log", "in log")
 MOCK.inlog[257] = nil

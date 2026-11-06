@@ -24,4 +24,16 @@ check("unknown holiday never active", not H:IsActive(-1))
 local found = false
 for _, x in ipairs(W:OnMap(1439, 15)) do if x.id == 4740 then found = true end end
 check("wanted poster quest on the map", found)
+-- Completed quests: server list at login, chains, survives without the game flag.
+PetSkillScoutDB.questDone = nil
+C_QuestLog = C_QuestLog or {}
+local oldAll = C_QuestLog.GetAllCompletedQuestIDs
+C_QuestLog.GetAllCompletedQuestIDs = function() return {4740} end
+check("server list loaded", W:LoadCompleted() == 1 and W:Done(4740))
+W:MarkDone(985)
+check("chain: previous quest marked done", W:Done(984))
+local found2 = false
+for _, x in ipairs(W:OnMap(1439, 15)) do if x.id == 4740 then found2 = true end end
+check("done quest has no pin", not found2)
+C_QuestLog.GetAllCompletedQuestIDs = oldAll
 print(string.format("passed %d, failed %d", passes, fails))

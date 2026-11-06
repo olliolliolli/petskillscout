@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.9
+- Completed quests are tracked by the addon too: the server's full list is read at every login
+  (so it survives reinstalls), every hand-in is recorded, and a done quest marks the quests
+  its chain required as done. Map pins and the Quests tab ("Done") use the same list.
+  /pss questdone reloads it and shows how many completed quests are known.
+
 3.3.8
 - Quest pins: every quest an NPC actually offers you (gossip, greeting or quest window) is
   remembered as available - its pin shows even when the database conditions (level,

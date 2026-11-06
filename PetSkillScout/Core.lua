@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.8"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.9"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -248,6 +248,15 @@ SLASH_PETSKILLSCOUT1 = "/petskills"
 SLASH_PETSKILLSCOUT2 = "/pss"
 SlashCmdList.PETSKILLSCOUT = function(msg)
     msg = (msg or ""):lower()
+    if msg == "questdone" then
+        local W = PSS.QuestWorth
+        if not W then return end
+        local got = W:LoadCompleted()
+        local n = 0
+        for _ in pairs(PetSkillScoutDB.questDone or {}) do n = n + 1 end
+        PSS:Print(string.format("questdone: %d from the server now, %d completed quests known", got, n))
+        return
+    end
     if msg == "questwhy" then
         if PSS.QuestWorth then PSS.QuestWorth:Why(4) end
         return

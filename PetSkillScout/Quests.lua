@@ -115,7 +115,9 @@ function Q:Finals(e)
   return list
 end
 
+-- Same completed list as the map pins (game flag + server list + hand-ins).
 function Q:QuestDone(id)
+  if PSS.QuestWorth and PSS.QuestWorth.Done then return PSS.QuestWorth:Done(id) end
   local api = QL()
   local v
   if api and api.IsQuestFlaggedCompleted then v = Call(api.IsQuestFlaggedCompleted, id)

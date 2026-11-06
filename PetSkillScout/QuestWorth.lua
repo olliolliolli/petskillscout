@@ -81,12 +81,66 @@ function W:RaceID() return Plain(select(3, Call(UnitRace, "player"))) end
 function W:ClassID() return Plain(select(3, Call(UnitClass, "player"))) end
 
 -- Game state -----------------------------------------------------------------
+-- Completed quests: the game's flag, plus our own list (DB().questDone),
+-- filled from the server's full list at login, from every hand-in, and from
+-- chains (a quest that needs X means X was done). Survives reinstalls of the
+-- addon because the server list is read again at every login.
+local function DoneSet()
+  local d = PetSkillScoutDB
+  if not d then return {} end
+  d.questDone = d.questDone or {}
+  return d.questDone
+end
+function W:MarkDone(id, depth)
+  id = tonumber(id)
+  if not id then return end
+  local set = DoneSet()
+  if set[id] then return end
+  local rr = PSS.QuestDB and PSS.QuestDB[id]
+  if rr and rr.r then return end -- repeatable: never "done for good"
+  set[id] = true
+  -- Previous quests of a done quest are done too (for all of them only when
+  -- every one was required).
+  depth = (depth or 0) + 1
+  local r = PSS.QuestDB and PSS.QuestDB[id]
+  if r and r.p and depth < 40 and (not r.pn or r.pn >= #r.p) then
+    for _, p in ipairs(r.p) do self:MarkDone(p, depth) end
+  end
+end
 function W:Done(id)
+  if DoneSet()[id] then return true end
   local api = QL()
   local v
   if api and api.IsQuestFlaggedCompleted then v = Call(api.IsQuestFlaggedCompleted, id)
   elseif IsQuestFlaggedCompleted then v = Call(IsQuestFlaggedCompleted, id) end
-  return Plain(v) == true
+  if Plain(v) == true then self:MarkDone(id); return true end
+  return false
+end
+-- The server's list of every quest you completed (async on older clients).
+function W:LoadCompleted()
+  local n = 0
+  local api = QL()
+  if api and api.GetAllCompletedQuestIDs then
+    for _, id in ipairs(Call(api.GetAllCompletedQuestIDs) or {}) do
+      id = tonumber(Plain(id))
+      if id then self:MarkDone(id); n = n + 1 end
+    end
+  end
+  if n == 0 and type(GetQuestsCompleted) == "function" then
+    local t = {}
+    pcall(GetQuestsCompleted, t)
+    for id, v in pairs(t) do if v then self:MarkDone(id); n = n + 1 end end
+    if n == 0 and type(QueryQuestsCompleted) == "function" and not self.queried then
+      self.queried = true
+      pcall(QueryQuestsCompleted) -- answer: QUEST_QUERY_COMPLETE
+    end
+  end
+  self.completedLoaded = n
+  if n > 0 then
+    self.byMap = nil
+    if PSS.QuestPins and PSS.QuestPins.Refresh then PSS.QuestPins:Refresh() end
+  end
+  return n
 end
 function W:InLog(id)
   local api = QL()
@@ -565,7 +619,9 @@ end
 -- Events: learn XP and times.
 local ev = CreateFrame("Frame")
 W.frame = ev
-for _, name in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_DETAIL"}) do pcall(ev.RegisterEvent, ev, name) end
+for _, name in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_DETAIL", "PLAYER_ENTERING_WORLD", "QUEST_QUERY_COMPLETE"}) do
+  pcall(ev.RegisterEvent, ev, name)
+end
 ev:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if event == "QUEST_ACCEPTED" then
     -- Modern clients pass the quest ID; older ones the log index first.
@@ -574,6 +630,16 @@ ev:SetScript("OnEvent", function(_, event, a1, a2, a3)
     W:OnAccepted(id)
   elseif event == "QUEST_TURNED_IN" then
     W:OnTurnedIn(tonumber(Plain(a1)), a2)
+    pcall(W.MarkDone, W, tonumber(Plain(a1)))
+    if PSS.QuestPins and PSS.QuestPins.Refresh then PSS.QuestPins:Refresh() end
+  elseif event == "PLAYER_ENTERING_WORLD" then
+    if not W.loadedOnce then
+      W.loadedOnce = true
+      if C_Timer and C_Timer.After then C_Timer.After(3, function() pcall(W.LoadCompleted, W) end)
+      else pcall(W.LoadCompleted, W) end
+    end
+  elseif event == "QUEST_QUERY_COMPLETE" then
+    pcall(W.LoadCompleted, W)
   elseif event == "QUEST_DETAIL" then
     local id = tonumber(Plain(Call(GetQuestID)))
     if id then W:SaveXP(id, Call(GetRewardXP)) end
