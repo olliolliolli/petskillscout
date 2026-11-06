@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.5
+- Network: /pss netlist shows the network members (whisper targets) and who was not found.
+
 3.1.4
 - Hunter network: "No player named X is currently playing" lines for network whispers are
   hidden from chat, and such players are left out of the network for 30 minutes.

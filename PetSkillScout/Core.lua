@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.1.4"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.1.5"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -248,6 +248,25 @@ SLASH_PETSKILLSCOUT1 = "/petskills"
 SLASH_PETSKILLSCOUT2 = "/pss"
 SlashCmdList.PETSKILLSCOUT = function(msg)
     msg = (msg or ""):lower()
+    if msg == "netlist" then
+        -- Network members as whisper targets, and who the server said is not online.
+        local N = PSS.Net
+        if not N then return end
+        PSS:Print("netlist: list API " .. tostring(type(ListChannelByName) == "function") .. ", my name " ..
+            tostring(GetUnitName and GetUnitName("player", true)) .. ", realm " ..
+            tostring(GetNormalizedRealmName and GetNormalizedRealmName()))
+        local n = 0
+        for who, m in pairs(N.members or {}) do
+            n = n + 1
+            local bad = N.unreachable and N.unreachable[who]
+            PSS:Print(string.format("  %s -> [%s]%s", who, tostring(m.target), bad and "  NOT FOUND" or ""))
+        end
+        for who in pairs(N.unreachable or {}) do
+            if not (N.members and N.members[who]) then PSS:Print("  " .. who .. "  NOT FOUND (dropped)") end
+        end
+        PSS:Print("netlist: " .. n .. " members")
+        return
+    end
     if msg == "netdiag" then
         if PSS.Sync and PSS.Sync.Diag then PSS.Sync:Diag() end
         return
