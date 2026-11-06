@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.4.0
+- Gamepad, step 1: new separate module (Gamepad.lua) that only detects the gamepad (enabled in
+  the client, last input) and reports changes to theme code - the themes themselves are not
+  changed yet. /pss gamepad prints what the client reports and the gamepad interface frames
+  on screen, to design the gamepad layouts on real data.
+
 3.3.16
 - Quest pins: a pin hidden with right click ("giver is not here") comes back by itself when
   that NPC offers you a quest.

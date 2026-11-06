@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.3.16"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.4.0"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -248,6 +248,10 @@ SLASH_PETSKILLSCOUT1 = "/petskills"
 SLASH_PETSKILLSCOUT2 = "/pss"
 SlashCmdList.PETSKILLSCOUT = function(msg)
     msg = (msg or ""):lower()
+    if msg == "gamepad" then
+        if PSS.Gamepad then PSS.Gamepad:Print() end
+        return
+    end
     if msg == "skills" then
         -- Skill lines the addon sees (quests needing Cooking, Fishing... and crafted gear).
         local W = PSS.QuestWorth
