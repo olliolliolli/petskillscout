@@ -115,12 +115,20 @@ local function walk(node, ctx, depth)
     if node.instanceID then c.inst = node.instanceID end
     if node.maps and not node.questID then c.maps = node.maps end
   end
+  -- Holiday content (ROOTS.Holidays, or a node with an event): seasonal NPCs
+  -- stand there only during the event.
+  if rawget(node, "e") or (ctx.root and ROOTS and ctx.root == tostring(ROOTS.Holidays)) then
+    if c == ctx then c = {}; for k, v in pairs(ctx) do c[k] = v end end
+    c.holiday = true
+  end
   if rawget(node, "questID") then
     count = count + 1
     local id = node.questID
     local prev = quests[id]
     if not prev or (not prev.coord and (node.coord or node.coords)) then
-      quests[id] = {node = node, ctx = c}
+      quests[id] = {node = node, ctx = c, holiday = c.holiday or (prev and prev.holiday)}
+    elseif c.holiday then
+      prev.holiday = true
     end
   end
   local g = rawget(node, "groups") or rawget(node, "g")

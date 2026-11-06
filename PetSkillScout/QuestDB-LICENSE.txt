@@ -1,5 +1,5 @@
 QuestDB.lua and PetDataATT.lua are generated from the WoW Forever database of AllTheThings
-(https://github.com/ATTWoWAddon/AllTheThings, commit 31a8fe6).
+(https://github.com/ATTWoWAddon/AllTheThings, commit b50b6d8).
 
 MIT License
 

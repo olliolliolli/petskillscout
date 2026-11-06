@@ -139,7 +139,7 @@ FEATURES
   tooltip lines, pet care reminder and Feed button mode.
 
 DATA AND LIMITATIONS
-- Quest database: AllTheThings commit 31a8fe6 (2026-11-05). Pet teachers and
+- Quest database: AllTheThings commit b50b6d8 (2026-11-06). Pet teachers and
   beast positions from AllTheThings: commit d503738 (unchanged since).
 - 653 tameable beasts, 548 of them with spawn points.
 - Families use the client names (Scorpid, Tallstrider, Wind Serpent, Crocolisk);
@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.12
+- Quest pins: holiday quests (Lunar Festival elders, Hallow's End, Darkmoon Faire and other
+  events - 219 quests) no longer get map pins; their givers stand there only during the event.
+- Data update 2026-11-06: quest database from AllTheThings commit b50b6d8 (1 new entry,
+  24 small changes, e.g. Arugal's Folly is now a 5-part chain).
+
 3.1.11
 - Network: players of other (connected) realms cannot be whispered on WoW Forever, so only
   same-realm channel members are whispered. The "not found" filter now uses the moment the
