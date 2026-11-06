@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.8
+- Theme: "blocked: MicroMenuContainer:SetPointBase()" on level up. The micro menu and bag row
+  are no longer anchored to the addon's info bar; they get a screen position instead, so the
+  game can re-lay them out in combat.
+
 3.1.7
 - Network: "player not found" lines are hidden whatever the client's wording (any system line
   naming someone the network whispered in the last 15 s). Channel members who never answered

@@ -1091,9 +1091,21 @@ function LY:PlaceMenus()
   local bags = G("BagsBar") or G("MainMenuBarBackpackButton")
   local micro = G("MicroMenuContainer") or G("MicroMenu") or G("CharacterMicroButton")
   local below = rightBar
+  -- Screen position (UIParent) right above the info bar: the game's own bars
+  -- must not be anchored to addon frames (their layout runs in combat).
+  local k = (rightBar:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+  local barRight, barTop = rightBar:GetRight(), rightBar:GetTop()
+  if not (barRight and barTop) then
+    PSS:Soon("place-menus", function() LY:PlaceMenus() end, 1) -- not laid out yet
+    return
+  end
+  local nextTop = barTop * k + 4
   if bags then
     pcall(bags.ClearAllPoints, bags)
-    pcall(bags.SetPoint, bags, "BOTTOMRIGHT", rightBar, "TOPRIGHT", 0, 4)
+    pcall(bags.SetPoint, bags, "BOTTOMRIGHT", UIParent, "BOTTOMLEFT", barRight * k, nextTop)
+    local h = Plain(bags.GetHeight and bags:GetHeight())
+    local bk = (bags:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+    if type(h) == "number" then nextTop = nextTop + h * bk + 4 end
     below = bags
   end
   if micro then
@@ -1102,7 +1114,11 @@ function LY:PlaceMenus()
       -- Classic: the first button leads a chain growing to the right.
       pcall(micro.SetPoint, micro, "BOTTOMLEFT", rightBar, "TOPLEFT", 0, (below ~= rightBar and 44 or 4))
     else
-      pcall(micro.SetPoint, micro, "BOTTOMRIGHT", below, "TOPRIGHT", 0, 4)
+      -- Modern micro menu: the game re-lays it out in combat (level up, new
+      -- spells). Anchored to our frames, that layout was blocked
+      -- (MicroMenuContainer:SetPointBase), so it gets a screen position on
+      -- UIParent instead, computed from the bag row / info bar.
+      pcall(micro.SetPoint, micro, "BOTTOMRIGHT", UIParent, "BOTTOMLEFT", barRight * k, nextTop)
     end
   end
 end
