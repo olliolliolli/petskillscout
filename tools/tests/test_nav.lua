@@ -54,4 +54,5 @@ do
   issecretvalue = old
   if ok and v == nil then passes = passes + 1 else fails = fails + 1; print("FAIL secret guid") end
 end
+check("dark text", PSS.SkinText.IsDark(0.18, 0.1, 0.03) and not PSS.SkinText.IsDark(1, 0.82, 0))
 print(string.format("passed %d, failed %d", passes, fails))
