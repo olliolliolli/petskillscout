@@ -188,6 +188,11 @@ function R:IsTamed(unit)
   return Flag(UnitPlayerControlled, unit) or Flag(UnitIsOtherPlayersPet, unit)
 end
 function R:Inspect(unit)
+  -- Instances have no tameable rares, only monsters: no scanning there.
+  if IsInInstance then
+    local ok, inside = pcall(IsInInstance)
+    if ok and PSS.Plain(inside) then return end
+  end
   if not UnitExists or not UnitExists(unit) then return end
   if self:IsTamed(unit) then return end
   local dead = UnitIsDead and UnitIsDead(unit)
@@ -196,7 +201,7 @@ function R:Inspect(unit)
   local entry = npc and self.byNpcID[npc]
   if not entry then
     local name = UnitName and UnitName(unit)
-    if not name then return end
+    if not name or (PSS.IsSecret and PSS.IsSecret(name)) then return end
     entry = self.byName[string.lower(name)]
     if not entry then return end
     -- Same name but a different known NPC: a name collision, not the rare.
