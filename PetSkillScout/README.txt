@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.1.10
+- Quest pins: drawn a little up and right of the giver (beside the game's own "!") on a round
+  backing in the rating colour - purple worth it, gold normal, dark with a grey edge not worth
+  it - on the world map and the minimap.
+
 3.1.9
 - Auto Shot bar: the real time between shots is measured (shortest of the last three) and used
   when the game's speed value is hidden or stale, e.g. after switching to a faster gun. The

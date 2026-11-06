@@ -82,12 +82,38 @@ function QP:Groups(mapID, level)
   return groups
 end
 
+-- Our "!" sits a little up and right of the giver (the game draws its own "!"
+-- right on the giver) on a round backing in the rating colour, so a grey
+-- "not worth it" pin is readable even next to the game's yellow one.
+QP.OFFSET = 9
+local DISC = "Interface/CHARACTERFRAME/TempPortraitAlphaMask"
+local function Backing(pin)
+  if pin.disc then return end
+  pin.discEdge = pin:CreateTexture(nil, "BACKGROUND", nil, -2)
+  pin.discEdge:SetTexture(DISC)
+  pin.discEdge:SetPoint("CENTER")
+  pin.disc = pin:CreateTexture(nil, "BACKGROUND", nil, -1)
+  pin.disc:SetTexture(DISC)
+  pin.disc:SetPoint("CENTER")
+end
+QP.Backing = Backing
 function QP:Style(pin, verdict)
+  Backing(pin)
+  local size = verdict == "great" and 22 or 18
+  pin.discEdge:SetSize(size + 4, size + 4)
+  pin.disc:SetSize(size, size)
+  if verdict == "great" then
+    pin.discEdge:SetVertexColor(0.74, 0.45, 1, 1); pin.disc:SetVertexColor(0.16, 0.06, 0.26, 0.95)
+  elseif verdict == "skip" then
+    pin.discEdge:SetVertexColor(0.55, 0.55, 0.55, 1); pin.disc:SetVertexColor(0.08, 0.08, 0.08, 0.9)
+  else
+    pin.discEdge:SetVertexColor(1, 0.82, 0, 1); pin.disc:SetVertexColor(0.18, 0.13, 0.02, 0.9)
+  end
   pin.icon:SetDesaturated(verdict ~= "ok")
   local c = PSS.QuestWorth.COLORS[verdict]
   if verdict == "ok" then pin.icon:SetVertexColor(1, 1, 1) else pin.icon:SetVertexColor(c[1] * 1.2, c[2] * 1.2, c[3] * 1.2) end
   pin:SetSize(verdict == "great" and 22 or 18, verdict == "great" and 22 or 18)
-  pin:SetAlpha(verdict == "skip" and 0.75 or 1)
+  pin:SetAlpha(1)
 end
 
 local function Update()
@@ -108,6 +134,8 @@ local function Update()
       pin.group = g
       QP:Style(pin, g.best)
       PSS.Map:Place(pin, canvas, g.x, g.y, width, height, scale)
+      local pt, rel, rp, x, y = pin:GetPoint(1)
+      if pt then pin:SetPoint(pt, rel, rp, x + QP.OFFSET, y + QP.OFFSET) end
       pin:Show()
     end
   end

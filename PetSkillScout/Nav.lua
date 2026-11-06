@@ -550,10 +550,14 @@ local function UpdateMinimap()
           p.icon:SetTexCoord(0, 1, 0, 1)
           p.ring:Hide()
           PSS.QuestPins:Style(p, c.verdict)
+          p.disc:Show(); p.discEdge:Show()
           if c.verdict == "great" then p:SetSize(16, 16) else p:SetSize(13, 13) end
+          local sz = c.verdict == "great" and 16 or 13
+          p.disc:SetSize(sz, sz); p.discEdge:SetSize(sz + 3, sz + 3)
           if not onMap then p:SetAlpha(0.6) end
         else
           p:SetSize(14, 14)
+          if p.disc then p.disc:Hide(); p.discEdge:Hide() end
           p.icon:SetDesaturated(false)
           p.icon:SetVertexColor(1, 1, 1)
           p.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
@@ -564,7 +568,8 @@ local function UpdateMinimap()
         end
         p.label, p.sub, p.dist, p.target, p.beastID = c.label, c.sub, math.floor(dist), c.target, c.beastID
         p:ClearAllPoints()
-        p:SetPoint("CENTER", Minimap, "CENTER", ex * scale, ny * scale)
+        local off = c.quest and 6 or 0 -- quest pins beside the game's own "!"
+        p:SetPoint("CENTER", Minimap, "CENTER", ex * scale + off, ny * scale + off)
         p:Show()
       end
     end
