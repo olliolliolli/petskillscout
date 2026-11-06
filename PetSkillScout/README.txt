@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.3.16
+- Quest pins: a pin hidden with right click ("giver is not here") comes back by itself when
+  that NPC offers you a quest.
+
 3.3.15
 - Quest pins: pins of nearby givers are spread only when they would really cover each other
   (0.2 % instead of 0.6 %, smaller ring), so they stay on their NPC. Grey "not worth it" pins

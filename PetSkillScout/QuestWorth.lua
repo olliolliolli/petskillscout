@@ -168,6 +168,14 @@ end
 function W:Offered(id, npc)
   id = tonumber(id)
   if not (id and PetSkillScoutDB) then return end
+  -- The NPC is clearly there and gives quests: a pin you hid for it ("giver
+  -- is not here") comes back.
+  if npc and PetSkillScoutDB.questPinHidden then
+    local prefix = tostring(npc) .. ":"
+    for key in pairs(PetSkillScoutDB.questPinHidden) do
+      if key:sub(1, #prefix) == prefix then PetSkillScoutDB.questPinHidden[key] = nil; self.byMap = nil end
+    end
+  end
   PetSkillScoutDB.questOffered = PetSkillScoutDB.questOffered or {}
   if PetSkillScoutDB.questOffered[id] then return end
   local rec = {t = time and time() or 0, g = npc}
