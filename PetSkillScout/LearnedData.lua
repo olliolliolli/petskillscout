@@ -11,6 +11,8 @@ quests = {
   [2159] = {n = "Dolanaar Delivery", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {2070, 159}},
   [2160] = {n = "Supplies to Tannok", g = 6782, gn = nil, f = "A", m = 1426, x = 33.8, y = 72.2, i = {117, 159}},
   [2561] = {n = "Druid of the Claw", g = 7317, gn = nil, f = "A", m = 1438, x = 44.9, y = 61.5, i = {9598, 18957}},
+  [277] = {n = "Fire Taboo", g = 1244, gn = nil, f = "A", m = 1437, x = 56.3, y = 40.6, i = {4606}},
+  [281] = {n = "Reclaiming Goods", g = 1242, gn = nil, f = "A", m = 1437, x = 8.4, y = 58.5, i = {929}},
   [373] = {n = "The Unsent Letter", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {}},
   [389] = {n = "Bazil Thredd", g = 1646, gn = "Baros Alexston", f = "A", m = 1453, x = 57.5, y = 47.8, i = {}},
   [4161] = {n = "Recipe of the Kaldorei", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {5482, 5472}},
@@ -19,6 +21,7 @@ quests = {
   [918] = {n = "Timberling Seeds", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {4604}},
   [947] = {n = "Cave Mushrooms", g = 3583, gn = "Barithras Moonshade", f = "A", m = 1439, x = 37.4, y = 43.6, i = {5610, 4605}},
   [96395] = {n = "An Ancient Grudge", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {279899, 279900}},
+  [98247] = {n = "Shipping Label", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {}},
   [98423] = {n = "The Treaty of Understanding", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {}},
 },
 vendors = {
