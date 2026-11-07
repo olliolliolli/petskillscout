@@ -356,8 +356,12 @@ if C_Timer and C_Timer.NewTicker then
     driver:SetShown(want and true or false)
   end)
 end
+local sinceCheck = 0
 driver:SetScript("OnUpdate", function(_, elapsed)
-  elapsed = elapsed or 0
+  -- 10 checks a second are enough for a fall that takes over a second.
+  sinceCheck = sinceCheck + (elapsed or 0)
+  if sinceCheck < 0.1 then return end
+  elapsed, sinceCheck = sinceCheck, 0
   -- Outside dungeons there is nothing to watch: check that once a second only.
   dungeonCheck = dungeonCheck - elapsed
   if dungeonCheck <= 0 then dungeonCheck = 1; inDungeon = InDungeon() and true or false end
@@ -366,7 +370,7 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   if banner and banner:IsShown() and now > hideAt and not G.dragging then
     if G.flow then G:EndFlow(false) else G:HideAlert() end
   end
-  -- Falling: checked every frame for a quick reaction.
+  -- Falling.
   local falling = Plain(safe(IsFalling)) and not Plain(safe(UnitOnTaxi, "player"))
   if Opt("guardFall") and falling then
     fallTime = fallTime + elapsed
