@@ -607,9 +607,19 @@ local function BuildBars()
   -- Blizzard bar extras that would sit on top of the new layout.
   for _, n in ipairs({"ActionBarUpButton", "ActionBarDownButton", "MainMenuBarPageNumber", "MainMenuExpBar",
     "ReputationWatchBar", "MainMenuBarMaxLevelBar", "MainMenuBarPerformanceBarFrame", "MainMenuBarLeftEndCap",
-    "MainMenuBarRightEndCap", "StatusTrackingBarManager", "MainStatusTrackingBarContainer",
-    "SecondaryStatusTrackingBarContainer"}) do
+    "MainMenuBarRightEndCap"}) do
     Park(G(n))
+  end
+  -- These stay with their parent: Edit Mode calls into it, and a parked bar
+  -- gave "attempt to call a nil value". Only made invisible.
+  for _, n in ipairs({"StatusTrackingBarManager", "MainStatusTrackingBarContainer",
+    "SecondaryStatusTrackingBarContainer"}) do
+    local f = G(n)
+    if f then
+      pcall(f.SetAlpha, f, 0)
+      pcall(f.EnableMouse, f, false)
+      if f.HookScript then pcall(f.HookScript, f, "OnShow", function(self) self:SetAlpha(0) end) end
+    end
   end
   LY:LayoutBars()
   -- The theme hides the page arrows: a small note shows a page other than 1.
