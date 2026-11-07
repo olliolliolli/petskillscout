@@ -987,6 +987,30 @@ function PlaceCombatTab()
       x = x + w + 2
     end
   end
+  -- Your own windows: a row right after General, placed here too, because the
+  -- game's scroll strip lost tabs next to the two tabs moved out of it.
+  if list then
+    local isRight = {}
+    for _, f in ipairs(right) do isRight[f] = true end
+    local first = list[1]
+    local firstTab = first and G(first:GetName() .. "Tab")
+    local lx = (firstTab and firstTab.GetWidth and firstTab:GetWidth() or 60) + 2
+    for i = 2, #list do
+      local f = list[i]
+      local tab = f and not isRight[f] and f.GetName and G(f:GetName() .. "Tab")
+      if tab then
+        if tab.GetParent and tab:GetParent() ~= dock then pcall(tab.SetParent, tab, dock) end
+        if tab.SetFrameLevel and dock.GetFrameLevel then pcall(tab.SetFrameLevel, tab, dock:GetFrameLevel() + 5) end
+        if tab.Show then pcall(tab.Show, tab) end
+        if tab.SetAlpha then pcall(tab.SetAlpha, tab, 1) end
+        pcall(tab.ClearAllPoints, tab)
+        pcall(tab.SetPoint, tab, "BOTTOMLEFT", dock, "BOTTOMLEFT", lx, 0)
+        local w = tab.GetWidth and tab:GetWidth() or 0
+        if not w or w < 20 then w = 70 end
+        lx = lx + w + 2
+      end
+    end
+  end
   combatBusy = false
 end
 LY.PlaceCombatTab = PlaceCombatTab
@@ -998,7 +1022,7 @@ local function HookChat()
   for _, fn in ipairs({"FCFDock_UpdateTabs", "FCF_DockUpdate"}) do
     if type(_G[fn]) == "function" then PSS.HookSecure(fn, function() pcall(PlaceCombatTab) end) end
   end
-  for _, fn in ipairs({"FCF_StopDragging", "FCF_UnDockFrame"}) do
+  for _, fn in ipairs({"FCF_StopDragging", "FCF_UnDockFrame", "FCF_OpenNewWindow"}) do
     if type(_G[fn]) == "function" then
       PSS.HookSecure(fn, function() PSS:Soon("chat-redock", RedockLoose, 0.2) end)
     end
