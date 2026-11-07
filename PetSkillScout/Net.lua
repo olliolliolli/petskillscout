@@ -434,7 +434,7 @@ end
 function N:RequestList()
   if not self:ChannelID() then return end
   self.listWanted = Now()
-  if type(ListChannelByName) == "function" then pcall(ListChannelByName, self.CHANNEL) end
+  -- ListChannelByName needs a key press and was blocked from this timer: not used.
   -- Modern clients: the channel roster (filled after CHANNEL_ROSTER_UPDATE).
   local idx = self:DisplayIndex()
   if idx and type(SetSelectedDisplayChannel) == "function" then pcall(SetSelectedDisplayChannel, idx) end
