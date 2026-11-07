@@ -102,4 +102,10 @@ do
   check("pet near", F(false, true, true) == false and F(true, true, false) == false)
   check("pet unknown", F(false, false, false) == nil and F(false, true, nil) == nil)
 end
+do
+  local F = PSS.PetCare.ShouldRemind
+  check("new hungry pet", F(1, nil) == true and F(2, nil) == true)
+  check("got worse", F(1, 2) == true)
+  check("no repeat", F(1, 1) == false and F(3, nil) == false and F(nil, nil) == false)
+end
 print(string.format("passed %d, failed %d", passes, fails))

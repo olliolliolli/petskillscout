@@ -227,9 +227,14 @@ end
 
 -- Reminder -----------------------------------------------------------------
 local lastHappiness, lastReminder = nil, -1e9
+-- Hungry now, and either it just got worse or this pet was only now seen
+-- (newly tamed or called): a new pet can already be hungry.
+function PC.ShouldRemind(h, last)
+  return h ~= nil and h < 3 and (last == nil or h < last)
+end
 function PC:CheckReminder()
   local h = self:Happiness()
-  if h and lastHappiness and h < lastHappiness and h < 3
+  if PC.ShouldRemind(h, lastHappiness)
      and (not PetSkillScoutDB or PetSkillScoutDB.petCareReminder ~= false) then
     local now = GetTime and GetTime() or 0
     if now - lastReminder > 60 then
