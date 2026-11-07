@@ -45,7 +45,19 @@ end
 function NC:Sync()
   if self:Enabled() then return self:Ensure() end
   local f = self:Frame()
-  if f and not InCombat() and type(FCF_Close) == "function" then pcall(FCF_Close, f) end
+  if not f then return end
+  if InCombat() then PSS:Soon("netchat", function() NC:Sync() end, 10) return end
+  if type(FCF_Close) == "function" then pcall(FCF_Close, f) end
+  -- The game's close can stop half way for a docked tab: finish it.
+  if self:Frame() then
+    if type(FCF_UnDockFrame) == "function" then pcall(FCF_UnDockFrame, f) end
+    local id = f.GetID and f:GetID()
+    if id and type(SetChatWindowShown) == "function" then pcall(SetChatWindowShown, id, false) end
+    if type(SetChatWindowDocked) == "function" and id then pcall(SetChatWindowDocked, id, false) end
+    pcall(f.Hide, f)
+    local tab = _G[f:GetName() .. "Tab"]
+    if tab then pcall(tab.Hide, tab) end
+  end
 end
 
 function NC:Post(e)

@@ -973,7 +973,8 @@ local function PlaceTabsNow()
   local dock = G("GeneralDockManager")
   if not dock then return end
   local right = {}
-  local net = PSS.NetChat and PSS.NetChat.Frame and PSS.NetChat:Frame()
+  -- Only while the option is on: otherwise a closed window was docked back.
+  local net = PSS.NetChat and PSS.NetChat:Enabled() and PSS.NetChat:Frame() or nil
   -- Our network window may have been left as a loose window (its tab then
   -- floats over the chat): put it into the dock first.
   if net and not net.isDocked and net ~= G("ChatFrame2") and type(FCF_DockFrame) == "function" then
