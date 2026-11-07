@@ -79,7 +79,7 @@ end
 -- true = pet is far, false = near, nil = the client cannot tell.
 -- Exact distance where the client gives it, otherwise the 40 yd party range;
 -- the 28 yd interact range fired on any normal pull. See G.FAR_HOLD too.
-G.FAR_YARDS, G.FAR_HOLD = 70, 4
+G.FAR_YARDS, G.FAR_HOLD = 70, 10
 local function PetFar()
   if UnitDistanceSquared then
     local ok0, sq, seen = pcall(UnitDistanceSquared, "pet")
