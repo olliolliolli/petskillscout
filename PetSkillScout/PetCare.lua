@@ -204,6 +204,29 @@ local function ButtonWanted(h)
 end
 
 -- Secure attributes and visibility can only change out of combat.
+-- /pss feedcheck: why the button is or is not shown.
+function PC:FeedCheck()
+  local h = self:Happiness()
+  local parts = {}
+  local diet = self:Diet()
+  for code in pairs(diet or {}) do parts[#parts + 1] = tostring(code) end
+  PSS:Print(string.format("feed: pet %s level %s family %s happiness %s wanted %s diet {%s} option %s",
+    tostring(HasPet()), tostring(UnitLevel and PSS.Plain(UnitLevel("pet"))),
+    tostring(PSS.MyPet and PSS.MyPet.family), tostring(h), tostring(ButtonWanted(h)),
+    table.concat(parts, ","), tostring(PetSkillScoutDB and PetSkillScoutDB.feedButton)))
+  for bag = 0, 4 do
+    for slot = 1, NumSlots(bag) do
+      local id, count = ItemAt(bag, slot)
+      local food = id and PSS.Foods and PSS.Foods[id]
+      if food then
+        PSS:Print(string.format("feed: bag item %d x%s type %s level %s eats %s", id, tostring(count), tostring(food[1]), tostring(food[2]), tostring(diet and diet[food[1]])))
+      end
+    end
+  end
+  local best = self:BestFood()
+  PSS:Print("feed: best " .. tostring(best and best.id))
+end
+
 function PC:UpdateButton()
   if InCombatLockdown and InCombatLockdown() then self.pending = true return end
   self.pending = false
