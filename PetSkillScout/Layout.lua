@@ -595,6 +595,11 @@ function LY:LayoutBars()
   self.barTop = top + small
 end
 
+function LY.PageText(page)
+  if type(page) ~= "number" or page <= 1 then return nil end
+  return string.format(L("barPage"), page)
+end
+
 local function BuildBars()
   barHolder = CreateFrame("Frame", "PetSkillScoutBarHolder", UIParent)
   LY.barHolderFrame = barHolder
@@ -607,6 +612,20 @@ local function BuildBars()
     Park(G(n))
   end
   LY:LayoutBars()
+  -- The theme hides the page arrows: a small note shows a page other than 1.
+  local note = Text(barHolder, 12, "RIGHT")
+  note:SetPoint("BOTTOMRIGHT", barHolder, "BOTTOMLEFT", -6, 2)
+  note:SetTextColor(1, 0.82, 0.2)
+  local function pageNote()
+    local page = Plain(Call(GetActionBarPage))
+    local text = LY.PageText(page)
+    note:SetText(text or "")
+    note:SetShown(text ~= nil)
+  end
+  local pages = CreateFrame("Frame")
+  for _, e in ipairs({"ACTIONBAR_PAGE_CHANGED", "PLAYER_ENTERING_WORLD"}) do pcall(pages.RegisterEvent, pages, e) end
+  pages:SetScript("OnEvent", pageNote)
+  pageNote()
   -- Blizzard re-arranges bars when one is toggled; follow it out of combat.
   local function relayoutNow()
     if InCombat() then LY.pendingLayout = true; return end
