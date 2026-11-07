@@ -86,10 +86,17 @@ local function PetFar()
     sq, seen = ok0 and Plain(sq), ok0 and Plain(seen)
     if seen and type(sq) == "number" then return sq > G.FAR_YARDS * G.FAR_YARDS end
   end
+  -- The party range check alone can say "out of range" for a pet right next
+  -- to you: the 28 yd interact check must agree, and without both no alert.
   local ok2, inRange, checked = pcall(UnitInRange, "pet")
   inRange, checked = ok2 and Plain(inRange), ok2 and Plain(checked)
-  if checked then return not inRange end
-  return nil
+  local ok3, near = pcall(CheckInteractDistance, "pet", 4)
+  near = ok3 and Plain(near)
+  return G.BothFar(inRange, checked, near)
+end
+function G.BothFar(inRange, checked, near)
+  if not checked or near == nil then return nil end
+  return inRange == false and near == false
 end
 
 local function KeyText(button)
@@ -398,7 +405,6 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   tick = 0
   if Opt("guardAggro") and not G.flow and InDungeon() and HasPet() and Plain(safe(UnitAffectingCombat, "pet")) then
     local far = PetFar()
-    if far == nil then far = not Plain(safe(UnitAffectingCombat, "player")) end
     -- Only a pet that stays away counts, not one running to a pull.
     if not far then G.farSince = nil elseif not G.farSince then G.farSince = now end
     if far and now - G.farSince >= G.FAR_HOLD and now - lastAggroAlert > 15 then
