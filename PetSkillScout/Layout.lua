@@ -758,11 +758,25 @@ end
 -- Old chat side buttons (menu bubble, voice, channels, quick join) and the
 -- scroll bars go; the mouse wheel still scrolls, Shift-wheel jumps.
 local CHAT_PARK = {"ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
-  "ChatFrameToggleVoiceMuteButton", "QuickJoinToastButton", "FriendsMicroButton", "ChatAlertFrame",
-  "GeneralDockManagerOverflowButton"}
+  "ChatFrameToggleVoiceMuteButton", "QuickJoinToastButton", "FriendsMicroButton", "ChatAlertFrame"}
 
 local function ParkChatButtons()
   for _, n in ipairs(CHAT_PARK) do Park(G(n)) end
+  -- The tab overflow button stays a child of the dock: the game reads the dock's
+  -- tab list through its parent (FCFDockOverflowButton_UpdatePulseState), and
+  -- moving it away gave "bad argument to pairs". Only made invisible.
+  local over = G("GeneralDockManagerOverflowButton")
+  if over then
+    if over.GetParent and over:GetParent() ~= G("GeneralDockManager") then
+      pcall(over.SetParent, over, G("GeneralDockManager"))
+    end
+    pcall(over.SetAlpha, over, 0)
+    pcall(over.EnableMouse, over, false)
+    if over.HookScript and not over.pssHidden then
+      over.pssHidden = true
+      pcall(over.HookScript, over, "OnShow", function(f) f:SetAlpha(0) end)
+    end
+  end
   for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local p = "ChatFrame" .. i
     local cf = G(p)
