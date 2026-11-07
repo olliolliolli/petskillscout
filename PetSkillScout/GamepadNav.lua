@@ -236,3 +236,75 @@ function GN:ComboAvailable() return false end
 local ev2 = CreateFrame("Frame")
 ev2:RegisterEvent("PLAYER_ENTERING_WORLD")
 ev2:SetScript("OnEvent", function() pcall(MenuButton) end)
+
+-- 2) An entry on the gamepad Main Menu wheel (Start button). The wheel is the
+-- game's own code, and writing into its tables would taint it and could break
+-- what it opens. So nothing of it is changed: our icon sits on a free segment
+-- of the current page, and the wheel is only read (which segment is chosen).
+GN.ICON = "Interface\\AddOns\\PetSkillScout\\Textures\\PetSkillScoutLogo"
+
+-- Index of the first free segment, nil when the page is full.
+function GN.FreeSegment(radial)
+  for i = 1, 8 do
+    local seg = radial["Segment" .. i]
+    if seg and seg.IsEmpty then
+      local ok, empty = pcall(seg.IsEmpty, seg)
+      if ok and empty then return i, seg end
+    end
+  end
+end
+
+-- Opened only when the wheel closed on our segment and was not cancelled.
+function GN.Chosen(free, index, cancelled)
+  return free ~= nil and free == index and not cancelled
+end
+
+local mark
+local function MarkWheel()
+  local radial = _G.GamepadRadial
+  if mark or not radial then return mark end
+  mark = CreateFrame("Frame", nil, radial)
+  mark:SetSize(60, 60)
+  mark:SetFrameLevel(radial:GetFrameLevel() + 20)
+  mark:EnableMouse(false)
+  mark.icon = mark:CreateTexture(nil, "OVERLAY")
+  mark.icon:SetSize(36, 36)
+  mark.icon:SetPoint("CENTER")
+  mark.icon:SetTexture(GN.ICON)
+  mark.label = mark:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  mark.label:SetPoint("TOP", mark.icon, "BOTTOM", 0, -2)
+  mark.label:SetText("PetSkillScout")
+  mark:Hide()
+  local function Place()
+    local i, seg = GN.FreeSegment(radial)
+    mark.free = i
+    if not i then mark:Hide() return end
+    mark:ClearAllPoints()
+    mark:SetPoint("CENTER", seg, "CENTER")
+    mark:Show()
+  end
+  local keeper = CreateFrame("Frame", nil, radial)
+  keeper:SetScript("OnUpdate", function()
+    pcall(Place)
+    local index = PSS.Plain(radial.currentIndex)
+    if type(index) == "number" and index > 0 then mark.chosen = index end
+    if index == 0 then mark.chosen = nil end
+  end)
+  pcall(radial.HookScript, radial, "OnHide", function()
+    local open = GN.Chosen(mark.free, mark.chosen, PSS.Plain(radial.isCancelled))
+    mark.chosen = nil
+    if open and not InCombat() and C_Timer and C_Timer.After then
+      C_Timer.After(0, function() PetSkillScout_ToggleWindow() end)
+    end
+  end)
+  return mark
+end
+GN.MarkWheel = MarkWheel
+
+local wheelEv = CreateFrame("Frame")
+pcall(wheelEv.RegisterEvent, wheelEv, "PLAYER_ENTERING_WORLD")
+wheelEv:SetScript("OnEvent", function()
+  if PetSkillScoutDB then PetSkillScoutDB.gamepadMenus, PetSkillScoutDB.gamepadRadial = nil, nil end
+  pcall(MarkWheel)
+  if C_Timer and C_Timer.After then C_Timer.After(5, function() pcall(MarkWheel) end) end
+end)

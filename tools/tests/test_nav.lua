@@ -65,4 +65,12 @@ do
 end
 check("gamepad look lost", PSS.GamepadTheme.Reverted(1, 0.85, 0.85) and PSS.GamepadTheme.Reverted(0, 1, 0.85))
 check("gamepad look kept", not PSS.GamepadTheme.Reverted(0, 0.85, 0.85))
+do
+  local GN = PSS.GamepadNav
+  local full = {IsEmpty = function() return false end}
+  local free = {IsEmpty = function() return true end}
+  check("first free segment", GN.FreeSegment({Segment1 = full, Segment2 = full, Segment3 = free}) == 3)
+  check("page full", GN.FreeSegment({Segment1 = full}) == nil)
+  check("wheel chosen", GN.Chosen(3, 3, false) and not GN.Chosen(3, 2, false) and not GN.Chosen(3, 3, true) and not GN.Chosen(nil, nil, false))
+end
 print(string.format("passed %d, failed %d", passes, fails))
