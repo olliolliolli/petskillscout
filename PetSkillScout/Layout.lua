@@ -1666,7 +1666,7 @@ local MM_KEEP = {
   {{"Tracking"}, {"MiniMapTrackingFrame", "MiniMapTracking", "MiniMapTrackingButton"}, "TOPLEFT", 2, -2},
   {{"IndicatorFrame"}, {"MiniMapMailFrame"}, "TOPRIGHT", -2, -2},
   {{"InstanceDifficulty"}, {"MiniMapInstanceDifficulty"}, "BOTTOMLEFT", 2, 2},
-  {{}, {"MiniMapBattlefieldFrame", "QueueStatusButton", "QueueStatusMinimapButton"}, "BOTTOMRIGHT", -2, 2},
+  {{}, {"MiniMapBattlefieldFrame"}, "BOTTOMRIGHT", -2, 2}, -- the group finder eye: PlaceEye
 }
 
 local function BuildMinimap()
