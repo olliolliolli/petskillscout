@@ -94,4 +94,5 @@ do
   check("only finished quests", #list == 1 and list[1].id == 142 and math.abs(list[1].x - 56.3) < 0.01 and list[1].title == "Q")
 end
 check("near turn-in", PSS.Minimap.Near(56.3, 47.5, 56.5, 47.6) and not PSS.Minimap.Near(56.3, 47.5, 58, 47.5))
+check("role marks", PSS.Layout.RoleOf("TANK") and PSS.Layout.RoleOf("HEALER") and PSS.Layout.RoleOf("DAMAGER") and not PSS.Layout.RoleOf("NONE"))
 print(string.format("passed %d, failed %d", passes, fails))

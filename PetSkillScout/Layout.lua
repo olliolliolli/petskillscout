@@ -265,6 +265,7 @@ local function UpdateName(f)
     local c = GetQuestDifficultyColor and type(lvl) == "number" and lvl > 0 and Call(GetQuestDifficultyColor, lvl)
     if c and c.r then f.level:SetTextColor(c.r, c.g, c.b) else f.level:SetTextColor(1, 0.82, 0) end
   end
+  if LY.UpdateRole then LY.UpdateRole(f) end
   if f.badge then
     local b = LY:Badge(u)
     f.badge:SetText(b or "")
@@ -428,12 +429,38 @@ local function BuildUnits()
 end
 
 -- Party frames: four flat frames stacked on the left, class coloured.
+-- Role marks on party frames: the game's role art, a coloured letter when that
+-- file is missing. Shown only when a role is set (group finder or by the leader).
+LY.ROLES = {
+  TANK = {0, 19 / 64, 22 / 64, 41 / 64, "T", 0.4, 0.65, 1},
+  HEALER = {20 / 64, 39 / 64, 1 / 64, 20 / 64, "H", 0.4, 0.9, 0.4},
+  DAMAGER = {20 / 64, 39 / 64, 22 / 64, 41 / 64, "D", 0.95, 0.4, 0.35},
+}
+function LY.RoleOf(value) return LY.ROLES[value] end
+local function UpdateRole(f)
+  if not f.role then return end
+  local r = LY.RoleOf(Plain(Call(UnitGroupRolesAssigned, f.unit)))
+  f.role:SetShown(r ~= nil)
+  f.roleText:SetShown(r ~= nil and not f.roleArt)
+  if not r then return end
+  if f.roleArt then f.role:SetTexCoord(r[1], r[2], r[3], r[4])
+  else f.roleText:SetText(r[5]); f.roleText:SetTextColor(r[6], r[7], r[8]) end
+end
+LY.UpdateRole = UpdateRole
+
 local function BuildParty()
   local holder = CreateFrame("Frame", "PetSkillScoutPartyHolder", UIParent)
   holder:SetSize(170, 4 * 36 - 6)
   holder:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 24, -220)
   for i = 1, 4 do
     local f = MakeUnit("party" .. i, 170, 30, 6, false)
+    f.role = f:CreateTexture(nil, "OVERLAY")
+    f.role:SetSize(16, 16)
+    f.role:SetPoint("RIGHT", f, "LEFT", -3, 0)
+    f.roleArt = f.role:SetTexture("Interface\LFGFrame\UI-LFG-ICON-PORTRAITROLES") ~= false
+    f.roleText = Text(f, 13, "CENTER")
+    f.roleText:SetPoint("RIGHT", f, "LEFT", -3, 0)
+    f.role:Hide(); f.roleText:Hide()
     f:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, -(i - 1) * 36)
   end
   LY:Movable("party", holder, "slot_party")
@@ -449,7 +476,7 @@ local UNIT_EVENTS = {"UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_POWER_UPDATE",
   "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER", "UNIT_NAME_UPDATE", "UNIT_LEVEL", "UNIT_FACTION", "UNIT_HAPPINESS",
   "PLAYER_TARGET_CHANGED", "UNIT_PET", "UNIT_TARGET", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED",
   "PLAYER_UPDATE_RESTING", "PLAYER_ENTERING_WORLD", "UNIT_CLASSIFICATION_CHANGED", "UNIT_MODEL_CHANGED",
-  "GROUP_ROSTER_UPDATE", "PARTY_MEMBERS_CHANGED", "UNIT_CONNECTION",
+  "GROUP_ROSTER_UPDATE", "PARTY_MEMBERS_CHANGED", "UNIT_CONNECTION", "PLAYER_ROLES_ASSIGNED", "ROLE_CHANGED_INFORM",
   "UNIT_PORTRAIT_UPDATE"}
 
 local function StartUnitEvents()
@@ -463,7 +490,7 @@ local function StartUnitEvents()
       UpdateUnit(units.pet)
     elseif event == "UNIT_TARGET" then
       if u == "target" then UpdateUnit(units.targettarget) end
-    elseif event:find("^PLAYER_") or event == "GROUP_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" then
+    elseif event:find("^PLAYER_") or event == "GROUP_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" or event == "ROLE_CHANGED_INFORM" then
       for _, f in pairs(units) do UpdateUnit(f) end
     elseif type(u) == "string" and units[u] then
       local f = units[u]
