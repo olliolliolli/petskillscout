@@ -107,6 +107,7 @@ io.stderr:write(string.format("data files ok %d, failed %d\n", nok, nfail))
 local quests, count = {}, 0
 local function walk(node, ctx, depth)
   if type(node) ~= "table" or depth > 60 then return end
+  if __visit then __visit(node) end -- genpets.lua
   local c = ctx
   if node.mapID or node.instanceID or node.maps or node.headerID or node.npcID then
     c = {}
