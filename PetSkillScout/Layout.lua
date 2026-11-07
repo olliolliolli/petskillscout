@@ -959,14 +959,6 @@ function PlaceCombatTab()
   if #right == 0 then return end
   combatBusy = true
   local list = type(dock.DOCKED_CHAT_FRAMES) == "table" and dock.DOCKED_CHAT_FRAMES
-  if list and type(FCF_DockFrame) == "function" then
-    for k, cf in ipairs(right) do
-      if list[#list - #right + k] ~= cf then
-        for _, f in ipairs(right) do pcall(FCF_DockFrame, f, #list + 1, false) end
-        break
-      end
-    end
-  end
   -- Each tab is anchored to the dock itself (not to the next tab): the tabs
   -- live in the dock's scroll strip, and a tab-to-tab anchor could leave a tab
   -- floating over the chat.
@@ -1014,6 +1006,18 @@ function PlaceCombatTab()
   combatBusy = false
 end
 LY.PlaceCombatTab = PlaceCombatTab
+
+-- The game puts all tabs back in a row now and then (for example in combat,
+-- when we may not move them): a slow check brings the right-hand tabs back.
+local tabWatch = CreateFrame("Frame")
+tabWatch:SetScript("OnUpdate", function()
+  local tab = G("ChatFrame2Tab")
+  if not (tab and LY.applied and LY.applied.chat) then return end
+  local ok, point = pcall(tab.GetPoint, tab, 1)
+  if ok and point ~= "BOTTOMRIGHT" then pcall(PlaceCombatTab) end
+end)
+tabWatch.pssKey = "chat tabs"
+PSS:Every(tabWatch, 2)
 
 local chatHooked = false
 local function HookChat()
