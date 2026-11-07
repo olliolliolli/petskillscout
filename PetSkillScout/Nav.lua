@@ -282,14 +282,20 @@ local function Enabled()
   return not PetSkillScoutDB or PetSkillScoutDB.minimapPins ~= false
 end
 
+-- Only for clients without Minimap:GetViewRadius. The zoom change below fires
+-- MINIMAP_UPDATE_ZOOM itself: "detecting" guards against an endless loop.
+local detecting = false
 local function DetectIndoors()
+  if detecting or not Minimap or Minimap.GetViewRadius then return end
   if not (Minimap and Minimap.GetZoom and GetCVar) then return end
+  detecting = true
   local zoom = Minimap:GetZoom()
   if GetCVar("minimapZoom") == GetCVar("minimapInsideZoom") then
     Minimap:SetZoom(zoom < 2 and zoom + 1 or zoom - 1)
   end
   indoors = tonumber(GetCVar("minimapZoom")) ~= Minimap:GetZoom()
   Minimap:SetZoom(zoom)
+  detecting = false
 end
 
 local function Pin(i)
@@ -635,9 +641,11 @@ driver:RegisterEvent("PLAYER_ENTERING_WORLD")
 driver:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 driver:RegisterEvent("ZONE_CHANGED_INDOORS")
 pcall(driver.RegisterEvent, driver, "MINIMAP_UPDATE_ZOOM")
-driver:SetScript("OnEvent", function()
+driver:SetScript("OnEvent", function(_, event)
   pcall(DetectIndoors)
-  mmDirty = true
+  detecting = false
+  -- A zoom change only moves the pins; the list stays (the next pass sees it).
+  if event ~= "MINIMAP_UPDATE_ZOOM" then mmDirty = true end
 end)
 -- A full pass (which pins, how they look) runs 5 times a second. Between
 -- passes, while you run or the map turns, the pins already on the minimap only
