@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.14"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.15"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -320,6 +320,20 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
     end
     if msg == "holidays" then
         if PSS.Holidays then PSS.Holidays:Print() end
+        return
+    end
+    if msg == "turnin" then
+        -- What the client says about quests on the map you stand in (Forever check).
+        local api = C_QuestLog
+        local mapID = C_Map and C_Map.GetBestMapForUnit and PSS.Plain(C_Map.GetBestMapForUnit("player"))
+        if not (api and api.GetQuestsOnMap and mapID) then PSS:Print("turnin: no GetQuestsOnMap") return end
+        local ok, list = pcall(api.GetQuestsOnMap, mapID)
+        PSS:Print("turnin: map " .. tostring(mapID) .. " ok=" .. tostring(ok) .. " quests=" .. tostring(ok and type(list) == "table" and #list or list))
+        for i, q in ipairs(ok and type(list) == "table" and list or {}) do
+            if i > 12 then break end
+            local done = api.IsComplete and select(2, pcall(api.IsComplete, q.questID))
+            PSS:Print(string.format("  %s complete=%s x=%s y=%s indicator=%s", tostring(q.questID), tostring(done), tostring(q.x), tostring(q.y), tostring(q.isMapIndicatorQuest)))
+        end
         return
     end
     if msg == "announce" then
