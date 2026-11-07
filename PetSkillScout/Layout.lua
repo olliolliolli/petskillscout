@@ -1715,7 +1715,26 @@ local function BuildMinimap()
   end
   LY:RefreshMinimapButtons()
   local tick = 0
+  -- Group finder eye: small, inside the bottom left corner at any map size.
+  local function PlaceEye()
+    if InCombat() then return end
+    for _, n in ipairs({"QueueStatusButton", "QueueStatusMinimapButton", "MiniMapLFGFrame", "LFGMinimapFrame"}) do
+      local eye = G(n)
+      if eye then
+        if eye.GetScale and math.abs((eye:GetScale() or 1) - LY.EYE_SCALE) > 0.01 then pcall(eye.SetScale, eye, LY.EYE_SCALE) end
+        local p, rel = eye:GetPoint(1)
+        if p ~= "BOTTOMLEFT" or rel ~= mm then
+          pcall(eye.ClearAllPoints, eye)
+          pcall(eye.SetPoint, eye, "BOTTOMLEFT", mm, "BOTTOMLEFT", 2 / LY.EYE_SCALE, 2 / LY.EYE_SCALE)
+        end
+        if eye.SetFrameLevel and mm.GetFrameLevel then pcall(eye.SetFrameLevel, eye, mm:GetFrameLevel() + 20) end
+      end
+    end
+  end
+  LY.EYE_SCALE = 0.55
+  LY.PlaceEye = PlaceEye
   mmHolder:SetScript("OnUpdate", function(_, e)
+    pcall(PlaceEye)
     tick = tick + (e or 0)
     if tick < 10 then return end
     tick = 0
