@@ -442,6 +442,7 @@ local function UpdateRole(f)
   local r = LY.RoleOf(Plain(Call(UnitGroupRolesAssigned, f.unit)))
   f.role:SetShown(r ~= nil)
   f.roleText:SetShown(r ~= nil)
+  f.name:SetPoint("LEFT", f.hp, "LEFT", r and 21 or 4, 0)
   if r then f.roleText:SetText(r[5]); f.roleText:SetTextColor(r[6], r[7], r[8]) end
 end
 LY.UpdateRole = UpdateRole
@@ -452,12 +453,14 @@ local function BuildParty()
   holder:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 24, -220)
   for i = 1, 4 do
     local f = MakeUnit("party" .. i, 170, 30, 6, false)
-    f.role = f:CreateTexture(nil, "ARTWORK")
+    -- Inside the bar: the left screen edge belongs to the game's raid manager tab.
+    f.role = f.hp:CreateTexture(nil, "OVERLAY", nil, 1)
     f.role:SetSize(16, 16)
-    f.role:SetPoint("RIGHT", f, "LEFT", -3, 0)
-    f.role:SetTexture("Interface\Buttons\WHITE8X8")
-    f.role:SetVertexColor(0, 0, 0, 0.8)
-    f.roleText = Text(f, 12, "CENTER")
+    f.role:SetPoint("LEFT", f.hp, "LEFT", 2, 0)
+    f.role:SetTexture("Interface/Buttons/WHITE8X8")
+    f.role:SetVertexColor(0, 0, 0, 0.75)
+    f.roleText = Text(f.hp, 12, "CENTER")
+    f.roleText:SetDrawLayer("OVERLAY", 2)
     f.roleText:SetPoint("CENTER", f.role, "CENTER", 0, 0)
     f.role:Hide(); f.roleText:Hide()
     f:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, -(i - 1) * 36)
