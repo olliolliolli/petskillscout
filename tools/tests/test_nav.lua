@@ -73,4 +73,16 @@ do
   check("page full", GN.FreeSegment({Segment1 = full}) == nil)
 end
 check("wheel release", PSS.GamepadNav.Released(true, false, 0) and not PSS.GamepadNav.Released(true, false, 2) and not PSS.GamepadNav.Released(false, false, 0))
+do
+  local C = PSS.QuestCleanup
+  check("cleanup off by default", not C:On())
+  local oldC, oldE, oldG = C_PlayerInfo, Enum, GetQuestDifficultyColor
+  C_PlayerInfo, Enum = {GetContentDifficultyQuestForPlayer = function(id) return id == 1 and 0 or 2 end}, {RelativeContentDifficulty = {Trivial = 0}}
+  check("grey quest", C.IsGrey(1, 5) == true and C.IsGrey(2, 5) == false)
+  C_PlayerInfo, GetQuestDifficultyColor = nil, nil
+  check("unknown stays", C.IsGrey(1, 5) == nil)
+  C_PlayerInfo, Enum, GetQuestDifficultyColor = oldC, oldE, oldG
+  check("finished kept", C.Keep({questID = 9e6}, true))
+  check("normal not kept", not C.Keep({questID = 9e6}, false))
+end
 print(string.format("passed %d, failed %d", passes, fails))
