@@ -607,13 +607,13 @@ local function UpdateMinimap()
           if not onMap then p:SetAlpha(0.6) end
         elseif c.obj then
           -- Quest objective: small mark, no ring. Turn-in "?": a bit bigger.
-          local sz = c.turnin and 13 or 11
+          local sz = c.turnin and 9 or 11
           p:SetSize(sz, sz)
           if p.disc then p.disc:Hide(); p.discEdge:Hide() end
           if c.turnin then
             -- Dark round backing with a gold rim: stands out on any map colour.
             PSS.QuestPins.Backing(p)
-            p.disc:SetSize(16, 16); p.discEdge:SetSize(19, 19)
+            p.disc:SetSize(10, 10); p.discEdge:SetSize(12, 12)
             p.disc:SetVertexColor(0.05, 0.04, 0.02, 1)
             p.discEdge:SetVertexColor(1, 0.82, 0.2, 1)
             p.disc:Show(); p.discEdge:Show()
