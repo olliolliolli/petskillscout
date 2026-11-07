@@ -13,7 +13,7 @@ local G = PSS.PetGuard
 local FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local STAY, FOLLOW, DEFENSIVE = "PetSkillScoutPetStay", "PetSkillScoutPetFollow", "PetSkillScoutPetDefensive"
-local FALL_SECONDS = 0.9     -- a normal jump is shorter than this
+local FALL_SECONDS = 1.8     -- longer than a jump or a small drop
 local SHOW_SECONDS = 8
 local STEP_SECONDS = 25      -- each step of the after-jump helper
 local DISMISS_PET, CALL_PET = 2641, 883
@@ -79,7 +79,7 @@ end
 -- true = pet is far, false = near, nil = the client cannot tell.
 -- Exact distance where the client gives it, otherwise the 40 yd party range;
 -- the 28 yd interact range fired on any normal pull. See G.FAR_HOLD too.
-G.FAR_YARDS, G.FAR_HOLD = 70, 10
+G.FAR_YARDS, G.FAR_HOLD = 70, 4
 local function PetFar()
   if UnitDistanceSquared then
     local ok0, sq, seen = pcall(UnitDistanceSquared, "pet")
