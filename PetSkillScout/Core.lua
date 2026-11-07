@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.38"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.39"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -216,6 +216,12 @@ function PSS:InitializeDB()
     PetSkillScoutDB.language = PetSkillScoutDB.language or (({ukUA="uk",plPL="pl",deDE="de",frFR="fr",itIT="it",esES="es",esMX="es",ptBR="pt",ptPT="pt",ruRU="ru"})[GetLocale and GetLocale() or ""] or "en")
     PetSkillScoutDB.theme = (PetSkillScoutDB.theme == "classic" or PetSkillScoutDB.theme == "blizzard" or PetSkillScoutDB.theme == "moonglade") and PetSkillScoutDB.theme or "journal"
     PetSkillScoutDB.tracked = PetSkillScoutDB.tracked or {}
+    -- 3.7.39: the network tab and network messages are opt-in now (once).
+    if not PetSkillScoutDB.netOptIn then
+        PetSkillScoutDB.netOptIn = true
+        PetSkillScoutDB.netChatTab = nil
+        if PetSkillScoutDB.syncNotify == "wanted" then PetSkillScoutDB.syncNotify = nil end
+    end
     -- Fields from older builds that are no longer used.
     PetSkillScoutDB.progress, PetSkillScoutDB.visited, PetSkillScoutDB.found = nil, nil, nil
     self.tracked = PetSkillScoutDB.tracked

@@ -163,7 +163,7 @@ function S:Text(entry)
 end
 
 local function Notify(entry, rec, dist)
-  local mode = PetSkillScoutDB and PetSkillScoutDB.syncNotify or "wanted"
+  local mode = PetSkillScoutDB and PetSkillScoutDB.syncNotify or "off"
   if mode == "off" then return end
   -- The realm network is busy: only wanted rares are announced from it.
   if dist == "CHANNEL" then mode = "wanted" end

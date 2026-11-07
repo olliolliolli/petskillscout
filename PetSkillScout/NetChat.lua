@@ -1,5 +1,5 @@
 -- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
--- Hunter network chat tab (Settings > Hunter network, on by default): a chat
+-- Hunter network chat tab (Settings > Hunter network, off by default): a chat
 -- window of its own where every network event appears live, the same lines
 -- as in the Network tab. The window is made once (out of combat) with the
 -- normal "new chat window" function and gets no other chat; you can drag,
@@ -11,7 +11,7 @@ local NC = PSS.NetChat
 
 local function DB() return PetSkillScoutDB or {} end
 local function InCombat() return InCombatLockdown and InCombatLockdown() end
-function NC:Enabled() return DB().netChatTab ~= false and DB().netEnabled ~= false end
+function NC:Enabled() return DB().netChatTab == true and DB().netEnabled ~= false end
 
 local function TabName() return PSS:L("netChatTab") end
 
@@ -41,6 +41,13 @@ function NC:Ensure()
   return frame
 end
 
+-- Option off: the window made earlier goes away too.
+function NC:Sync()
+  if self:Enabled() then return self:Ensure() end
+  local f = self:Frame()
+  if f and not InCombat() and type(FCF_Close) == "function" then pcall(FCF_Close, f) end
+end
+
 function NC:Post(e)
   if not self:Enabled() or not e then return end
   local f = self:Ensure()
@@ -56,5 +63,5 @@ local w = CreateFrame("Frame")
 w:RegisterEvent("PLAYER_ENTERING_WORLD")
 w:SetScript("OnEvent", function(self)
   self:UnregisterAllEvents()
-  PSS:Soon("netchat", function() NC:Ensure() end, 8)
+  PSS:Soon("netchat", function() NC:Sync() end, 8)
 end)
