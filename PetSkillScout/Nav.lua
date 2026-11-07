@@ -288,6 +288,11 @@ local function DetectIndoors()
   if IsIndoors then indoors = PSS.Plain(safe(IsIndoors)) and true or false end
 end
 
+function MM.Near(x1, y1, x2, y2)
+  local dx, dy = x1 - x2, y1 - y2
+  return dx * dx + dy * dy < 0.36 -- 0.6 % of the map
+end
+
 local function Pin(i)
   local p = pins[i]
   if not p then
@@ -411,6 +416,11 @@ local function Candidates(mapID)
   if QP and QP.MinimapEnabled and QP:MinimapEnabled() and QP.TurnIns then
     local ok, list2 = pcall(QP.TurnIns, QP, mapID)
     for _, q in ipairs(ok and list2 or {}) do
+      -- Our own "!" right at the turn-in spot only hides the "?": left out here.
+      for i = #list, 1, -1 do
+        local e = list[i]
+        if e.quest and MM.Near(e.quest.x, e.quest.y, q.x, q.y) then table.remove(list, i) end
+      end
       table.insert(list, {obj = true, turnin = true, icon = QP.TURNIN_ICON, label = q.title, sub = PSS:L("qTurnIn"),
         target = {name = q.title, mapID = mapID, points = {{q.x, q.y}}}})
     end
@@ -597,9 +607,17 @@ local function UpdateMinimap()
           if not onMap then p:SetAlpha(0.6) end
         elseif c.obj then
           -- Quest objective: small mark, no ring. Turn-in "?": a bit bigger.
-          local sz = c.turnin and 14 or 11
+          local sz = c.turnin and 13 or 11
           p:SetSize(sz, sz)
           if p.disc then p.disc:Hide(); p.discEdge:Hide() end
+          if c.turnin then
+            -- Dark round backing with a gold rim: stands out on any map colour.
+            PSS.QuestPins.Backing(p)
+            p.disc:SetSize(16, 16); p.discEdge:SetSize(19, 19)
+            p.disc:SetVertexColor(0.05, 0.04, 0.02, 1)
+            p.discEdge:SetVertexColor(1, 0.82, 0.2, 1)
+            p.disc:Show(); p.discEdge:Show()
+          end
           p.ring:Hide()
           p.icon:SetDesaturated(false)
           p.icon:SetVertexColor(1, 1, 1)
