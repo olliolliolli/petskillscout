@@ -91,7 +91,7 @@ local function PetFar()
   local ok2, inRange, checked = pcall(UnitInRange, "pet")
   inRange, checked = ok2 and Plain(inRange), ok2 and Plain(checked)
   local ok3, near = pcall(CheckInteractDistance, "pet", 4)
-  near = ok3 and Plain(near)
+  if ok3 then near = Plain(near) else near = nil end -- failed check: unknown, not far
   return G.BothFar(inRange, checked, near)
 end
 function G.BothFar(inRange, checked, near)
