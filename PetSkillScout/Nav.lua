@@ -408,6 +408,13 @@ local function Candidates(mapID)
       end
     end
   end
+  if QP and QP.MinimapEnabled and QP:MinimapEnabled() and QP.TurnIns then
+    local ok, list2 = pcall(QP.TurnIns, QP, mapID)
+    for _, q in ipairs(ok and list2 or {}) do
+      table.insert(list, {obj = true, turnin = true, icon = QP.TURNIN_ICON, label = q.title, sub = PSS:L("qTurnIn"),
+        target = {name = q.title, mapID = mapID, points = {{q.x, q.y}}}})
+    end
+  end
   if Nav.target and Nav.target.mapID == mapID then
     table.insert(list, {target = Nav.target, icon = "Interface\\Icons\\Ability_Hunter_Pathfinding",
       color = {0.95, 0.77, 0.30}, label = Nav.target.name, sub = PSS:L("arrowTarget"), edge = true})
@@ -589,8 +596,9 @@ local function UpdateMinimap()
           p.disc:SetSize(sz, sz); p.discEdge:SetSize(sz + 2, sz + 2)
           if not onMap then p:SetAlpha(0.6) end
         elseif c.obj then
-          -- Quest objective: small mark, no ring.
-          p:SetSize(11, 11)
+          -- Quest objective: small mark, no ring. Turn-in "?": a bit bigger.
+          local sz = c.turnin and 14 or 11
+          p:SetSize(sz, sz)
           if p.disc then p.disc:Hide(); p.discEdge:Hide() end
           p.ring:Hide()
           p.icon:SetDesaturated(false)
@@ -615,6 +623,8 @@ local function UpdateMinimap()
         local sx, sy = 0, 0
         if c.quest and PSS.QuestPins and PSS.QuestPins.SpreadOffset then sx, sy = PSS.QuestPins.SpreadOffset(c.quest.spread, 4) end
         p:SetPoint("CENTER", Minimap, "CENTER", ex * scale + off + sx, ny * scale + off + sy)
+        p.baseLevel = p.baseLevel or p:GetFrameLevel()
+        p:SetFrameLevel(p.baseLevel + (c.turnin and 10 or 0))
         p:Show()
         p.mmE, p.mmN, p.mmSX, p.mmSY = onMap and rawE or nil, rawN, sx, sy
       end

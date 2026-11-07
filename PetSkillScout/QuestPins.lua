@@ -241,6 +241,7 @@ local function Update()
   end
   QP.shown = used
   QP:UpdateObjectives(canvas, mapID, width, height, scale)
+  QP:UpdateTurnIns(canvas, mapID, width, height, scale)
 end
 QP.Update = Update
 
@@ -305,6 +306,56 @@ function QP:UpdateObjectives(canvas, mapID, width, height, scale)
   end
 end
 
+-- Finished quests of your log: the client gives their turn-in spot
+-- (C_QuestLog.GetQuestsOnMap, x/y 0..1, checked on WoW Forever). A gold "?" on
+-- top of our other marks; without that data the game's own icon stays alone.
+QP.TURNIN_ICON = "Interface\\GossipFrame\\ActiveQuestIcon"
+function QP:TurnIns(mapID)
+  local out, api = {}, C_QuestLog
+  if not (api and api.GetQuestsOnMap and api.IsComplete and mapID) then return out end
+  local ok, list = pcall(api.GetQuestsOnMap, mapID)
+  for _, q in ipairs(ok and type(list) == "table" and list or {}) do
+    local id, x, y = PSS.Plain(q.questID), PSS.Plain(q.x), PSS.Plain(q.y)
+    local okD, done = pcall(api.IsComplete, id)
+    if id and type(x) == "number" and type(y) == "number" and okD and done == true
+       and not PSS.Plain(q.isMapIndicatorQuest) then
+      local okT, title = pcall(api.GetTitleForQuestID or function() end, id)
+      out[#out + 1] = {id = id, x = x * 100, y = y * 100, title = okT and PSS.Plain(title) or tostring(id)}
+    end
+  end
+  return out
+end
+
+local turnPins = {}
+function QP:UpdateTurnIns(canvas, mapID, width, height, scale)
+  for _, p in ipairs(turnPins) do p:Hide() end
+  for i, q in ipairs(self:TurnIns(mapID)) do
+    local pin = turnPins[i]
+    if not pin then
+      pin = CreateFrame("Frame", nil, canvas)
+      pin:SetSize(18, 18)
+      pin.icon = pin:CreateTexture(nil, "ARTWORK")
+      pin.icon:SetAllPoints(pin)
+      pin.icon:SetTexture(QP.TURNIN_ICON)
+      pin:EnableMouse(true)
+      pin:SetScript("OnEnter", function(self)
+        if not GameTooltip then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(PSS:Safe(self.title or "?"), 1, 0.82, 0)
+        GameTooltip:AddLine(PSS:Safe(PSS:L("qTurnIn")), 0.8, 0.8, 0.8)
+        GameTooltip:Show()
+      end)
+      pin:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+      turnPins[i] = pin
+    end
+    if pin:GetParent() ~= canvas then pin:SetParent(canvas) end
+    PSS.Map:RaisePin(pin, 9600)
+    pin.title = q.title
+    PSS.Map:Place(pin, canvas, q.x, q.y, width, height, scale)
+    pin:Show()
+  end
+end
+
 local driver = CreateFrame("Frame")
 PSS:OnlyWithWorldMap(driver)
 QP._driver = driver
@@ -316,7 +367,7 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   if not ok then QP._lastError = tostring(err) end
 end)
 local ev = CreateFrame("Frame")
-for _, e in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "PLAYER_LEVEL_UP", "PLAYER_EQUIPMENT_CHANGED",
+for _, e in ipairs({"QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "PLAYER_EQUIPMENT_CHANGED",
     "UNIT_QUEST_LOG_CHANGED", "QUESTLINE_UPDATE"}) do
   pcall(ev.RegisterEvent, ev, e)
 end

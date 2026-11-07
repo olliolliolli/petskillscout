@@ -85,4 +85,12 @@ do
   check("finished kept", C.Keep({questID = 9e6}, true))
   check("normal not kept", not C.Keep({questID = 9e6}, false))
 end
+do
+  local QP, old = PSS.QuestPins, C_QuestLog
+  C_QuestLog = {GetQuestsOnMap = function() return {{questID = 142, x = 0.563, y = 0.475}, {questID = 116, x = 0.1, y = 0.1}, {questID = 5, x = 0.1, y = 0.1, isMapIndicatorQuest = true}} end,
+    IsComplete = function(id) return id ~= 116 end, GetTitleForQuestID = function() return "Q" end}
+  local list = QP:TurnIns(1436)
+  C_QuestLog = old
+  check("only finished quests", #list == 1 and list[1].id == 142 and math.abs(list[1].x - 56.3) < 0.01 and list[1].title == "Q")
+end
 print(string.format("passed %d, failed %d", passes, fails))
