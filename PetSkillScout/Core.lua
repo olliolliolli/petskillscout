@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.20"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.21"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -320,6 +320,23 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
     end
     if msg == "holidays" then
         if PSS.Holidays then PSS.Holidays:Print() end
+        return
+    end
+    if msg == "roles" then
+        -- What the client says about group roles (Forever check).
+        for _, u in ipairs({"player", "party1", "party2", "party3", "party4"}) do
+            local okE, e = pcall(UnitExists, u)
+            if okE and e then
+                local ok, r = pcall(UnitGroupRolesAssigned, u)
+                PSS:Print(string.format("roles: %s %s = %s (ok=%s)", u, tostring(UnitName and PSS.Plain(UnitName(u))), tostring(PSS.Plain(r)), tostring(ok)))
+            end
+        end
+        if GetLFGRoles then
+            local ok, a1, a2, a3, a4 = pcall(GetLFGRoles)
+            PSS:Print("roles: GetLFGRoles " .. tostring(ok) .. " " .. tostring(a1) .. " " .. tostring(a2) .. " " .. tostring(a3) .. " " .. tostring(a4))
+        end
+        PSS:Print("roles: LFGList " .. tostring(C_LFGList ~= nil) .. " active=" .. tostring(C_LFGList and C_LFGList.HasActiveEntryInfo and select(2, pcall(C_LFGList.HasActiveEntryInfo))))
+        PSS:Print("roles: GetLFGMode " .. tostring(GetLFGMode ~= nil) .. " inLFG=" .. tostring(IsInGroup and LE_PARTY_CATEGORY_INSTANCE and select(2, pcall(IsInGroup, LE_PARTY_CATEGORY_INSTANCE))))
         return
     end
     if msg == "turnin" then
