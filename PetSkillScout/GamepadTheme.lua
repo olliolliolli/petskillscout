@@ -114,6 +114,7 @@ local function SkinTree(f, depth)
     if type(name) == "string" and (name:find("ActionButton%d+$") or name:find("ClassAction$")) then
       if not skinned[c] and PSS.Skin and PSS.Skin.SkinActionButton then
         skinned[c] = true
+        GT.sample = GT.sample or c
         pcall(PSS.Skin.SkinActionButton, c)
         local idx = tonumber(name:match("Bar[A-Za-z]*ActionButton(%d+)$"))
         if idx then pcall(Label, c, idx) end
@@ -144,6 +145,8 @@ function GT:SkinBar()
   -- Protected buttons: never touched in combat, redone when combat ends.
   if InCombat() then self.skinPending = true; return false end
   self.skinPending = nil
+  -- The game rebuilds these buttons on input changes and alt-tab: always redo.
+  wipe(skinned)
   pcall(SkinTree, root, 0)
   if not InCombat() and root.SetScale then
     local want = (PetSkillScoutDB and tonumber(PetSkillScoutDB.gamepadScale)) or self.SCALE
@@ -170,6 +173,26 @@ end
 if PSS.Gamepad and PSS.Gamepad.OnChange then
   PSS.Gamepad:OnChange(function(active) GT:Apply(active) end)
 end
+
+-- True when the game put its own look back on the bar.
+function GT.Reverted(alpha, scale, want)
+  if type(alpha) == "number" and alpha > 0.01 then return true end
+  return type(scale) == "number" and type(want) == "number" and math.abs(scale - want) > 0.01
+end
+local keep = CreateFrame("Frame")
+keep:SetScript("OnUpdate", function()
+  if not GT.active or InCombat() or not GT.sample then return end
+  local root = _G.GamepadMainActionBarFrame
+  local okS, shown = pcall(function() return root and root:IsVisible() end)
+  if not (okS and shown) then return end
+  local okN, nt = pcall(GT.sample.GetNormalTexture, GT.sample)
+  local okA, alpha = pcall(function() return nt and nt:GetAlpha() end)
+  local okR, scale = pcall(root.GetScale, root)
+  local want = (PetSkillScoutDB and tonumber(PetSkillScoutDB.gamepadScale)) or GT.SCALE
+  if GT.Reverted(okN and okA and PSS.Plain(alpha), okR and PSS.Plain(scale), want) then pcall(GT.SkinBar, GT) end
+end)
+keep.pssKey = "gamepad look"
+PSS:Every(keep, 2)
 
 local ev = CreateFrame("Frame")
 GT.frame = ev

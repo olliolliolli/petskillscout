@@ -63,4 +63,6 @@ do
   e, n = PSS.Minimap.Shift(1, 0, 0, 0, 0, 1)
   check("shift rotated", math.abs(e) < 1e-9 and math.abs(n - 1) < 1e-9)
 end
+check("gamepad look lost", PSS.GamepadTheme.Reverted(1, 0.85, 0.85) and PSS.GamepadTheme.Reverted(0, 1, 0.85))
+check("gamepad look kept", not PSS.GamepadTheme.Reverted(0, 0.85, 0.85))
 print(string.format("passed %d, failed %d", passes, fails))
