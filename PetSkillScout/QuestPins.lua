@@ -162,6 +162,12 @@ function QP:Groups(mapID, level)
       merged[#merged + 1] = g
     end
   end
+  -- Fixed order: the ring slot of a pin stays the same at every redraw.
+  table.sort(merged, function(a, b)
+    if a.x ~= b.x then return a.x < b.x end
+    if a.y ~= b.y then return a.y < b.y end
+    return (a.npc or -(a.ob or 0)) < (b.npc or -(b.ob or 0))
+  end)
   for i2, g in ipairs(merged) do
     local n = 0
     for k = 1, i2 - 1 do

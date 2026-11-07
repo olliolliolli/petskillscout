@@ -55,4 +55,6 @@ do
   if ok and v == nil then passes = passes + 1 else fails = fails + 1; print("FAIL secret guid") end
 end
 check("dark text", PSS.SkinText.IsDark(0.18, 0.1, 0.03) and not PSS.SkinText.IsDark(1, 0.82, 0))
+check("fast while moving", PSS.Minimap.Interval(7, false) == PSS.Minimap.FAST and PSS.Minimap.Interval(0, true) == PSS.Minimap.FAST)
+check("slow standing", PSS.Minimap.Interval(0, false) == PSS.Minimap.SLOW)
 print(string.format("passed %d, failed %d", passes, fails))

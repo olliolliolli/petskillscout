@@ -632,12 +632,21 @@ driver:SetScript("OnEvent", function()
   pcall(DetectIndoors)
   mmDirty = true
 end)
+-- Pins follow the map smoothly (about 30 times a second) while you run or
+-- the minimap turns; standing still, 5 times a second is plenty.
+MM.FAST, MM.SLOW = 0.03, 0.2
+function MM.Interval(speed, rotating)
+  if (type(speed) == "number" and speed > 0) or rotating then return MM.FAST end
+  return MM.SLOW
+end
 driver:SetScript("OnUpdate", function(_, elapsed)
   mmElapsed = mmElapsed + (elapsed or 0)
-  if mmElapsed < 0.2 then return end
+  local speed = GetUnitSpeed and PSS.Plain(safe(GetUnitSpeed, "player"))
+  local rotating = GetCVar and GetCVar("rotateMinimap") == "1"
+  if mmElapsed < MM.Interval(speed, rotating) then return end
   mmElapsed = 0
   local ok, err = pcall(UpdateMinimap)
   if not ok then MM._lastError = tostring(err) end
 end)
 driver.pssKey = "Nav minimap"
-PSS:Every(driver, 0.2)
+PSS:Every(driver, MM.FAST)
