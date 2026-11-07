@@ -44,7 +44,8 @@ end
 -- Option off: the window made earlier goes away too.
 function NC:Sync()
   if self:Enabled() then return self:Ensure() end
-  local f = self:Frame()
+  -- Only a window this addon made: never a chat window of yours with that name.
+  local f = DB().netChatName and self:Frame()
   if not f then return end
   if InCombat() then PSS:Soon("netchat", function() NC:Sync() end, 10) return end
   if type(FCF_Close) == "function" then pcall(FCF_Close, f) end
