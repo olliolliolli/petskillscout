@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.29"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.30"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -385,6 +385,11 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
     end
     if msg == "chatdebug" then
         -- Chat windows: index, name, docked, shown, tab position (for bug reports).
+        local LY = PSS.Layout
+        if LY then
+            if LY.PlaceCombatTab then LY.PlaceCombatTab() end
+            PSS:Print("tabs: chat theme " .. tostring(LY.applied and LY.applied.chat) .. " error " .. tostring(LY.tabError))
+        end
         for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
             local cf, tab = _G["ChatFrame" .. i], _G["ChatFrame" .. i .. "Tab"]
             local ok, name, _, _, _, _, _, shown, _, docked = pcall(GetChatWindowInfo, i)

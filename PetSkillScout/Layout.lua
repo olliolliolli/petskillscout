@@ -938,7 +938,7 @@ LY.RedockLoose = RedockLoose
 -- They are kept last in the dock (so no other tab is chained to them) and
 -- anchored from the dock's right edge.
 local combatBusy = false
-function PlaceCombatTab()
+local function PlaceTabsNow()
   if combatBusy or InCombat() or not LY.applied.chat then return end
   if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then return end
   local dock = G("GeneralDockManager")
@@ -1004,6 +1004,10 @@ function PlaceCombatTab()
     end
   end
   combatBusy = false
+end
+PlaceCombatTab = function()
+  local ok, err = pcall(PlaceTabsNow)
+  if not ok then combatBusy = false; LY.tabError = tostring(err) end
 end
 LY.PlaceCombatTab = PlaceCombatTab
 
