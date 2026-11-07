@@ -4250,7 +4250,7 @@ local SETTINGS = {
     {key="questWorth", label="optQuestWorth", hint="optQuestWorthHint", kind="toggle", default=true},
     {key="questPins", label="optQuestPins", hint="optQuestPinsHint", kind="toggle", default=true,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
-    {key="questPinsSkip", label="optQuestPinsSkip", hint="optQuestPinsSkipHint", kind="toggle", default=true,
+    {key="questPinsSkip", label="optQuestPinsSkip", hint="optQuestPinsSkipHint", kind="toggle", default=false,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questLearn", label="optQuestLearn", hint="optQuestLearnHint", kind="toggle", default=true},
     {key="questMinimap", label="optQuestMinimap", hint="optQuestMinimapHint", kind="toggle", default=true,

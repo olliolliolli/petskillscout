@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.42"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.43"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -221,6 +221,11 @@ function PSS:InitializeDB()
         PetSkillScoutDB.netOptIn = true
         PetSkillScoutDB.netChatTab = nil
         if PetSkillScoutDB.syncNotify == "wanted" then PetSkillScoutDB.syncNotify = nil end
+    end
+    -- 3.7.43: grey quest pins are opt-in now (once).
+    if not PetSkillScoutDB.greyPinsOptIn then
+        PetSkillScoutDB.greyPinsOptIn = true
+        PetSkillScoutDB.questPinsSkip = nil
     end
     -- Fields from older builds that are no longer used.
     PetSkillScoutDB.progress, PetSkillScoutDB.visited, PetSkillScoutDB.found = nil, nil, nil
