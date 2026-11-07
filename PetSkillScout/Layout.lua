@@ -429,8 +429,8 @@ local function BuildUnits()
 end
 
 -- Party frames: four flat frames stacked on the left, class coloured.
--- Role marks on party frames: the game's role art, a coloured letter when that
--- file is missing. Shown only when a role is set (group finder or by the leader).
+-- Role marks on party frames: a small square with a coloured letter (the game's
+-- role art file showed nothing on Forever). Shown only when a role is set.
 LY.ROLES = {
   TANK = {0, 19 / 64, 22 / 64, 41 / 64, "T", 0.4, 0.65, 1},
   HEALER = {20 / 64, 39 / 64, 1 / 64, 20 / 64, "H", 0.4, 0.9, 0.4},
@@ -441,10 +441,8 @@ local function UpdateRole(f)
   if not f.role then return end
   local r = LY.RoleOf(Plain(Call(UnitGroupRolesAssigned, f.unit)))
   f.role:SetShown(r ~= nil)
-  f.roleText:SetShown(r ~= nil and not f.roleArt)
-  if not r then return end
-  if f.roleArt then f.role:SetTexCoord(r[1], r[2], r[3], r[4])
-  else f.roleText:SetText(r[5]); f.roleText:SetTextColor(r[6], r[7], r[8]) end
+  f.roleText:SetShown(r ~= nil)
+  if r then f.roleText:SetText(r[5]); f.roleText:SetTextColor(r[6], r[7], r[8]) end
 end
 LY.UpdateRole = UpdateRole
 
@@ -454,12 +452,13 @@ local function BuildParty()
   holder:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 24, -220)
   for i = 1, 4 do
     local f = MakeUnit("party" .. i, 170, 30, 6, false)
-    f.role = f:CreateTexture(nil, "OVERLAY")
+    f.role = f:CreateTexture(nil, "ARTWORK")
     f.role:SetSize(16, 16)
     f.role:SetPoint("RIGHT", f, "LEFT", -3, 0)
-    f.roleArt = f.role:SetTexture("Interface\LFGFrame\UI-LFG-ICON-PORTRAITROLES") ~= false
-    f.roleText = Text(f, 13, "CENTER")
-    f.roleText:SetPoint("RIGHT", f, "LEFT", -3, 0)
+    f.role:SetTexture("Interface\Buttons\WHITE8X8")
+    f.role:SetVertexColor(0, 0, 0, 0.8)
+    f.roleText = Text(f, 12, "CENTER")
+    f.roleText:SetPoint("CENTER", f.role, "CENTER", 0, 0)
     f.role:Hide(); f.roleText:Hide()
     f:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, -(i - 1) * 36)
   end
