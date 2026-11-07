@@ -71,6 +71,5 @@ do
   local free = {IsEmpty = function() return true end}
   check("first free segment", GN.FreeSegment({Segment1 = full, Segment2 = full, Segment3 = free}) == 3)
   check("page full", GN.FreeSegment({Segment1 = full}) == nil)
-  check("wheel chosen", GN.Chosen(3, 3, false) and not GN.Chosen(3, 2, false) and not GN.Chosen(3, 3, true) and not GN.Chosen(nil, nil, false))
 end
 print(string.format("passed %d, failed %d", passes, fails))

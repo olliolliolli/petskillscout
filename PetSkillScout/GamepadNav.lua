@@ -254,10 +254,7 @@ function GN.FreeSegment(radial)
   end
 end
 
--- Opened only when the wheel closed on our segment and was not cancelled.
-function GN.Chosen(free, index, cancelled)
-  return free ~= nil and free == index and not cancelled
-end
+GN.HOLD = 0.7 -- seconds on the icon
 
 local mark
 local function MarkWheel()
@@ -274,6 +271,13 @@ local function MarkWheel()
   mark.label = mark:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   mark.label:SetPoint("TOP", mark.icon, "BOTTOM", 0, -2)
   mark.label:SetText("PetSkillScout")
+  -- Fills while the stick stays on the icon.
+  mark.fill = mark:CreateTexture(nil, "OVERLAY")
+  mark.fill:SetTexture("Interface/Buttons/WHITE8X8")
+  mark.fill:SetVertexColor(1, 0.82, 0.2, 1)
+  mark.fill:SetHeight(3)
+  mark.fill:SetPoint("TOPLEFT", mark.label, "BOTTOMLEFT", 0, -3)
+  mark.fill:Hide()
   mark:Hide()
   local function Place()
     local i, seg = GN.FreeSegment(radial)
@@ -283,19 +287,32 @@ local function MarkWheel()
     mark:SetPoint("CENTER", seg, "CENTER")
     mark:Show()
   end
+  -- Holding the stick on our segment opens the window: the wheel resets its
+  -- choice when the stick is let go, and an empty segment has no action.
+  local function Open()
+    mark.held = 0
+    pcall(radial.Hide, radial)
+    if C_Timer and C_Timer.After then C_Timer.After(0, function() PetSkillScout_ToggleWindow() end) end
+  end
+  mark.held = 0
   local keeper = CreateFrame("Frame", nil, radial)
-  keeper:SetScript("OnUpdate", function()
+  keeper:SetScript("OnUpdate", function(_, elapsed)
     pcall(Place)
     local index = PSS.Plain(radial.currentIndex)
-    if type(index) == "number" and index > 0 then mark.chosen = index end
-    if index == 0 then mark.chosen = nil end
-  end)
-  pcall(radial.HookScript, radial, "OnHide", function()
-    local open = GN.Chosen(mark.free, mark.chosen, PSS.Plain(radial.isCancelled))
-    mark.chosen = nil
-    if open and not InCombat() and C_Timer and C_Timer.After then
-      C_Timer.After(0, function() PetSkillScout_ToggleWindow() end)
+    local db = PetSkillScoutDB
+    if db and type(index) == "number" then
+      local log = db.gamepadWheel or {}
+      log.free = mark.free
+      log["i" .. index] = true
+      db.gamepadWheel = log
     end
+    local on = mark.free ~= nil and index == mark.free
+    mark.held = on and mark.held + (elapsed or 0) or 0
+    if mark.fill then
+      mark.fill:SetWidth(math.max(1, 60 * math.min(1, mark.held / GN.HOLD)))
+      mark.fill:SetShown(on)
+    end
+    if mark.held >= GN.HOLD and not InCombat() then Open() end
   end)
   return mark
 end
