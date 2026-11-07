@@ -429,21 +429,23 @@ local function BuildUnits()
 end
 
 -- Party frames: four flat frames stacked on the left, class coloured.
--- Role marks on party frames: a small square with a coloured letter (the game's
--- role art file showed nothing on Forever). Shown only when a role is set.
+-- Role marks on party frames: shield = tank, sword = damage, green cross = healer
+-- (drawn with two bars). Shown only when a role is set.
 LY.ROLES = {
-  TANK = {0, 19 / 64, 22 / 64, 41 / 64, "T", 0.4, 0.65, 1},
-  HEALER = {20 / 64, 39 / 64, 1 / 64, 20 / 64, "H", 0.4, 0.9, 0.4},
-  DAMAGER = {20 / 64, 39 / 64, 22 / 64, 41 / 64, "D", 0.95, 0.4, 0.35},
+  TANK = {icon = "Interface/Icons/INV_Shield_06"},
+  DAMAGER = {icon = "Interface/Icons/INV_Sword_04"},
+  HEALER = {cross = true},
 }
 function LY.RoleOf(value) return LY.ROLES[value] end
 local function UpdateRole(f)
   if not f.role then return end
   local r = LY.RoleOf(Plain(Call(UnitGroupRolesAssigned, f.unit)))
   f.role:SetShown(r ~= nil)
-  f.roleText:SetShown(r ~= nil)
+  f.roleIcon:SetShown(r ~= nil and r.icon ~= nil)
+  f.roleV:SetShown(r ~= nil and r.cross == true)
+  f.roleH:SetShown(r ~= nil and r.cross == true)
   f.name:SetPoint("LEFT", f.hp, "LEFT", r and 21 or 4, 0)
-  if r then f.roleText:SetText(r[5]); f.roleText:SetTextColor(r[6], r[7], r[8]) end
+  if r and r.icon then f.roleIcon:SetTexture(r.icon) end
 end
 LY.UpdateRole = UpdateRole
 
@@ -459,10 +461,21 @@ local function BuildParty()
     f.role:SetPoint("LEFT", f.hp, "LEFT", 2, 0)
     f.role:SetTexture("Interface/Buttons/WHITE8X8")
     f.role:SetVertexColor(0, 0, 0, 0.75)
-    f.roleText = Text(f.hp, 12, "CENTER")
-    f.roleText:SetDrawLayer("OVERLAY", 2)
-    f.roleText:SetPoint("CENTER", f.role, "CENTER", 0, 0)
-    f.role:Hide(); f.roleText:Hide()
+    f.roleIcon = f.hp:CreateTexture(nil, "OVERLAY", nil, 2)
+    f.roleIcon:SetPoint("TOPLEFT", f.role, "TOPLEFT", 1, -1)
+    f.roleIcon:SetPoint("BOTTOMRIGHT", f.role, "BOTTOMRIGHT", -1, 1)
+    f.roleIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    f.roleV = f.hp:CreateTexture(nil, "OVERLAY", nil, 2)
+    f.roleV:SetTexture("Interface/Buttons/WHITE8X8")
+    f.roleV:SetVertexColor(0.3, 0.95, 0.35, 1)
+    f.roleV:SetSize(4, 12)
+    f.roleV:SetPoint("CENTER", f.role, "CENTER")
+    f.roleH = f.hp:CreateTexture(nil, "OVERLAY", nil, 2)
+    f.roleH:SetTexture("Interface/Buttons/WHITE8X8")
+    f.roleH:SetVertexColor(0.3, 0.95, 0.35, 1)
+    f.roleH:SetSize(12, 4)
+    f.roleH:SetPoint("CENTER", f.role, "CENTER")
+    f.role:Hide(); f.roleIcon:Hide(); f.roleV:Hide(); f.roleH:Hide()
     f:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, -(i - 1) * 36)
   end
   LY:Movable("party", holder, "slot_party")
