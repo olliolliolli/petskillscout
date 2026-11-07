@@ -62,7 +62,10 @@ for _, t in ipairs(teachers) do
   if not have[key] and not seen[key] then
     seen[key] = true
     local slug = t.ability:lower():gsub("[^%w]", "")
-    add[#add + 1] = string.format('  {id="att-%s%d-%d",npcID=%d,name="%s",family="%s",minLevel=%d,maxLevel=%d,ability="%s",rank=%d,continent="%s",zone="%s",faction="All",source="AllTheThings Forever DB (MIT)",confidence="zone-level only",verifiedCoords=false,notes="From ATT beast training (Forever)."},',
+    local kept = old:match('
+(  {id="att%-' .. slug .. t.rank .. '%-' .. t.npc .. '"[^
+]+)')
+    add[#add + 1] = kept or string.format('  {id="att-%s%d-%d",npcID=%d,name="%s",family="%s",minLevel=%d,maxLevel=%d,ability="%s",rank=%d,continent="%s",zone="%s",faction="All",source="AllTheThings Forever DB (MIT)",confidence="zone-level only",verifiedCoords=false,notes="From ATT beast training (Forever)."},',
       slug, t.rank, t.npc, t.npc, esc(t.name), esc(t.family), t.min, t.max, esc(t.ability), t.rank,
       esc(cont[t.zone] or "Unknown"), esc(t.zone))
   end
