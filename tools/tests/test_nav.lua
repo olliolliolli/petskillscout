@@ -57,4 +57,10 @@ end
 check("dark text", PSS.SkinText.IsDark(0.18, 0.1, 0.03) and not PSS.SkinText.IsDark(1, 0.82, 0))
 check("fast while moving", PSS.Minimap.Interval(7, false) == PSS.Minimap.FAST and PSS.Minimap.Interval(0, true) == PSS.Minimap.FAST)
 check("slow standing", PSS.Minimap.Interval(0, false) == PSS.Minimap.SLOW)
+do
+  local e, n = PSS.Minimap.Shift(10, 20, 3, 5)
+  check("shift east north", e == 7 and n == 15)
+  e, n = PSS.Minimap.Shift(1, 0, 0, 0, 0, 1)
+  check("shift rotated", math.abs(e) < 1e-9 and math.abs(n - 1) < 1e-9)
+end
 print(string.format("passed %d, failed %d", passes, fails))

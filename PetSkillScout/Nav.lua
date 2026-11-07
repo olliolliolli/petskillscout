@@ -559,10 +559,15 @@ local function UpdateMinimap()
   local facing = GetPlayerFacing and GetPlayerFacing() or 0
   local rotate = GetCVar and GetCVar("rotateMinimap") == "1"
   local used = 0
+  -- Reference for the quick moves between full passes (see MoveFast).
+  local okU, wn, ww = pcall(UnitPosition, "player")
+  wn, ww = okU and PSS.Plain(wn), okU and PSS.Plain(ww)
+  cached.wn, cached.ww, cached.scale = wn, ww, scale
   for _, c in ipairs(cached.list) do
     local dx, dy, dist = Nav:Nearest(c.target, mapID, px, py)
     if dx then
       local ex, ny = dx, -dy
+      local rawE, rawN = ex, ny
       if rotate then
         local cs, sn = math.cos(-facing), math.sin(-facing)
         ex, ny = ex * cs - ny * sn, ex * sn + ny * cs
@@ -615,10 +620,12 @@ local function UpdateMinimap()
         if c.quest and PSS.QuestPins and PSS.QuestPins.SpreadOffset then sx, sy = PSS.QuestPins.SpreadOffset(c.quest.spread, 4) end
         p:SetPoint("CENTER", Minimap, "CENTER", ex * scale + off + sx, ny * scale + off + sy)
         p:Show()
+        p.mmE, p.mmN, p.mmSX, p.mmSY = onMap and rawE or nil, rawN, sx, sy
       end
     end
   end
   for i = used + 1, #pins do pins[i]:Hide() end
+  cached.used = used
   DrawArea(mapID, px, py, scale, rotate, facing)
 end
 
@@ -632,18 +639,48 @@ driver:SetScript("OnEvent", function()
   pcall(DetectIndoors)
   mmDirty = true
 end)
--- Pins follow the map smoothly (about 30 times a second) while you run or
--- the minimap turns; standing still, 5 times a second is plenty.
-MM.FAST, MM.SLOW = 0.03, 0.2
+-- A full pass (which pins, how they look) runs 5 times a second. Between
+-- passes, while you run or the map turns, the pins already on the minimap only
+-- shift by how far you moved: no table work, no map lookups.
+MM.FAST, MM.SLOW = 0.05, 0.2
 function MM.Interval(speed, rotating)
   if (type(speed) == "number" and speed > 0) or rotating then return MM.FAST end
   return MM.SLOW
 end
+-- Pin offset (yards east, north) after you moved; rotated with the minimap.
+function MM.Shift(e, n, movedE, movedN, cs, sn)
+  e, n = e - movedE, n - movedN
+  if cs then return e * cs - n * sn, e * sn + n * cs end
+  return e, n
+end
+local function MoveFast()
+  local used, s = cached.used or 0, cached.scale
+  if used == 0 or not (s and cached.wn and UnitPosition) then return end
+  local ok, wn, ww = pcall(UnitPosition, "player")
+  wn, ww = ok and PSS.Plain(wn), ok and PSS.Plain(ww)
+  if type(wn) ~= "number" or type(ww) ~= "number" then return end
+  local movedN, movedE = wn - cached.wn, cached.ww - ww -- second value grows westwards
+  local cs, sn
+  if GetCVar and GetCVar("rotateMinimap") == "1" then
+    local f = -(GetPlayerFacing and GetPlayerFacing() or 0)
+    cs, sn = math.cos(f), math.sin(f)
+  end
+  for i = 1, used do
+    local p = pins[i]
+    if p and p.mmE then
+      local e, n = MM.Shift(p.mmE, p.mmN, movedE, movedN, cs, sn)
+      p:SetPoint("CENTER", Minimap, "CENTER", e * s + p.mmSX, n * s + p.mmSY)
+    end
+  end
+end
 driver:SetScript("OnUpdate", function(_, elapsed)
   mmElapsed = mmElapsed + (elapsed or 0)
-  local speed = GetUnitSpeed and PSS.Plain(safe(GetUnitSpeed, "player"))
-  local rotating = GetCVar and GetCVar("rotateMinimap") == "1"
-  if mmElapsed < MM.Interval(speed, rotating) then return end
+  if mmElapsed < MM.SLOW then
+    local speed = GetUnitSpeed and PSS.Plain(safe(GetUnitSpeed, "player"))
+    local rotating = GetCVar and GetCVar("rotateMinimap") == "1"
+    if MM.Interval(speed, rotating) == MM.FAST then pcall(MoveFast) end
+    return
+  end
   mmElapsed = 0
   local ok, err = pcall(UpdateMinimap)
   if not ok then MM._lastError = tostring(err) end

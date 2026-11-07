@@ -57,3 +57,5 @@ ev:SetScript("OnUpdate", function(_, e)
   acc = 0
   pcall(T.Scan, T)
 end)
+ev.pssKey = "SkinText"
+PSS:Every(ev, 0.2)
