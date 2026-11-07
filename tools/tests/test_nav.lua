@@ -72,4 +72,5 @@ do
   check("first free segment", GN.FreeSegment({Segment1 = full, Segment2 = full, Segment3 = free}) == 3)
   check("page full", GN.FreeSegment({Segment1 = full}) == nil)
 end
+check("wheel release", PSS.GamepadNav.Released(true, false, 0) and not PSS.GamepadNav.Released(true, false, 2) and not PSS.GamepadNav.Released(false, false, 0))
 print(string.format("passed %d, failed %d", passes, fails))

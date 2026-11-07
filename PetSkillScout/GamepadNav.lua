@@ -254,7 +254,10 @@ function GN.FreeSegment(radial)
   end
 end
 
-GN.HOLD = 0.7 -- seconds on the icon
+-- The stick left our segment for the centre (not for another segment).
+function GN.Released(was, on, index)
+  return was and not on and (index == 0 or index == nil)
+end
 
 local mark
 local function MarkWheel()
@@ -271,13 +274,6 @@ local function MarkWheel()
   mark.label = mark:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   mark.label:SetPoint("TOP", mark.icon, "BOTTOM", 0, -2)
   mark.label:SetText("PetSkillScout")
-  -- Fills while the stick stays on the icon.
-  mark.fill = mark:CreateTexture(nil, "OVERLAY")
-  mark.fill:SetTexture("Interface/Buttons/WHITE8X8")
-  mark.fill:SetVertexColor(1, 0.82, 0.2, 1)
-  mark.fill:SetHeight(3)
-  mark.fill:SetPoint("TOPLEFT", mark.label, "BOTTOMLEFT", 0, -3)
-  mark.fill:Hide()
   mark:Hide()
   local function Place()
     local i, seg = GN.FreeSegment(radial)
@@ -287,14 +283,11 @@ local function MarkWheel()
     mark:SetPoint("CENTER", seg, "CENTER")
     mark:Show()
   end
-  -- Holding the stick on our segment opens the window: the wheel resets its
-  -- choice when the stick is let go, and an empty segment has no action.
   local function Open()
-    mark.held = 0
+    mark.was = false
     pcall(radial.Hide, radial)
     if C_Timer and C_Timer.After then C_Timer.After(0, function() PetSkillScout_ToggleWindow() end) end
   end
-  mark.held = 0
   local keeper = CreateFrame("Frame", nil, radial)
   keeper:SetScript("OnUpdate", function(_, elapsed)
     pcall(Place)
@@ -306,13 +299,18 @@ local function MarkWheel()
       log["i" .. index] = true
       db.gamepadWheel = log
     end
+    -- Like the game's own entries: chosen when the stick is let go on it.
     local on = mark.free ~= nil and index == mark.free
-    mark.held = on and mark.held + (elapsed or 0) or 0
-    if mark.fill then
-      mark.fill:SetWidth(math.max(1, 60 * math.min(1, mark.held / GN.HOLD)))
-      mark.fill:SetShown(on)
+    if GN.Released(mark.was, on, index) and not InCombat() then Open() end
+    mark.was = on
+  end)
+  -- Closed by the game with our segment chosen (A or Start).
+  pcall(radial.HookScript, radial, "OnHide", function()
+    local open = mark.was and not PSS.Plain(radial.isCancelled)
+    mark.was = false
+    if open and not InCombat() and C_Timer and C_Timer.After then
+      C_Timer.After(0, function() PetSkillScout_ToggleWindow() end)
     end
-    if mark.held >= GN.HOLD and not InCombat() then Open() end
   end)
   return mark
 end
