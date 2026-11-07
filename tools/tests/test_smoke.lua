@@ -297,7 +297,7 @@ do
     ChatFrame7 = made; return made
   end
   GetChatWindowInfo = function(i) if i == 7 and made then return PSS:L("netChatTab"), 12, 1, 1, 1, 1, true, 0 end end
-  PetSkillScoutDB.netChatMade = nil; PSS.NetChat.tried = nil
+  PetSkillScoutDB.netChatTab = true; PetSkillScoutDB.netChatMade = nil; PSS.NetChat.tried = nil
   PSS.NetFeed:Add("rare", "Mira Stone", "Ghostfang", "Barrens")
   PSS.NetFeed:Add("join", "Ole Brand", "2.9.4")
   if not made or #lines ~= 2 or not lines[1]:find("Ghostfang", 1, true) then fails = fails + 1; print("FAIL network chat tab gets events: " .. #lines) end
