@@ -139,7 +139,7 @@ FEATURES
   tooltip lines, pet care reminder and Feed button mode.
 
 DATA AND LIMITATIONS
-- Quest database: AllTheThings commit b50b6d8 (2026-11-06). Pet teachers and
+- Quest database: AllTheThings commit 1528abd (2026-11-08). Pet teachers and
   beast positions from AllTheThings: commit d503738 (unchanged since).
 - 653 tameable beasts, 548 of them with spawn points.
 - Families use the client names (Scorpid, Tallstrider, Wind Serpent, Crocolisk);
@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.47
+- Data update 2026-11-08: quest database from AllTheThings commit 1528abd (1 quest gets its giver:
+  Locating the Lost City, Horde, Badlands); pet teachers unchanged (48 beasts, 196 positions);
+  gear data unchanged; no new learned data.
+
 3.6.4
 - Gamepad: the keyboard-and-mouse backing behind the bags no longer pops up again when the
   theme re-skins the bags and micro menu (it stays hidden in gamepad mode and when the bars

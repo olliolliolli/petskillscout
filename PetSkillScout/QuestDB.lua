@@ -1,7 +1,7 @@
 -- Quests of WoW Forever (generated, do not edit by hand).
 -- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/AllTheThings),
 -- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.
--- Source commit bd2e452. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
+-- Source commit 1528abd. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
 -- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),
 -- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,
 -- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.
@@ -4062,7 +4062,7 @@ PSS.QuestDB = {
 [95697]={g=3368,x=57.4,y=53.4,m=1454,l=24,s="H",d=1,o="i",i={280766,280805,250185,250077},n="Changing Tastes"},
 [95737]={g=3970,x=35,y=48.4,m=1440,l=24,s="A",n="Seeking Caitlin"},
 [95748]={g=2519,x=32.2,y=27.8,m=1434,l=30,s="H",o="i",ox=23,oy=12,om=1434,n="The Gurubashi Legends of Old"},
-[95770]={l=30,s="H",n="Locating the Lost City"},
+[95770]={g=2519,x=32.2,y=27.8,m=1434,l=30,s="H",p={95748},n="Locating the Lost City"},
 [95771]={l=6,i={270298},n="A Taste of Darkness"},
 [95772]={g=956,x=25.8,y=46.5,m=1433,l=24,s="A",d=1,n="Songblade Search"},
 [95773]={l=30,s="H",o="i",ox=19.8,oy=26,om=1434,n="Enemies in the Water"},
