@@ -45,8 +45,18 @@ end
 -- them, and channel text from addons is only allowed during a key press
 -- (/pss netdiag). The realm network therefore whispers each member of the
 -- network channel (Net.lua keeps the list); the token bucket below paces it.
+-- Nothing is sent from inside a dungeon or raid: the client can block addon
+-- messages there, and the queue would then be blocked about once a second.
+-- Receiving is not affected; the records go out again later (relay).
+local function InInstance()
+  if type(IsInInstance) ~= "function" then return false end
+  local ok, inside = pcall(IsInInstance)
+  if not ok or (PSS.IsSecret and PSS.IsSecret(inside)) then return false end
+  return inside == true or inside == 1
+end
+S.InInstance = InInstance
 function S:Send(msg, dist, target)
-  if type(msg) ~= "string" or #msg > 250 then return end
+  if type(msg) ~= "string" or #msg > 250 or InInstance() then return end
   if dist == "CHANNEL" then
     local N = PSS.Net
     if not (N and N.Members) then return end
@@ -81,7 +91,7 @@ end
 S.Channels = Channels
 
 function S:SendAll(msg, net)
-  if type(msg) ~= "string" or #msg > 250 then return false end
+  if type(msg) ~= "string" or #msg > 250 or InInstance() then return false end
   local channels = Channels(net)
   for _, c in ipairs(channels) do self:Send(msg, c[1], c[2]) end
   if #channels > 0 and PSS.NetFeed then pcall(PSS.NetFeed.OnSent, PSS.NetFeed, msg) end
@@ -364,6 +374,8 @@ S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender, ..
 end)
 S.frame:SetScript("OnUpdate", function()
   if #queue == 0 then return end
+  -- Entered an instance with messages still waiting: drop them.
+  if InInstance() then for i = #queue, 1, -1 do queue[i] = nil end return end
   Refill()
   while tokens >= 1 and #queue > 0 do
     local m = table.remove(queue, 1)

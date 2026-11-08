@@ -60,4 +60,11 @@ do
   S.handlers.ZZ = old
   check("escape codes stripped", got == nil or not got:find("|", 1, true))
 end
+-- Inside an instance nothing is sent.
+sent = {}
+IsInInstance = function() return true, "party" end
+S:Send("H~z", "WHISPER", "Kim Bo")
+check("no send inside an instance", #sent == 0)
+check("SendAll refuses inside an instance", S:SendAll("H~z", true) == false)
+IsInInstance = function() return false, "none" end
 print(string.format("passed %d, failed %d", passes, fails))
