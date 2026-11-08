@@ -357,7 +357,66 @@ local function HookShow(frame, fn)
   pcall(PSS.HookScript, frame, "OnShow", function(f) if S.active then pcall(fn, f) end end)
 end
 
-local function WindowNow(f) S:Window(f) end
+-- Quest window pages keep their own parchment (textures of the panels and
+-- their scroll frames, not of the window): faded too, so the light text the
+-- theme uses stays readable. Only the panels' own textures: reward icons live
+-- in buttons and are not touched.
+local QUEST_PAGES = {"QuestFrameDetailPanel", "QuestFrameProgressPanel", "QuestFrameRewardPanel",
+  "QuestFrameGreetingPanel", "QuestDetailScrollFrame", "QuestProgressScrollFrame", "QuestRewardScrollFrame",
+  "QuestGreetingScrollFrame", "QuestDetailScrollChildFrame", "QuestRewardScrollChildFrame",
+  "QuestProgressScrollChildFrame", "GossipFrameGreetingPanel", "QuestLogDetailScrollFrame"}
+local function QuestPages()
+  for _, n in ipairs(QUEST_PAGES) do
+    local f = G(n)
+    if f then
+      for _, k in ipairs({"Bg", "Background", "MaterialTopLeft", "MaterialTopRight", "MaterialBotLeft", "MaterialBotRight", "SealMaterialBG"}) do
+        if F(f, k) then Fade(F(f, k)) end
+      end
+      for _, r in ipairs(Regions(f)) do
+        if IsTexture(r) then
+          local layer = Layer(r)
+          if layer == "BACKGROUND" or layer == "BORDER" then Fade(r) end
+        end
+      end
+    end
+  end
+end
+-- Fallback: any parchment texture deeper in the quest windows (by its atlas
+-- or file name), whatever the panel is called on this client.
+local PARCH = {"parchment", "questbg", "questbackground", "questdetail", "material"}
+local function IsParchment(r)
+  local okA, atlas = pcall(r.GetAtlas, r)
+  local okT, file = pcall(r.GetTexture, r)
+  local name = ((okA and type(atlas) == "string") and atlas or "") .. " " .. ((okT and type(file) == "string") and file or "")
+  name = name:lower()
+  for _, k in ipairs(PARCH) do if name:find(k, 1, true) then return true end end
+  return false
+end
+local function WalkParchment(f, depth)
+  if depth > 6 or type(f) ~= "table" then return end
+  for _, r in ipairs(Regions(f)) do
+    if IsTexture(r) and IsParchment(r) then Fade(r) end
+  end
+  for _, c in ipairs(Children(f)) do
+    -- Buttons hold reward and item icons: never faded.
+    local okT, t = pcall(c.GetObjectType, c)
+    if not (okT and (t == "Button" or t == "CheckButton" or t == "ItemButton")) then WalkParchment(c, depth + 1) end
+  end
+end
+local function QuestPagesAll()
+  QuestPages()
+  for _, n in ipairs({"QuestFrame", "GossipFrame", "QuestLogFrame", "QuestLogDetailFrame"}) do
+    local f = G(n)
+    if f then WalkParchment(f, 0) end
+  end
+end
+S.QuestPages = QuestPagesAll
+
+local function WindowNow(f)
+  S:Window(f)
+  local n = f.GetName and f:GetName()
+  if n == "QuestFrame" or n == "GossipFrame" or n == "QuestLogFrame" or n == "QuestLogDetailFrame" then pcall(QuestPagesAll) end
+end
 
 local function SkinWindows()
   local list = {}
@@ -365,8 +424,10 @@ local function SkinWindows()
   for i = 1, 13 do list[#list + 1] = G("ContainerFrame" .. i) end
   for i = 1, 4 do list[#list + 1] = G("StaticPopup" .. i) end
   for _, f in pairs(list) do
-    if f then S:Window(f); HookShow(f, WindowNow) end
+    if f then WindowNow(f); HookShow(f, WindowNow) end
   end
+  -- Quest pages switch inside the window (details, progress, reward).
+  for _, n in ipairs(QUEST_PAGES) do HookShow(G(n), function() pcall(QuestPagesAll) end) end
 end
 
 -- Tooltips -------------------------------------------------------------------
