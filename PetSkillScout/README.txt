@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.54
+- Data update 2026-11-08: learned data from players (+2 rare spots). AllTheThings (1528abd),
+  pet teachers and gear data unchanged.
+
 3.7.53
 - Hunter network sends nothing from inside dungeons and raids (messages can be blocked there);
   receiving is unchanged and records go out again after you leave.
