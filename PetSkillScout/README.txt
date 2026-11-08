@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.56
+- Data update 2026-11-08: AllTheThings d6c8eb5 (one hidden quest trigger), pet teachers, gear and
+  learned data unchanged.
+
+3.7.55
+- Minimap pins use less CPU while you move (full pass once a second, quick shift between).
+- /pss cpu keeps its result for the developer.
+
 3.7.54
 - Data update 2026-11-08: learned data from players (+2 rare spots). AllTheThings (1528abd),
   pet teachers and gear data unchanged.

@@ -1,7 +1,7 @@
 -- Quests of WoW Forever (generated, do not edit by hand).
 -- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/AllTheThings),
 -- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.
--- Source commit 1528abd. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
+-- Source commit d6c8eb5. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
 -- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),
 -- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,
 -- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.
@@ -3468,6 +3468,7 @@ PSS.QuestDB = {
 [9664]={g=17069,x=81.3,y=59.4,m=1423,l=55,s="A",o="xxxx",ox=39.7,oy=75.4,om=1423,n="Establishing New Outposts"},
 [9665]={g=17072,x=80,y=57.4,m=1423,l=55,s="H",o="xxxx",ox=39.7,oy=75.4,om=1423,n="Bolstering Our Defenses"},
 [27118]={ob=179485,l=42,r=1,d=1,n="A Broken Trap"},
+[55296]={n="Completed when turning in Chen's Empty Keg (2/3) (821)"},
 [65593]={g=5675,x=85,y=25.6,m=1458,l=20,s="H",cl={9},p={1472},a={65610},o="ii",ox=63.6,oy=65.6,om=1421,n="Hearts of the Lovers"},
 [65597]={g=5675,x=85,y=25.6,m=1458,l=20,s="H",cl={9},p={65593},a={65604},o="n",i={22243},n="The Binding (Incubus) [Undercity]"},
 [65601]={g=5909,x=47.2,y=46.6,m=1454,l=20,s="H",cl={9},p={1507},n="Love Hurts"},
