@@ -80,5 +80,9 @@ function P:Stop()
   for i = 1, math.min(10, #list) do
     PSS:Print(string.format("%2d. %.3f ms/s  %s", i, list[i][2] / secs, list[i][1]))
   end
-  PSS:Print("Send me a screenshot of these lines.")
+  -- Kept in SavedVariables too (last check only), for the developer.
+  local keep = {at = time and time() or 0, total = total / secs, top = {}}
+  for i = 1, math.min(20, #list) do keep.top[i] = {list[i][1], list[i][2] / secs} end
+  if PetSkillScoutDB then PetSkillScoutDB.cpuLog = keep end
+  PSS:Print("Saved. Do /reload so the developer can read it.")
 end

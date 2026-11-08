@@ -594,6 +594,9 @@ local function UpdateMinimap()
         used = used + 1
         local p = Pin(used)
         p.group = c.quest
+        -- Look of the pin: only when it shows another place than last pass.
+        if p.cand ~= c or p.cOn ~= onMap then
+        p.cand, p.cOn = c, onMap
         if c.quest then
           -- Quest giver: the "!" icon in its rating colour, no ring.
           p.icon:SetTexture(PSS.QuestPins.ICON)
@@ -635,6 +638,7 @@ local function UpdateMinimap()
           p.ring:SetVertexColor(c.color[1], c.color[2], c.color[3], 1)
           p:SetAlpha(onMap and 1 or 0.6)
         end
+        end
         p.label, p.sub, p.dist, p.target, p.beastID = c.label, c.sub, math.floor(dist), c.target, c.beastID
         p:ClearAllPoints()
         local off = 0 -- right on the giver, like the game's own "!"
@@ -648,7 +652,7 @@ local function UpdateMinimap()
       end
     end
   end
-  for i = used + 1, #pins do pins[i]:Hide() end
+  for i = used + 1, #pins do pins[i]:Hide(); pins[i].cand = nil end
   cached.used = used
   DrawArea(mapID, px, py, scale, rotate, facing)
 end
@@ -699,12 +703,16 @@ local function MoveFast()
     end
   end
 end
+-- While you move, the quick shift keeps the pins in place, so the full pass
+-- (new pins coming into view) runs once a second instead of 5 times.
+MM.FULL_MOVING = 1
 driver:SetScript("OnUpdate", function(_, elapsed)
   mmElapsed = mmElapsed + (elapsed or 0)
-  if mmElapsed < MM.SLOW then
-    local speed = GetUnitSpeed and PSS.Plain(safe(GetUnitSpeed, "player"))
-    local rotating = GetCVar and GetCVar("rotateMinimap") == "1"
-    if MM.Interval(speed, rotating) == MM.FAST then pcall(MoveFast) end
+  local speed = GetUnitSpeed and PSS.Plain(safe(GetUnitSpeed, "player"))
+  local rotating = GetCVar and GetCVar("rotateMinimap") == "1"
+  local moving = MM.Interval(speed, rotating) == MM.FAST
+  if mmElapsed < (moving and not mmDirty and MM.FULL_MOVING or MM.SLOW) then
+    if moving then pcall(MoveFast) end
     return
   end
   mmElapsed = 0
