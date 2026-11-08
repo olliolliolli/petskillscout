@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.50
+- Data update 2026-11-08: learned data from players (+13 quests, +9 ammo vendors, +9 rare spots).
+  AllTheThings (1528abd), pet teachers and gear data unchanged.
+
 3.7.49
 - Rare alert sound follows the beast family: wolves howl, cats roar, bears, boars, spiders, birds
   and the others use their own creature voice from the game files. /pss raresound plays them all
