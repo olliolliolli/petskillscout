@@ -603,8 +603,8 @@ end
 
 -- Cache refresh: when items arrive, the open tab redraws (throttled).
 G.frame = CreateFrame("Frame")
-for _, e in ipairs({"GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT", "PLAYER_EQUIPMENT_CHANGED", "PLAYER_LEVEL_UP",
-    "UNIT_INVENTORY_CHANGED"}) do
+-- Not UNIT_INVENTORY_CHANGED: it fires on every shot (ammo count).
+for _, e in ipairs({"GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT", "PLAYER_EQUIPMENT_CHANGED", "PLAYER_LEVEL_UP"}) do
   pcall(G.frame.RegisterEvent, G.frame, e)
 end
 local dirty = false
@@ -615,10 +615,10 @@ local function RedrawGear()
 end
 G.Redraw = RedrawGear
 G.frame:SetScript("OnEvent", function(_, event, unit)
-  if event == "UNIT_INVENTORY_CHANGED" and unit ~= "player" then return end
   dirty = true
   -- New gear: redraw at once and again when the item's stats have arrived.
-  if (event == "PLAYER_EQUIPMENT_CHANGED" or event == "UNIT_INVENTORY_CHANGED") and C_Timer then
+  -- Slot 0 is ammo (changes on every shot): nothing to redraw.
+  if event == "PLAYER_EQUIPMENT_CHANGED" and unit ~= 0 and C_Timer then
     if PSS.GearCompare and PSS.GearCompare.Reset then pcall(PSS.GearCompare.Reset, PSS.GearCompare) end
     C_Timer.After(0.2, RedrawGear)
     C_Timer.After(1.5, RedrawGear)
