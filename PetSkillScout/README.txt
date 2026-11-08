@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.51
+- Hunter network feed: records your addon only passes on to others are no longer listed as your
+  finds; your own line appears only for a quest you found that our data lacks.
+
 3.7.50
 - Data update 2026-11-08: learned data from players (+13 quests, +9 ammo vendors, +9 rare spots).
   AllTheThings (1528abd), pet teachers and gear data unchanged.

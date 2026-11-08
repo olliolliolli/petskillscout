@@ -121,6 +121,13 @@ GetTitleText = function() return "Mine Quest" end
 F:OnSent("O~990011~4242~1438~5~5~A~~Mine Quest")
 ok((F:Stats().sent or 0) == sent0 + 1 and F.events[1].mine, "own record counted and marked as mine")
 ok(#F:List("quest", false) == 1, "hide my own events")
+-- Relay of someone else's record or of a known quest is not "my find".
+local n0 = #F.events
+F:OnSent("O~990010~88~1438~10~10~A~~Lost Necklace")
+local kid
+for id, r in pairs(PSS.QuestDB) do if r.m and r.x then kid = id break end end
+F:OnSent("O~" .. kid .. "~88~1438~10~10~A~~Known")
+ok(#F.events == n0, "relayed records not shown as mine")
 -- The tab draws without errors.
 local UI = PSS.UI
 UI:Create()

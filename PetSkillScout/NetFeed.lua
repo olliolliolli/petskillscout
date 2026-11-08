@@ -82,8 +82,16 @@ function F:OnSent(msg)
   local st = self:Stats()
   st.sent = (st.sent or 0) + 1
   if kind == "O" then
+    -- The addon also passes on records it already has (relay): those are not
+    -- your finds. Shown only for a quest you found that our data lacks, once.
     local parts = {strsplit(PSS.Sync.SEP, msg)}
-    self:Add("quest", UnitName and UnitName("player") or "?", parts[9], parts[3] ~= "" and parts[3] or nil, true)
+    local id = tonumber(parts[2])
+    local r = id and PSS.QuestDB and PSS.QuestDB[id]
+    local rec = id and PSS.QuestLearn and PSS.QuestLearn.Records and DB() and PSS.QuestLearn:Records()[id]
+    if id and not (r and r.m and r.x) and (not rec or rec.me) and not self.seenNews["q" .. id] then
+      self.seenNews["q" .. id] = true
+      self:Add("quest", UnitName and UnitName("player") or "?", parts[9], parts[3] ~= "" and parts[3] or nil, true)
+    end
   end
 end
 
