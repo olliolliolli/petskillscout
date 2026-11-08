@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.51"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.52"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -221,6 +221,11 @@ function PSS:InitializeDB()
         PetSkillScoutDB.netOptIn = true
         PetSkillScoutDB.netChatTab = nil
         if PetSkillScoutDB.syncNotify == "wanted" then PetSkillScoutDB.syncNotify = nil end
+    end
+    -- 3.7.52: blocked log restarts with per-path counts (once).
+    if not PetSkillScoutDB.blockedLogV2 then
+        PetSkillScoutDB.blockedLogV2 = true
+        PetSkillScoutDB.blockedLog = nil
     end
     -- 3.7.43: grey quest pins are opt-in now (once).
     if not PetSkillScoutDB.greyPinsOptIn then
@@ -491,6 +496,19 @@ blockWatch:SetScript("OnEvent", function(_, event, addon, func)
     local e = log[tostring(func)] or {n = 0}
     e.n = e.n + 1
     if not e.stack and debugstack then e.stack = debugstack(2, 8, 0) end
+    -- Every distinct call path with its own count and times (up to 8): the
+    -- first stack alone hid what is blocked later in another place.
+    if debugstack then
+      local st = debugstack(2, 8, 0)
+      e.paths = e.paths or {}
+      local p = e.paths[st]
+      if not p then
+        local n = 0
+        for _ in pairs(e.paths) do n = n + 1 end
+        if n < 8 then p = {n = 0, first = time and time() or 0}; e.paths[st] = p end
+      end
+      if p then p.n = p.n + 1; p.last = time and time() or 0; p.combat = InCombatLockdown and InCombatLockdown() or false end
+    end
     log[tostring(func)] = e
     PetSkillScoutDB.blockedLog = log
   end

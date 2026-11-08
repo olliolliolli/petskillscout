@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.52
+- Data update 2026-11-08: learned data from players (+1 quest, +1 rare spot).
+- Diagnostics: blocked actions are logged per call path with counts and times.
+
 3.7.51
 - Hunter network feed: records your addon only passes on to others are no longer listed as your
   finds; your own line appears only for a quest you found that our data lacks.
