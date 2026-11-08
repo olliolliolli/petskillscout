@@ -304,17 +304,60 @@ function R:SeenText(entry)
   return when .. where .. count
 end
 
--- Wolf howl from the game files (classic wolf, then Draenor wolf), raid
--- warning sound if neither plays. Master channel: heard with effects muted.
-local HOWLS = {564211, 929455}
-function R:Howl()
+-- Rare alert sound by beast family: file IDs of the creature's own voice in
+-- the game files (first that plays wins), raid warning sound if none does.
+-- Master channel: heard with effects muted.
+R.FAMILY_SOUNDS = {
+  Wolf = {564211, 929455},          -- howl
+  Cat = {562387, 545949},           -- tiger / cat roar
+  Bear = {544959},
+  Boar = {545134},
+  Spider = {560106, 549870},        -- shale spider / giant spider
+  ["Carrion Bird"] = {545937},
+  ["Bird of Prey"] = {557977, 1266218}, -- owl / eagle
+  Crocolisk = {545963},
+  Hyena = {552339},
+  Scorpid = {627020},
+  Raptor = {558877},
+  Tallstrider = {561390},
+  Turtle = {559878},
+  ["Wind Serpent"] = {564141, 1934563},
+  Bat = {3544351, 555491},
+  Gorilla = {550967},
+  Fox = {3593144, 555457},
+  Crab = {546423},
+  Owl = {557977},
+  Ravager = {995782},
+  ["Dragonhawk"] = {547519},
+  ["Warp Stalker"] = {563991},
+  ["Nether Ray"] = {601769},
+  Serpent = {559967},
+  Sporebat = {560792},
+}
+function R:PlayFamily(family)
   if PlaySoundFile then
-    for _, id in ipairs(HOWLS) do
+    for _, id in ipairs(self.FAMILY_SOUNDS[family] or {}) do
       local ok, willPlay = pcall(PlaySoundFile, id, "Master")
-      if ok and willPlay then return end
+      if ok and willPlay then return id end
     end
   end
   if PlaySound then pcall(PlaySound, 8959, "Master") end
+  return nil
+end
+-- /pss raresound [family]: one family, or all of them one by one.
+function R:SoundTest(arg)
+  arg = tostring(arg or ""):lower()
+  local list = {}
+  for fam in pairs(self.FAMILY_SOUNDS) do
+    if arg == "" or fam:lower() == arg then list[#list + 1] = fam end
+  end
+  table.sort(list)
+  if #list == 0 then PSS:Print("raresound: unknown family " .. arg) return end
+  for i, fam in ipairs(list) do
+    C_Timer.After((i - 1) * 2.5, function()
+      PSS:Print("raresound: " .. fam .. " -> " .. tostring(R:PlayFamily(fam) or "NOT PLAYED"))
+    end)
+  end
 end
 
 -- unit (optional): the unit token the rare was seen on, used for the portrait.
@@ -333,7 +376,7 @@ function R:AlertName(name, unit)
     local message=PSS:L('rareWarning')..entry.name
     pcall(RaidNotice_AddMessage,RaidWarningFrame,PSS:Safe(message),ChatTypeInfo and ChatTypeInfo.RAID_WARNING)
   end
-  if not PetSkillScoutDB or PetSkillScoutDB.rareSound ~= false then R:Howl() end
+  if not PetSkillScoutDB or PetSkillScoutDB.rareSound ~= false then R:PlayFamily(entry.family) end
   if PSS.RareAlert and (not PetSkillScoutDB or PetSkillScoutDB.rareAlertPopup ~= false) then
     PSS.RareAlert:Show(entry, unit)
   end

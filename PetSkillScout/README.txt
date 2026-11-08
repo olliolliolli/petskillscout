@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.49
+- Rare alert sound follows the beast family: wolves howl, cats roar, bears, boars, spiders, birds
+  and the others use their own creature voice from the game files. /pss raresound plays them all
+  (or /pss raresound cat for one).
+
 3.7.48
 - Hunter network feed shows only news: rares (seen, tamed, killed, queues) and quests or ammo
   vendors our data does not have yet - each once. Hellos and already known quests/vendors are

@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.48"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.49"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -331,6 +331,10 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
     end
     if msg == "holidays" then
         if PSS.Holidays then PSS.Holidays:Print() end
+        return
+    end
+    if msg:sub(1, 9) == "raresound" then
+        if PSS.RarePets then PSS.RarePets:SoundTest((msg:sub(10):gsub("^%s+", ""))) end
         return
     end
     if msg == "feedcheck" then

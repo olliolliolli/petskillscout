@@ -108,4 +108,11 @@ do
   check("got worse", F(1, 2) == true)
   check("no repeat", F(1, 1) == false and F(3, nil) == false and F(nil, nil) == false)
 end
+-- Rare alert sound by family.
+local R, played = PSS.RarePets, nil
+PlaySoundFile = function(id) played = id; return true end
+R:PlayFamily("Cat")
+check("cat roars", played == R.FAMILY_SOUNDS.Cat[1])
+R:PlayFamily("Wolf")
+check("wolf howls", played == 564211)
 print(string.format("passed %d, failed %d", passes, fails))
