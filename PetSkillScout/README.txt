@@ -206,6 +206,12 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.48
+- Hunter network feed shows only news: rares (seen, tamed, killed, queues) and quests or ammo
+  vendors our data does not have yet - each once. Hellos and already known quests/vendors are
+  no longer listed (they are still received and counted).
+- Gamepad: the hint strip sits under the window instead of over its footer.
+
 3.7.47
 - Data update 2026-11-08: quest database from AllTheThings commit 1528abd (1 quest gets its giver:
   Locating the Lost City, Horde, Badlands); pet teachers unchanged (48 beasts, 196 positions);

@@ -37,13 +37,16 @@ local function RareName(npc, id)
 end
 
 local joined = {}
+F.seenNews = {}
 -- Every message that passed the checks in Sync:Receive.
 function F:OnMessage(parts, who)
   local kind = parts[1]
   local st = self:Stats()
   if kind ~= "P" then st.recv = (st.recv or 0) + 1 end
+  -- The feed shows only news: rares, and quests / vendors our data did not
+  -- have yet (this runs before Sync stores the record). Hellos are not shown.
   if kind == "H" then
-    if not joined[who] then joined[who] = true; self:Add("join", who, parts[2]) end
+    joined[who] = true
   elseif kind == "S" then
     local name, zone = RareName(parts[2], parts[3])
     if name then self:Add("rare", who, name, zone) end
@@ -51,9 +54,21 @@ function F:OnMessage(parts, who)
     local name = RareName(parts[2], parts[3])
     if name then self:Add(parts[5] == "tame" and "tame" or "kill", who, name) end
   elseif kind == "V" then
-    self:Add("vendor", who, parts[7])
+    local npc = tonumber(parts[2])
+    local known = npc and PSS.Ammo and PSS.Ammo.Vendors and PSS.Ammo:Vendors()[npc]
+    if npc and not known and not self.seenNews["v" .. npc] then
+      self.seenNews["v" .. npc] = true
+      self:Add("vendor", who, parts[7])
+    end
   elseif kind == "O" then
-    self:Add("quest", who, parts[9], parts[3] ~= "" and parts[3] or nil)
+    local id = tonumber(parts[2])
+    local r = id and PSS.QuestDB and PSS.QuestDB[id]
+    local learned = id and PSS.QuestLearn and PSS.QuestLearn.Records and PetSkillScoutDB and PetSkillScoutDB.questObs
+      and PSS.QuestLearn:Records()[id]
+    if id and not (r and r.m and r.x) and not learned and not self.seenNews["q" .. id] then
+      self.seenNews["q" .. id] = true
+      self:Add("quest", who, parts[9], parts[3] ~= "" and parts[3] or nil)
+    end
   elseif kind == "Q" and (parts[3] == "j") then
     local name = RareName(nil, parts[2])
     if name then self:Add("queue", who, name) end

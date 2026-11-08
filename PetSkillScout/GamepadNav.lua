@@ -143,8 +143,9 @@ local function Hint()
   if hint then return hint end
   hint = CreateFrame("Frame", nil, fr)
   hint:SetHeight(20)
-  hint:SetPoint("BOTTOMLEFT", fr, "BOTTOMLEFT", 8, 4)
-  hint:SetPoint("BOTTOMRIGHT", fr, "BOTTOMRIGHT", -8, 4)
+  -- Under the window, so it never covers the window's own footer text.
+  hint:SetPoint("TOPLEFT", fr, "BOTTOMLEFT", 0, -2)
+  hint:SetPoint("TOPRIGHT", fr, "BOTTOMRIGHT", 0, -2)
   hint:SetFrameLevel(fr:GetFrameLevel() + 50)
   local bg = hint:CreateTexture(nil, "BACKGROUND")
   bg:SetTexture("Interface/Buttons/WHITE8X8")

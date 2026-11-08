@@ -99,10 +99,16 @@ local rare = PSS.RarePets.entries and PSS.RarePets.entries[1]
 if not rare then PSS.RarePets:Build(); rare = PSS.RarePets.entries[1] end
 PSS.Sync:Receive("S~" .. tostring(rare.npcID or 0) .. "~" .. tostring(rare.id) .. "~1429~40~50", "CHANNEL", "Mira-Realm")
 PSS.Sync:Receive("O~990010~88~1438~10~10~A~~Lost Necklace", "CHANNEL", "Mira-Realm")
-ok(#F.events == 3, "feed got join, rare and quest: " .. #F.events)
+ok(#F.events == 2, "feed got rare and new quest, no hello: " .. #F.events)
 ok(F.events[1].kind == "quest" and F.events[1].a == "Lost Necklace", "newest first")
-ok(#F:List("quest", true) == 1 and #F:List("rare", true) == 1 and #F:List("hunter", true) == 1, "filters")
-ok((F:Stats().recv or 0) - recv0 == 3, "received counter")
+ok(#F:List("quest", true) == 1 and #F:List("rare", true) == 1, "filters")
+-- Known quest (in the database with its giver) and repeats are not news.
+local knownID
+for id, r in pairs(PSS.QuestDB) do if r.m and r.x then knownID = id break end end
+PSS.Sync:Receive("O~" .. knownID .. "~88~1438~10~10~A~~Known", "CHANNEL", "Mira-Realm")
+PSS.Sync:Receive("O~990010~88~1438~10~10~A~~Lost Necklace", "CHANNEL", "Ann-Realm")
+ok(#F.events == 2, "known quest and repeat not shown: " .. #F.events)
+ok((F:Stats().recv or 0) - recv0 == 5, "received counter")
 local online = F:Online()
 local seenMira = false
 for _, h in ipairs(online) do if h.name == "Mira" and h.v == "2.7.1" then seenMira = true end end
