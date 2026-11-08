@@ -1642,13 +1642,23 @@ function LY:ArrangeButtonBar()
   for i, b in ipairs(list) do
     local col, row = math.floor((i - 1) / perCol), (i - 1) % perCol
     if b:GetParent() ~= bar then pcall(b.SetParent, b, bar) end
-    pcall(b.ClearAllPoints, b)
-    pcall(b.SetPoint, b, "TOPRIGHT", bar, "TOPRIGHT", -col * (BAR_BTN + BAR_GAP), -row * (BAR_BTN + BAR_GAP))
     pcall(SkinBarButton, b)
     -- Same size for all: square, from the button's own size.
     local bw, bh = Plain(b:GetWidth()) or BAR_BTN, Plain(b:GetHeight()) or BAR_BTN
     if bw ~= bh then pcall(b.SetHeight, b, bw) end
-    pcall(b.SetScale, b, BAR_BTN / math.max(20, bw))
+    local sc = BAR_BTN / math.max(20, bw)
+    pcall(b.SetScale, b, sc)
+    -- Offsets of a scaled frame are in its own scale: divide, so the buttons
+    -- sit edge to edge with the bar and leave no empty space.
+    pcall(b.ClearAllPoints, b)
+    pcall(b.SetPoint, b, "TOPRIGHT", bar, "TOPRIGHT", -col * (BAR_BTN + BAR_GAP) / sc, -row * (BAR_BTN + BAR_GAP) / sc)
+    if not b.pssBarHooked and b.HookScript then
+      -- A button shown or hidden later (an addon added, an icon toggled): re-pack.
+      b.pssBarHooked = true
+      local function again() if C_Timer then C_Timer.After(0.1, function() pcall(LY.ArrangeButtonBar, LY) end) end end
+      pcall(PSS.HookScript, b, "OnShow", again)
+      pcall(PSS.HookScript, b, "OnHide", again)
+    end
     barButtons[b] = true
   end
   if not self:Saved("buttons") then bar:ClearAllPoints() end
@@ -1804,7 +1814,7 @@ local function BuildMinimap()
   mmHolder:SetScript("OnUpdate", function(_, e)
     pcall(PlaceEye)
     tick = tick + (e or 0)
-    if tick < 10 then return end
+    if tick < 4 then return end -- new addon buttons join the bar within seconds
     tick = 0
     pcall(LY.SquareMinimapButtons, LY)
   end)
