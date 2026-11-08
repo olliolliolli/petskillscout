@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.61"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.62"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -223,6 +223,11 @@ function PSS:InitializeDB()
         if PetSkillScoutDB.syncNotify == "wanted" then PetSkillScoutDB.syncNotify = nil end
     end
     -- 3.7.52: blocked log restarts with per-path counts (once).
+    -- 3.7.62: cause found (PetGuard range check in combat); log restarts to confirm.
+    if not PetSkillScoutDB.blockedLogV3 then
+        PetSkillScoutDB.blockedLogV3 = true
+        PetSkillScoutDB.blockedLog = nil
+    end
     if not PetSkillScoutDB.blockedLogV2 then
         PetSkillScoutDB.blockedLogV2 = true
         PetSkillScoutDB.blockedLog = nil

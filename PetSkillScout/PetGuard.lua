@@ -90,6 +90,13 @@ local function PetFar()
   -- to you: the 28 yd interact check must agree, and without both no alert.
   local ok2, inRange, checked = pcall(UnitInRange, "pet")
   inRange, checked = ok2 and Plain(inRange), ok2 and Plain(checked)
+  -- CheckInteractDistance is blocked in combat on this client (it was blocked
+  -- thousands of times per dungeon): in combat only the party range check,
+  -- and the hold time (G.FAR_HOLD) filters a short wrong "out of range".
+  if InCombatLockdown and InCombatLockdown() then
+    if not checked then return nil end
+    return inRange == false
+  end
   local ok3, near = pcall(CheckInteractDistance, "pet", 4)
   if ok3 then near = Plain(near) else near = nil end -- failed check: unknown, not far
   return G.BothFar(inRange, checked, near)

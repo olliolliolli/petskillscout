@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.62
+- Fixed: the "pet fighting far away" check in dungeons used a range check the game blocks in
+  combat (thousands of blocked-action messages). In combat only the party range check is used.
+- Data update 2026-11-08: AllTheThings 35d1d56 (+174 quests), learned data +1 quest.
+- Minimap: pins redraw at once indoors/outdoors; addon button bar is flat, square and packed.
+- Gear tab redraws right after you equip an item; quest pages lose the parchment under the theme.
+
 3.7.56
 - Data update 2026-11-08: AllTheThings d6c8eb5 (one hidden quest trigger), pet teachers, gear and
   learned data unchanged.

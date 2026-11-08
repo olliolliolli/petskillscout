@@ -33,6 +33,7 @@ quests = {
   [8374] = {n = "Claiming Arathi Basin", g = 15351, gn = nil, f = "A", m = 1453, x = 81.1, y = 38.4, i = {}},
   [87760] = {n = "Buceador sagrado", g = 10219, gn = nil, f = "A", m = 1439, x = 36.6, y = 45.5, i = {5996, 6372}},
   [918] = {n = "Timberling Seeds", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {4604}},
+  [92819] = {n = "Destrucción en las Minas de la Muerte", g = 253279, gn = nil, f = "A", m = 1436, x = 38.7, y = 83.7, i = {}},
   [947] = {n = "Cave Mushrooms", g = 3583, gn = "Barithras Moonshade", f = "A", m = 1439, x = 37.4, y = 43.6, i = {5610, 4605}},
   [96395] = {n = "An Ancient Grudge", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {279899, 279900}},
   [97222] = {n = "Gatehouse Goods", g = 483, gn = nil, f = "A", m = 1453, x = 66.5, y = 73.6, i = {414}},
