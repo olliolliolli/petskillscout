@@ -555,19 +555,20 @@ local function UpdateMinimap()
     cached.fresh = true
   end
   local zoom = (Minimap:GetZoom() or 0) + 1
+  -- The view radius changes between indoors and outdoors at the same zoom
+  -- step: part of the "nothing changed" check, else pins keep the old scale.
+  local radius = Minimap.GetViewRadius and tonumber(safe(Minimap.GetViewRadius, Minimap))
+  if not (radius and radius > 0) then radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2 end
   local facingNow = GetPlayerFacing and GetPlayerFacing() or 0
   local rotNow = GetCVar and GetCVar("rotateMinimap") == "1"
   -- Standing still with the same zoom: the icons are already right.
   local st = cached.state
   if st and not cached.fresh and st.px == px and st.py == py and st.zoom == zoom and st.mapID == mapID
-     and (not rotNow or st.facing == facingNow) and st.n == #cached.list
+     and (not rotNow or st.facing == facingNow) and st.n == #cached.list and st.radius == radius
      and st.focus == (PSS.RareMap and PSS.RareMap.focus) then return end
-  cached.state = {px = px, py = py, zoom = zoom, mapID = mapID, facing = facingNow, n = #cached.list,
+  cached.state = {px = px, py = py, zoom = zoom, mapID = mapID, facing = facingNow, n = #cached.list, radius = radius,
     focus = PSS.RareMap and PSS.RareMap.focus}
   cached.fresh = false
-  -- The client knows the exact view radius (yards); the zoom table is the fallback.
-  local radius = Minimap.GetViewRadius and tonumber(safe(Minimap.GetViewRadius, Minimap))
-  if not (radius and radius > 0) then radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2 end
   local scale = (Minimap:GetWidth() / 2) / radius
   local facing = GetPlayerFacing and GetPlayerFacing() or 0
   local rotate = GetCVar and GetCVar("rotateMinimap") == "1"
@@ -664,8 +665,9 @@ driver:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 driver:RegisterEvent("ZONE_CHANGED_INDOORS")
 pcall(driver.RegisterEvent, driver, "MINIMAP_UPDATE_ZOOM")
 driver:SetScript("OnEvent", function(_, event)
-  -- A zoom change only moves the pins; the next pass sees it.
-  if event == "MINIMAP_UPDATE_ZOOM" then return end
+  -- A zoom change (also when you go in or out of a building) needs a full
+  -- pass right away: the quick shift between passes uses the old scale.
+  if event == "MINIMAP_UPDATE_ZOOM" then pcall(DetectIndoors); mmElapsed = MM.SLOW; cached.state = nil; return end
   pcall(DetectIndoors)
   mmDirty = true
 end)
