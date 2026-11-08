@@ -1542,7 +1542,7 @@ end
 -- our own). Map pins and the Blizzard tracking / mail buttons are not
 -- touched. More buttons than fit the minimap height wrap into a second
 -- column. Off (Settings > Interface): buttons follow the square edge.
-local BAR_BTN, BAR_GAP = 28, 3
+local BAR_BTN, BAR_GAP = 26, 4
 local barButtons = {}
 LY.barButtons = barButtons
 
@@ -1557,6 +1557,59 @@ local function IsAddonButton(c, lib)
   if name:find("^LibDBIcon") then return true end
   return name:find("[Mm]inimap") ~= nil and (name:find("[Bb]utton") ~= nil or name:find("Icon") ~= nil)
     and not name:find("^MiniMap") and not name:find("^Minimap")
+end
+
+-- One look for every addon button in the bar: round frames and dark discs
+-- hidden (by name, or as art larger than the button itself), the icon fills
+-- a flat square with a thin edge. Done once per button.
+local barSkinned = setmetatable({}, {__mode = "k"})
+local BAR_ART = {"border", "background", "ring", "backdrop", "trackingborder"}
+local function TexName(r)
+  local okA, atlas = pcall(r.GetAtlas, r)
+  local okP, path = pcall(r.GetTextureFilePath or r.GetTexture, r)
+  return ((okA and type(atlas) == "string" and atlas or "") .. " " .. (okP and type(path) == "string" and path or "")):lower()
+end
+local function SkinBarButton(b)
+  if barSkinned[b] or not b.GetRegions then return end
+  barSkinned[b] = true
+  local bw = Plain(Call(b.GetWidth, b)) or 31
+  local icon, area
+  for _, r in ipairs({b:GetRegions()}) do
+    local okT, kind = pcall(r.GetObjectType, r)
+    if okT and kind == "Texture" then
+      local okL, layer = pcall(r.GetDrawLayer, r)
+      local name = TexName(r)
+      local w, h = Plain(Call(r.GetWidth, r)) or 0, Plain(Call(r.GetHeight, r)) or 0
+      local art = w > bw * 1.3
+      for _, k in ipairs(BAR_ART) do if name:find(k, 1, true) then art = true end end
+      if layer ~= "HIGHLIGHT" then
+        if art then
+          pcall(r.SetAlpha, r, 0)
+          pcall(PSS.HookSecure, r, "SetAlpha", function(t, a) if a ~= 0 then t:SetAlpha(0) end end)
+        elseif w * h > (area or 0) then
+          icon, area = r, w * h
+        end
+      end
+    end
+  end
+  if icon then
+    pcall(icon.ClearAllPoints, icon)
+    pcall(icon.SetPoint, icon, "TOPLEFT", b, "TOPLEFT", 3, -3)
+    pcall(icon.SetPoint, icon, "BOTTOMRIGHT", b, "BOTTOMRIGHT", -3, 3)
+    pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+  end
+  local edge = b:CreateTexture(nil, "BACKGROUND", nil, -8)
+  edge:SetTexture("Interface/Buttons/WHITE8X8"); edge:SetAllPoints(b)
+  edge:SetVertexColor(0.55, 0.47, 0.3, 0.9)
+  local bg = b:CreateTexture(nil, "BACKGROUND", nil, -7)
+  bg:SetTexture("Interface/Buttons/WHITE8X8")
+  bg:SetPoint("TOPLEFT", b, "TOPLEFT", 1, -1); bg:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+  bg:SetVertexColor(0.06, 0.07, 0.06, 1)
+  local hl = b.GetHighlightTexture and b:GetHighlightTexture()
+  if hl then
+    pcall(hl.ClearAllPoints, hl); pcall(hl.SetAllPoints, hl, b)
+    pcall(hl.SetTexture, hl, "Interface/Buttons/WHITE8X8"); pcall(hl.SetVertexColor, hl, 1, 1, 1, 0.15)
+  end
 end
 
 function LY:ButtonBar()
@@ -1591,7 +1644,11 @@ function LY:ArrangeButtonBar()
     if b:GetParent() ~= bar then pcall(b.SetParent, b, bar) end
     pcall(b.ClearAllPoints, b)
     pcall(b.SetPoint, b, "TOPRIGHT", bar, "TOPRIGHT", -col * (BAR_BTN + BAR_GAP), -row * (BAR_BTN + BAR_GAP))
-    pcall(b.SetScale, b, BAR_BTN / math.max(20, Plain(b:GetWidth()) or BAR_BTN))
+    pcall(SkinBarButton, b)
+    -- Same size for all: square, from the button's own size.
+    local bw, bh = Plain(b:GetWidth()) or BAR_BTN, Plain(b:GetHeight()) or BAR_BTN
+    if bw ~= bh then pcall(b.SetHeight, b, bw) end
+    pcall(b.SetScale, b, BAR_BTN / math.max(20, bw))
     barButtons[b] = true
   end
   if not self:Saved("buttons") then bar:ClearAllPoints() end
