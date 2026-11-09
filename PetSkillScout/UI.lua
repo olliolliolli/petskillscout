@@ -1553,6 +1553,9 @@ function UI:BuildRares()
       tile.meta:SetPoint("TOPLEFT", tile, "TOPLEFT", 10, -150)
       tile.badge = Badge(tile)
       tile.badge:SetPoint("TOPLEFT", tile, "TOPLEFT", 10, -170)
+      tile.speed = Label(tile, "", 11, C.muted, 110, "RIGHT", true)
+      tile.speed:SetPoint("RIGHT", tile, "RIGHT", -10, 0)
+      tile.speed:SetPoint("TOP", tile.badge, "TOP", 0, -3)
       tile.extra = Badge(tile)
       tile.extra:SetPoint("LEFT", tile.badge, "RIGHT", 6, 0)
       tile.seen = Label(tile, "", 10, C.muted, TILE_W - 20, "LEFT", true)
@@ -1691,11 +1694,10 @@ function UI:UpdateRares(rebuild)
       else
         meta = meta .. "  ·  " .. (e.zone or "?")
       end
-      -- Attack speed on the family line (the level label is narrow); faster than 2.0 s in green.
-      if spd then
-        meta = meta .. "  ·  " .. (spd < 2 and "|cff8fe0a0" or "") .. string.format(L("rareAtk"), spd) .. (spd < 2 and "|r" or "")
-      end
       tile.meta:SetText(meta)
+      -- Attack speed on the right of the badge row; faster than 2.0 s in green.
+      tile.speed:SetText(spd and string.format(L("rareAtk"), spd) or "")
+      if spd and spd < 2 then tile.speed:SetTextColor(0.56, 0.88, 0.63) else tile.speed:SetTextColor(C.muted[1], C.muted[2], C.muted[3]) end
       local kind, text = "none", L("badgeNotTamed")
       if tamed then kind, text = "tamed", L("rareTamed")
       elseif want then kind, text = "want", L("badgeWanted") end
