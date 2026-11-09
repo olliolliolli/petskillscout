@@ -468,6 +468,20 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if PSS.UI and PSS.UI.ShowPassport then PSS.UI:Create(); PSS.UI:ShowPassport() end
     elseif msg == "share" then
         if PSS.PetLink then PSS.PetLink:Share() end
+    elseif msg == "under" then
+        -- Frames under the mouse (hover the problem spot, type it in chat).
+        local list = GetMouseFoci and {GetMouseFoci()} or {GetMouseFocus and GetMouseFocus()}
+        local f = list[1]
+        local n = 0
+        while f and n < 6 do
+            local nm = f.GetName and f:GetName() or "?"
+            PSS:Print(string.format("%d. %s  strata %s level %s mouse %s", n + 1, tostring(nm),
+                tostring(f.GetFrameStrata and f:GetFrameStrata()), tostring(f.GetFrameLevel and f:GetFrameLevel()),
+                tostring(f.IsMouseEnabled and f:IsMouseEnabled())))
+            f = f.GetParent and f:GetParent()
+            n = n + 1
+        end
+        if n == 0 then PSS:Print("nothing under the mouse") end
     elseif msg == "bars" then
         if PSS.Layout and PSS.Layout.SideDiag then PSS.Layout.SideDiag() end
     elseif msg == "cpu" then

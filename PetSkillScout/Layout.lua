@@ -609,7 +609,7 @@ function LY:LayoutBars()
     return true
   end
   LY.SideDiag = function()
-    for _, n in ipairs({"ActionButton1", "MultiBarLeftButton1", "MultiBarRightButton1"}) do
+    for _, n in ipairs({"ActionButton1", "MultiBarBottomRightButton12", "MultiBarLeftButton1", "MultiBarRightButton1"}) do
       local b = G(n)
       if not b then PSS:Print(n .. ": missing") else
         local p = b:GetParent()
