@@ -470,7 +470,10 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if PSS.PetLink then PSS.PetLink:Share() end
     elseif msg == "under" then
         -- Frames under the mouse (hover the problem spot, type it in chat).
-        local list = GetMouseFoci and {GetMouseFoci()} or {GetMouseFocus and GetMouseFocus()}
+        -- GetMouseFoci returns one table of frames on this client.
+        local list = GetMouseFoci and GetMouseFoci() or {GetMouseFocus and GetMouseFocus()}
+        if type(list) ~= "table" then list = {list} end
+        if type(list[1]) == "table" and not list[1].GetName and type(list[1][1]) == "table" then list = list[1] end
         local f = list[1]
         local n = 0
         while f and n < 6 do
