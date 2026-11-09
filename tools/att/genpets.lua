@@ -6,10 +6,12 @@
 --   already in the addon. Points are only added: older ones came from ATT
 --   sources that no longer exist in this form.
 local BASE, OUT, COMMIT = arg[1], arg[2], arg[3]
-local found = {}
+local found, side = {}, {}
 __visit = function(node)
   local id = rawget(node, "npcID") or rawget(node, "creatureID")
   if type(id) ~= "number" then return end
+  local r = rawget(node, "races")
+  if r ~= nil and r == rawget(_G, "ALLIANCE_ONLY") then side[id] = "A" elseif r ~= nil and r == rawget(_G, "HORDE_ONLY") then side[id] = "H" end
   local list = {}
   local c = rawget(node, "coord")
   if type(c) == "table" then list[1] = c end
@@ -94,6 +96,26 @@ for id in pairs(want) do
   end
 end
 
+-- Hunter and pet trainers: "n(id, { -- Name <Hunter Trainer>" in the zone
+-- files (the name is only in the comment), positions from the same entries.
+local trainers, tseen = {}, {}
+for _, file in ipairs(__files(BASE .. "/forever")) do
+  if not file:find("/.config/", 1, true) and not file:find("Missing DB", 1, true) then
+    for line in (read(file) .. "\n"):gmatch("(.-)\r?\n") do
+      local id, name, role = line:match("n%((%d+),.-%-%-%s*(.-)%s*<([^>]*Trainer)>")
+      id = tonumber(id)
+      local kind = role == "Hunter Trainer" and "hunter" or role == "Pet Trainer" and "pet" or nil
+      if id and kind and not tseen[id] and found[id] and found[id][1] then
+        tseen[id] = true
+        local p = found[id][1]
+        trainers[#trainers + 1] = string.format('{npc=%d,name="%s",kind="%s",mapID=%d,x=%g,y=%g%s},',
+          id, esc(name), kind, p[3], p[1], p[2], side[id] and (',f="' .. side[id] .. '"') or "")
+      end
+    end
+  end
+end
+table.sort(trainers)
+
 local ids = {}
 for id in pairs(pos) do ids[#ids + 1] = id end
 table.sort(ids)
@@ -111,5 +133,8 @@ for _, id in ipairs(ids) do
   f:write(string.format("[%d]={mapID=%d,points={%s}},\n", id, pos[id].map, table.concat(p, ",")))
 end
 f:write("}\n")
+f:write("-- Hunter and pet trainers (ATT zone entries): f = faction when only one may use them.\n")
+f:write("PSS.TrainersATT = {\n" .. table.concat(trainers, "\n") .. "\n}\n")
 f:close()
+io.stderr:write(string.format("trainers %d\n", #trainers))
 io.stderr:write(string.format("teachers %d, added beasts %d, positions %d, new points %d\n", #teachers, #add, #ids, gained))

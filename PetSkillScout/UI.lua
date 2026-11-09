@@ -1806,8 +1806,15 @@ function UI:BuildRoute()
     UI:UpdateRoute()
   end, {icon="Interface\\Minimap\\MinimapArrow", iconSize=18, iconLeft=true, size=12})
   self.rtGo:SetPoint("RIGHT", self.rtClear, "LEFT", -8, 0)
-  self.rtSummary = Label(p, "", 12, C.muted, BODY_W, "LEFT", true)
+  self.rtSummary = Label(p, "", 12, C.muted, BODY_W - 400, "LEFT", true)
   self.rtSummary:SetPoint("TOPLEFT", p, "TOPLEFT", 2, -46)
+  -- Nearest hunter / pet trainer: map and arrow.
+  self.rtPetTr = MakeButton(p, "", 190, 24, function() PSS.Trainers:Show("pet") end,
+    {icon="Interface\\Minimap\\MinimapArrow", iconSize=14, iconLeft=true, size=11})
+  self.rtPetTr:SetPoint("TOPRIGHT", p, "TOPRIGHT", 0, -40)
+  self.rtHuntTr = MakeButton(p, "", 190, 24, function() PSS.Trainers:Show("hunter") end,
+    {icon="Interface\\Minimap\\MinimapArrow", iconSize=14, iconLeft=true, size=11})
+  self.rtHuntTr:SetPoint("RIGHT", self.rtPetTr, "LEFT", -8, 0)
 
   self.rtScroll = CreateFrame("ScrollFrame", "PetSkillScoutRouteScroll", p, "FauxScrollFrameTemplate")
   self.rtScroll:SetPoint("TOPLEFT", p, "TOPLEFT", 0, -72)
@@ -1888,6 +1895,8 @@ function UI:UpdateRoute(scrollOnly)
   self.rtFill:SetText(L("routeFill"))
   self.rtClear:SetText(L("routeClear"))
   self.rtGo:SetText(L("routeGo"))
+  self.rtHuntTr:SetText(L("trHunter"))
+  self.rtPetTr:SetText(L("trPet"))
   self.rtSkillDD:Sync()
   self.rtRankDD:Sync()
   -- Summary: stops left, zones, the next stop.

@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.68
+- Route tab: "Hunter trainer" and "Pet trainer" buttons open the map with an arrow to the
+  nearest one. Hunter trainers come from AllTheThings; every trainer you talk to is remembered
+  (the only source for pet trainers so far).
+- Action bars 4 and 5 as 4x3 squares beside the main bars; all bar buttons on one layer
+  (one cell of bar 3 could not take spells). /pss bars and /pss under for diagnostics.
+
 3.7.64
 - Quest marks of the addon (map, minimap, objectives) are off by default now: turn on
   "Quest pins" in the options. Quest ratings in NPC dialogue stay on.

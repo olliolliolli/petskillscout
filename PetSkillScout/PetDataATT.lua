@@ -254,3 +254,7 @@ PSS.BeastPositionsATT = {
 [276189]={mapID=1429,points={{52.4,79.8},{59.8,80.2},{65.6,76.4}}},
 [276198]={mapID=1411,points={{69,71.6},{60.6,89.6},{63.6,95.6}}},
 }
+-- Hunter and pet trainers (ATT zone entries): f = faction when only one may use them.
+PSS.TrainersATT = {
+
+}

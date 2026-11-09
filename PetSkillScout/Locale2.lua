@@ -3,7 +3,7 @@
 local PSS = PetSkillScout
 local NEW = {
   en = {
-    tabRoute="Route", routeAdd="Add", routeFill="Fill from my pet", routeClear="Clear", routeGo="Start route",
+    tabRoute="Route", routeAdd="Add", routeFill="Fill from my pet", routeClear="Clear", routeGo="Start route", trHunter="Hunter trainer", trPet="Pet trainer", trNone="%s: none known yet. Talk to one once and the addon remembers it.", trAt="%s: %s (%s), %s",
     routeSummary="%d stops left in %d zones", routeSummaryEmpty="Pick a skill and rank, then Add.",
     routeNextIs="next: %s (%s)", routeFinished="Route finished!",
     routeEmpty="The route is empty. Pick a skill and rank above and press Add, or press \"Fill from my pet\" to add the best ranks your pet's family can learn at your level.",
@@ -32,7 +32,7 @@ local NEW = {
     timerShortWait="respawn in ~%s", timerShortOpen="may be up (killed %s ago)", timerShortLate="should be up (killed %s ago)", timerShortUnknown="killed %s ago, respawn ?", timerShortInfo="respawns after ~%s",
   },
   uk = {
-    tabRoute="Маршрут", routeAdd="Додати", routeFill="Заповнити з пета", routeClear="Очистити", routeGo="Почати маршрут",
+    tabRoute="Маршрут", routeAdd="Додати", routeFill="Заповнити з пета", routeClear="Очистити", routeGo="Почати маршрут", trHunter="Тренер мисливців", trPet="Тренер петів", trNone="%s: поки жодного не відомо. Поговори з ним один раз, і аддон запам'ятає.", trAt="%s: %s (%s), %s",
     routeSummary="Залишилось точок: %d, зон: %d", routeSummaryEmpty="Вибери навичку й ранг, потім «Додати».",
     routeNextIs="далі: %s (%s)", routeFinished="Маршрут пройдено!",
     routeEmpty="Маршрут порожній. Вибери навичку й ранг угорі та натисни «Додати» або «Заповнити з пета» — додадуться найкращі ранги, які сімейство твого пета може вивчити на твоєму рівні.",
@@ -61,7 +61,7 @@ local NEW = {
     timerShortWait="респавн через ~%s", timerShortOpen="може вже бути (убитий %s тому)", timerShortLate="мав би бути (убитий %s тому)", timerShortUnknown="убитий %s тому, респавн ?", timerShortInfo="респавн через ~%s",
   },
   pl = {
-    tabRoute="Trasa", routeAdd="Dodaj", routeFill="Wypelnij z pupila", routeClear="Wyczysc", routeGo="Rozpocznij trase",
+    tabRoute="Trasa", routeAdd="Dodaj", routeFill="Wypelnij z pupila", routeClear="Wyczysc", routeGo="Rozpocznij trase", trHunter="Trener łowców", trPet="Trener zwierząt", trNone="%s: na razie żadnego nie znamy. Porozmawiaj z nim raz, a dodatek go zapamięta.", trAt="%s: %s (%s), %s",
     routeSummary="Pozostalo punktow: %d, stref: %d", routeSummaryEmpty="Wybierz umiejetnosc i range, potem Dodaj.",
     routeNextIs="dalej: %s (%s)", routeFinished="Trasa ukonczona!",
     routeEmpty="Trasa jest pusta. Wybierz umiejetnosc i range u gory i kliknij Dodaj albo \"Wypelnij z pupila\", aby dodac najlepsze rangi dostepne dla rodziny pupila na twoim poziomie.",
@@ -90,7 +90,7 @@ local NEW = {
     timerShortWait="odrodzenie za ~%s", timerShortOpen="moze juz byc (zabity %s temu)", timerShortLate="powinien byc (zabity %s temu)", timerShortUnknown="zabity %s temu, odrodzenie ?", timerShortInfo="odradza sie po ~%s",
   },
   de = {
-    tabRoute="Route", routeAdd="Hinzufügen", routeFill="Aus meinem Tier", routeClear="Leeren", routeGo="Route starten",
+    tabRoute="Route", routeAdd="Hinzufügen", routeFill="Aus meinem Tier", routeClear="Leeren", routeGo="Route starten", trHunter="Jägerlehrer", trPet="Tierausbilder", trNone="%s: noch keiner bekannt. Sprich einmal mit einem, dann merkt sich das Addon ihn.", trAt="%s: %s (%s), %s",
     routeSummary="Noch %d Stationen in %d Zonen", routeSummaryEmpty="Fähigkeit und Rang wählen, dann Hinzufügen.",
     routeNextIs="als Nächstes: %s (%s)", routeFinished="Route abgeschlossen!",
     routeEmpty="Die Route ist leer. Wähle oben Fähigkeit und Rang und klicke Hinzufügen, oder \"Aus meinem Tier\" für die besten Ränge, die die Familie deines Tieres auf deiner Stufe lernen kann.",
@@ -119,7 +119,7 @@ local NEW = {
     timerShortWait="Respawn in ~%s", timerShortOpen="evtl. da (vor %s getötet)", timerShortLate="sollte da sein (vor %s getötet)", timerShortUnknown="vor %s getötet, Respawn ?", timerShortInfo="Respawn nach ~%s",
   },
   fr = {
-    tabRoute="Itinéraire", routeAdd="Ajouter", routeFill="Depuis mon familier", routeClear="Vider", routeGo="Lancer l'itinéraire",
+    tabRoute="Itinéraire", routeAdd="Ajouter", routeFill="Depuis mon familier", routeClear="Vider", routeGo="Lancer l'itinéraire", trHunter="Maître des chasseurs", trPet="Dresseur de familiers", trNone="%s : aucun connu pour l'instant. Parlez-lui une fois et l'addon s'en souviendra.", trAt="%s: %s (%s), %s",
     routeSummary="%d étapes restantes dans %d zones", routeSummaryEmpty="Choisissez une technique et un rang, puis Ajouter.",
     routeNextIs="suivante : %s (%s)", routeFinished="Itinéraire terminé !",
     routeEmpty="L'itinéraire est vide. Choisissez une technique et un rang en haut puis Ajouter, ou « Depuis mon familier » pour ajouter les meilleurs rangs que sa famille peut apprendre à votre niveau.",
@@ -148,7 +148,7 @@ local NEW = {
     timerShortWait="réapparition dans ~%s", timerShortOpen="peut-être là (tué il y a %s)", timerShortLate="devrait être là (tué il y a %s)", timerShortUnknown="tué il y a %s, délai ?", timerShortInfo="réapparaît après ~%s",
   },
   it = {
-    tabRoute="Percorso", routeAdd="Aggiungi", routeFill="Dal mio famiglio", routeClear="Svuota", routeGo="Avvia percorso",
+    tabRoute="Percorso", routeAdd="Aggiungi", routeFill="Dal mio famiglio", routeClear="Svuota", routeGo="Avvia percorso", trHunter="Istruttore dei cacciatori", trPet="Addestratore di famigli", trNone="%s: nessuno noto finora. Parlaci una volta e l'addon lo ricorderà.", trAt="%s: %s (%s), %s",
     routeSummary="%d tappe rimaste in %d zone", routeSummaryEmpty="Scegli abilità e grado, poi Aggiungi.",
     routeNextIs="prossima: %s (%s)", routeFinished="Percorso completato!",
     routeEmpty="Il percorso è vuoto. Scegli abilità e grado in alto e premi Aggiungi, oppure \"Dal mio famiglio\" per aggiungere i gradi migliori che la sua famiglia può imparare al tuo livello.",
@@ -177,7 +177,7 @@ local NEW = {
     timerShortWait="ricompare tra ~%s", timerShortOpen="forse c'è (ucciso %s fa)", timerShortLate="dovrebbe esserci (ucciso %s fa)", timerShortUnknown="ucciso %s fa, ricomparsa ?", timerShortInfo="ricompare dopo ~%s",
   },
   es = {
-    tabRoute="Ruta", routeAdd="Añadir", routeFill="Desde mi mascota", routeClear="Vaciar", routeGo="Iniciar ruta",
+    tabRoute="Ruta", routeAdd="Añadir", routeFill="Desde mi mascota", routeClear="Vaciar", routeGo="Iniciar ruta", trHunter="Instructor de cazadores", trPet="Instructor de mascotas", trNone="%s: aún no se conoce ninguno. Habla con uno una vez y el addon lo recordará.", trAt="%s: %s (%s), %s",
     routeSummary="Quedan %d paradas en %d zonas", routeSummaryEmpty="Elige habilidad y rango, luego Añadir.",
     routeNextIs="siguiente: %s (%s)", routeFinished="¡Ruta completada!",
     routeEmpty="La ruta está vacía. Elige habilidad y rango arriba y pulsa Añadir, o \"Desde mi mascota\" para añadir los mejores rangos que su familia puede aprender a tu nivel.",
