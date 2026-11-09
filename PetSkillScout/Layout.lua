@@ -582,13 +582,43 @@ function LY:LayoutBars()
   -- beside the main block, bar 5 on the left, bar 4 on the right.
   local sideGap = 10
   local sideW = 4 * BTN + 3 * GAP
+  -- Same layer as the main bar buttons (the side bars sit lower by default,
+  -- so a theme frame nearby could catch the mouse and drops failed), and
+  -- empty slots kept visible like on the main bars so spells can be dropped.
+  local ref = G("ActionButton1")
+  local strata = ref and Plain(Call(ref.GetFrameStrata, ref)) or "MEDIUM"
+  local level = ref and Plain(Call(ref.GetFrameLevel, ref)) or 5
   local function Side(prefix, frame, x0)
     if not Shown(frame) then return false end
+    local f = G(frame)
+    if f then pcall(f.SetAlpha, f, 1); pcall(f.SetFrameStrata, f, strata) end
     for i = 1, 12 do
+      local b = G(prefix .. i)
       local col, r = (i - 1) % 4, math.floor((i - 1) / 4)
-      PlaceButton(G(prefix .. i), BTN, barHolder, x0 + col * (BTN + GAP), (2 - r) * (BTN + GAP))
+      PlaceButton(b, BTN, barHolder, x0 + col * (BTN + GAP), (2 - r) * (BTN + GAP))
+      if b then
+        pcall(b.SetFrameStrata, b, strata)
+        pcall(b.SetFrameLevel, b, level + 2)
+        pcall(b.EnableMouse, b, true)
+        local main = ref and Plain(Call(ref.GetAttribute, ref, "showgrid"))
+        local mine = Plain(Call(b.GetAttribute, b, "showgrid"))
+        if type(main) == "number" and (type(mine) ~= "number" or mine < main) then pcall(b.SetAttribute, b, "showgrid", main) end
+        if b.ShowGrid and type(main) == "number" and main > 0 then pcall(b.ShowGrid, b, main) end
+      end
     end
     return true
+  end
+  LY.SideDiag = function()
+    for _, n in ipairs({"ActionButton1", "MultiBarLeftButton1", "MultiBarRightButton1"}) do
+      local b = G(n)
+      if not b then PSS:Print(n .. ": missing") else
+        local p = b:GetParent()
+        PSS:Print(string.format("%s: shown %s visible %s alpha %.2f strata %s level %s mouse %s grid %s action %s parent %s/%s",
+          n, tostring(b:IsShown()), tostring(b:IsVisible()), Plain(b:GetEffectiveAlpha()) or -1, tostring(b:GetFrameStrata()),
+          tostring(b:GetFrameLevel()), tostring(b:IsMouseEnabled()), tostring(Plain(Call(b.GetAttribute, b, "showgrid"))),
+          tostring(Plain(Call(b.GetAttribute, b, "action"))), tostring(p and p:GetName()), tostring(p and p:IsShown())))
+      end
+    end
   end
   self.leftSide = Side("MultiBarLeftButton", "MultiBarLeft", -(sideW + sideGap))
   self.rightSide = Side("MultiBarRightButton", "MultiBarRight", width + sideGap)
