@@ -578,6 +578,24 @@ function LY:LayoutBars()
       row = row + 1
     end
   end
+  -- Bars 4 and 5 (Blizzard's right and left side bars): squares of 4 x 3
+  -- beside the main block, bar 5 on the left, bar 4 on the right.
+  local sideGap = 10
+  local sideW = 4 * BTN + 3 * GAP
+  local function Side(prefix, frame, x0)
+    if not Shown(frame) then return false end
+    for i = 1, 12 do
+      local col, r = (i - 1) % 4, math.floor((i - 1) / 4)
+      PlaceButton(G(prefix .. i), BTN, barHolder, x0 + col * (BTN + GAP), (2 - r) * (BTN + GAP))
+    end
+    return true
+  end
+  self.leftSide = Side("MultiBarLeftButton", "MultiBarLeft", -(sideW + sideGap))
+  self.rightSide = Side("MultiBarRightButton", "MultiBarRight", width + sideGap)
+  if self.pageNote then
+    self.pageNote:ClearAllPoints()
+    self.pageNote:SetPoint("BOTTOMRIGHT", barHolder, "BOTTOMLEFT", self.leftSide and -(sideW + sideGap + 6) or -6, 2)
+  end
   local top = row * (BTN + GAP) + 4
   local small = 30
   -- Stance buttons on the left; the pet bar centred (right aligned when a
@@ -624,7 +642,8 @@ local function BuildBars()
   LY:LayoutBars()
   -- The theme hides the page arrows: a small note shows a page other than 1.
   local note = Text(barHolder, 12, "RIGHT")
-  note:SetPoint("BOTTOMRIGHT", barHolder, "BOTTOMLEFT", -6, 2)
+  note:SetPoint("BOTTOMRIGHT", barHolder, "BOTTOMLEFT", LY.leftSide and -(4 * BTN + 3 * GAP + 16) or -6, 2)
+  LY.pageNote = note
   note:SetTextColor(1, 0.82, 0.2)
   local function pageNote()
     local page = Plain(Call(GetActionBarPage))
@@ -645,9 +664,17 @@ local function BuildBars()
   local function relayout() PSS:Soon("relayout", relayoutNow) end
   -- Modern bars lay their buttons out themselves (edit mode); redo ours after.
   for _, n in ipairs({"MainMenuBar", "MainActionBar", "MultiBarBottomLeft", "MultiBarBottomRight",
-    "PetActionBar", "StanceBar"}) do
+    "MultiBarRight", "MultiBarLeft", "PetActionBar", "StanceBar"}) do
     local f = G(n)
     if f and type(f.UpdateGridLayout) == "function" then PSS.HookSecure(f, "UpdateGridLayout", relayout) end
+  end
+  -- Bars 4 / 5 turned on or off in the options: re-arrange the squares.
+  for _, n in ipairs({"MultiBarRight", "MultiBarLeft"}) do
+    local f = G(n)
+    if f and f.HookScript then
+      pcall(PSS.HookScript, f, "OnShow", relayout)
+      pcall(PSS.HookScript, f, "OnHide", relayout)
+    end
   end
   if EventRegistry and EventRegistry.RegisterCallback then
     pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Exit", relayout, LY)
