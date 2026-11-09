@@ -33,7 +33,15 @@ function R:KnownRank(ability)
   local pet = PSS.MyPet
   if pet and pet.active then
     for _, s in ipairs(pet.spells or {}) do
-      if s.key == ability and tonumber(s.rank) and s.rank > best then best = s.rank end
+      if s.key == ability and tonumber(s.rank) and s.rank > best then
+        best = s.rank
+        -- The hunter keeps a rank once a pet knows it: remember it, so dismissing
+        -- the pet does not reopen the goal (and re-announce it on next summon).
+        if PetSkillScoutDB then
+          PetSkillScoutDB.knownRanks = PetSkillScoutDB.knownRanks or {}
+          PetSkillScoutDB.knownRanks[ability] = best
+        end
+      end
     end
   end
   return best
@@ -289,7 +297,10 @@ local function CheckProgress()
   for _, g in ipairs(goals) do
     local key = g.a .. "#" .. g.r
     if R:IsDone(g) then
-      if lastOpen and lastOpen[key] then
+      local said = PetSkillScoutDB.routeAnnounced or {}
+      PetSkillScoutDB.routeAnnounced = said
+      if lastOpen and lastOpen[key] and not said[key] then
+        said[key] = true
         finished = true
         PetSkillScoutDB.routeLearned = (PetSkillScoutDB.routeLearned or 0) + 1
       end
