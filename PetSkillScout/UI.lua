@@ -1684,12 +1684,16 @@ function UI:UpdateRares(rebuild)
       tile.view:SetSubject({display=e.beast.displayID, npc=e.beast.npcID}, FamilyIcon(e.family))
       tile.name:SetText(e.name)
       local spd = R.Speed and R:Speed(e)
-      tile.level:SetText(L("level") .. " " .. LevelText(e) .. "  ·  " .. (spd and string.format(L("rareAtk"), spd) or (L("rareAtk"):gsub("%%%.1f", "?"))))
+      tile.level:SetText(L("level") .. " " .. LevelText(e))
       local meta = (e.family and PSS:NameFamily(e.family) or "?")
       if e.dist then
         meta = meta .. "  ·  |cff8fe0a0" .. (e.approx and "~" or "") .. string.format(L("yardsDir"), math.floor(e.dist + 0.5), e.dir) .. "|r"
       else
         meta = meta .. "  ·  " .. (e.zone or "?")
+      end
+      -- Attack speed on the family line (the level label is narrow); faster than 2.0 s in green.
+      if spd then
+        meta = meta .. "  ·  " .. (spd < 2 and "|cff8fe0a0" or "") .. string.format(L("rareAtk"), spd) .. (spd < 2 and "|r" or "")
       end
       tile.meta:SetText(meta)
       local kind, text = "none", L("badgeNotTamed")
