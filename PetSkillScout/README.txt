@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.63
+- Data update 2026-11-09: AllTheThings 9bcc9ac (4633 quests: +3 new, 4 removed, 18 quests got giver NPC/position,
+  4 got objective marks), learned data +1 quest +2 rare spots. Pet data and gear source unchanged.
+
 3.7.62
 - Fixed: the "pet fighting far away" check in dungeons used a range check the game blocks in
   combat (thousands of blocked-action messages). In combat only the party range check is used.

@@ -29,6 +29,7 @@ quests = {
   [5929] = {n = "Great Bear Spirit", g = 11802, gn = nil, f = "A", m = 1450, x = 56.3, y = 30.4, i = {}},
   [64] = {n = "The Forgotten Heirloom", g = 237, gn = nil, f = "A", m = 1436, x = 60, y = 19.4, i = {1179, 4541}},
   [7905] = {n = "The Darkmoon Faire", g = 14842, gn = nil, f = "A", m = 1455, x = 37.8, y = 82, i = {}},
+  [79980] = {n = "Scramble", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {281660, 217314, 217315, 3464, 3465}},
   [8372] = {n = "La lutte pour le goulet des Chanteguerres", g = 15351, gn = nil, f = "A", m = 1457, x = 58.5, y = 34.3, i = {}},
   [8374] = {n = "Claiming Arathi Basin", g = 15351, gn = nil, f = "A", m = 1453, x = 81.1, y = 38.4, i = {}},
   [87760] = {n = "Buceador sagrado", g = 10219, gn = nil, f = "A", m = 1439, x = 36.6, y = 45.5, i = {5996, 6372}},
@@ -115,6 +116,8 @@ rares = {
   ["Nightscreech"] = {npc = 0, {m = 1438, x = 51.5, y = 49.7}, {m = 1438, x = 47.3, y = 32.8}, {m = 1438, x = 37.7, y = 55.3}},
   ["Sewer Beast"] = {npc = 0, {m = 1453, x = 69.3, y = 48.6}},
   ["Shanda the Spinner"] = {npc = 0, {m = 1432, x = 77.4, y = 52}},
+  ["The Rake"] = {npc = 0, {m = 1412, x = 52.6, y = 28.5}},
   ["Timber"] = {npc = 0, {m = 1426, x = 34, y = 42.5}},
+  ["Vultros"] = {npc = 0, {m = 1436, x = 52.1, y = 26.4}},
 },
 }
