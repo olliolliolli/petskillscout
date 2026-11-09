@@ -1683,7 +1683,8 @@ function UI:UpdateRares(rebuild)
       local tamed, want = R:IsCollected(e), R:IsWanted(e)
       tile.view:SetSubject({display=e.beast.displayID, npc=e.beast.npcID}, FamilyIcon(e.family))
       tile.name:SetText(e.name)
-      tile.level:SetText(L("level") .. " " .. LevelText(e))
+      local spd = R.Speed and R:Speed(e)
+      tile.level:SetText(L("level") .. " " .. LevelText(e) .. (spd and ("  ·  " .. string.format(L("rareAtk"), spd)) or ""))
       local meta = (e.family and PSS:NameFamily(e.family) or "?")
       if e.dist then
         meta = meta .. "  ·  |cff8fe0a0" .. (e.approx and "~" or "") .. string.format(L("yardsDir"), math.floor(e.dist + 0.5), e.dir) .. "|r"

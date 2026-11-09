@@ -662,6 +662,7 @@ T["routeFillNone"] = "Nada a adicionar: seu ajudante já tem os melhores graus p
 T["routeFilled"] = "%d habilidades adicionadas à rota."
 T["routeFinished"] = "Rota concluída!"
 T["routeGo"] = "Iniciar rota"
+T["rareAtk"] = "ataque %.1f s"
 T["trHunter"] = "Instrutor de caçadores"
 T["trPet"] = "Treinador de mascotes"
 T["trNone"] = "%s: nenhum conhecido ainda. Fale com um uma vez e o addon vai lembrar."

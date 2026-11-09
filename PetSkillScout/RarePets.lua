@@ -187,6 +187,11 @@ function R:IsTamed(unit)
   if okG and type(guid) == "string" and not (PSS.IsSecret and PSS.IsSecret(guid)) and guid:find("^Pet%-") then return true end
   return Flag(UnitPlayerControlled, unit) or Flag(UnitIsOtherPlayersPet, unit)
 end
+function R:Speed(e)
+  local t = PetSkillScoutDB and PetSkillScoutDB.rareSpeed
+  return t and e and t[e.name]
+end
+
 function R:Inspect(unit)
   -- Instances have no tameable rares, only monsters: no scanning there.
   if IsInInstance then
@@ -211,6 +216,16 @@ function R:Inspect(unit)
   if dead then
     if PSS.RareTimer then PSS.RareTimer:MarkGone(entry, "corpse") end
     return
+  end
+  -- Attack speed, read from the game while you look at the live rare
+  -- (it stays with the pet once tamed). Kept per rare name.
+  if PetSkillScoutDB and UnitAttackSpeed then
+    local ok, main = pcall(UnitAttackSpeed, unit)
+    main = ok and PSS.Plain(main)
+    if type(main) == "number" and main > 0.3 and main < 5 then
+      PetSkillScoutDB.rareSpeed = PetSkillScoutDB.rareSpeed or {}
+      PetSkillScoutDB.rareSpeed[entry.name] = math.floor(main * 100 + 0.5) / 100
+    end
   end
   -- A live creature GUID is the strongest source for custom Forever NPC IDs.
   -- Save it for subsequent 3D previews, but never overwrite the curated catalogue.

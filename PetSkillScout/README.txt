@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.69
+- Rare beasts tab: attack speed of each rare, read in the game when you hover or target it.
+
 3.7.68
 - Route tab: "Hunter trainer" and "Pet trainer" buttons open the map with an arrow to the
   nearest one. Hunter trainers come from AllTheThings; every trainer you talk to is remembered
