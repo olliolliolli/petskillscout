@@ -187,9 +187,14 @@ function R:IsTamed(unit)
   if okG and type(guid) == "string" and not (PSS.IsSecret and PSS.IsSecret(guid)) and guid:find("^Pet%-") then return true end
   return Flag(UnitPlayerControlled, unit) or Flag(UnitIsOtherPlayersPet, unit)
 end
+-- Attack speed: what you saw in the game first, else the beast atlas (the
+-- same value the Beasts tab shows; 2.0 s when the atlas has no special speed).
 function R:Speed(e)
   local t = PetSkillScoutDB and PetSkillScoutDB.rareSpeed
-  return t and e and t[e.name]
+  if t and e and t[e.name] then return t[e.name] end
+  local npc = e and e.beast and tonumber(e.beast.npcID)
+  local rec = npc and PSS.Atlas and PSS.Atlas.Get and PSS.Atlas:Get(npc)
+  return rec and rec.speed or nil
 end
 
 function R:Inspect(unit)
