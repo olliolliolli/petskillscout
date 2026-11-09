@@ -4248,7 +4248,7 @@ local SETTINGS = {
   {id="quests", title="setQuests", sub="setQuestsSub", rows={
     {key="questAlert", label="optQuestAlert", hint="optQuestAlertHint", kind="toggle", default=true},
     {key="questWorth", label="optQuestWorth", hint="optQuestWorthHint", kind="toggle", default=true},
-    {key="questPins", label="optQuestPins", hint="optQuestPinsHint", kind="toggle", default=true,
+    {key="questPins", label="optQuestPins", hint="optQuestPinsHint", kind="toggle", default=false,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questPinsSkip", label="optQuestPinsSkip", hint="optQuestPinsSkipHint", kind="toggle", default=false,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},

@@ -13,7 +13,7 @@ function GetQuestLogRewardXP(id) return MOCK.logXP[id] or 0 end
 C_QuestLog.GetQuestObjectives = function(id) return MOCK.objectives[id] end
 C_QuestLog.GetQuestTagInfo = function(id) return MOCK.tags[id] end
 local function reset()
-  PetSkillScoutDB = {language = "en"}; PSS:InitializeDB()
+  PetSkillScoutDB = {language = "en", questPins = true}; PSS:InitializeDB()
   MOCK.done, MOCK.inlog, MOCK.owned, MOCK.prints, MOCK.equipped = {}, {}, {}, {}, {}
   MOCK.level, MOCK.faction, MOCK.class, MOCK.classID, MOCK.race = 12, "Alliance", "HUNTER", 3, 1
   MOCK.logXP, MOCK.objectives, MOCK.tags = {}, {}, {}
@@ -123,6 +123,12 @@ for _, g in ipairs(groups) do if g.npc == 1187 then daryl = g end end
 ok(daryl and daryl.best == "great", "Daryl's pin is purple")
 QP:Refresh(); QP.Update()
 ok((QP.shown or 0) > 0, "pins drawn " .. tostring(QP.shown))
+do -- off by default for a fresh install
+  local keep = PetSkillScoutDB.questPins
+  PetSkillScoutDB.questPins = nil
+  ok(not QP:Enabled(), "quest pins off by default")
+  PetSkillScoutDB.questPins = keep
+end
 local shownAll = QP.shown
 PetSkillScoutDB.questPinsSkip = true; QP:Refresh(); QP.Update()
 ok(QP.shown >= shownAll, "grey pins on request")

@@ -16,7 +16,8 @@ local ICON = "Interface\\GossipFrame\\AvailableQuestIcon"
 local ORDER = {great = 1, ok = 2, skip = 3}
 
 local function DB() return PetSkillScoutDB or {} end
-function QP:Enabled() return DB().questPins ~= false end
+-- Off until you turn it on (3.7.64): the game shows its own quest marks.
+function QP:Enabled() return DB().questPins == true end
 function QP:ShowSkip() return DB().questPinsSkip == true end
 function QP:MinimapEnabled() return QP:Enabled() and DB().questMinimap ~= false end
 function QP:Refresh() dirty = true; if PSS.Minimap then PSS.Minimap:Refresh() end end

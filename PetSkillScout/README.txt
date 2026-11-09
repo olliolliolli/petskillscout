@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.64
+- Quest marks of the addon (map, minimap, objectives) are off by default now: turn on
+  "Quest pins" in the options. Quest ratings in NPC dialogue stay on.
+
 3.7.63
 - Data update 2026-11-09: AllTheThings 9bcc9ac (4633 quests: +3 new, 18 quests got giver NPC/position,
   4 got objective marks), learned data +1 quest +2 rare spots. Pet data and gear source unchanged.
