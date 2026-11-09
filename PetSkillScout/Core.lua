@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.69"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.70"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -63,8 +63,25 @@ local mapBound, mapHooked = {}, false
 local function HookWorldMap()
   if mapHooked or not (WorldMapFrame and WorldMapFrame.HookScript) then return false end
   mapHooked = true
-  WorldMapFrame:HookScript("OnShow", function() for _, f in ipairs(mapBound) do f:Show() end end)
+  -- Lay the pins out at once (this frame and the next, when the canvas has its
+  -- size), not on the next 0.25 s tick: until then they stood where they were
+  -- on the previous map and then jumped.
+  local function now()
+    for _, f in ipairs(mapBound) do
+      local fn = f.pssTick or f:GetScript("OnUpdate")
+      if fn and f:IsShown() then pcall(fn, f, 1) end
+    end
+  end
+  local function soon()
+    now()
+    if C_Timer and C_Timer.After then C_Timer.After(0, now) end
+  end
+  PSS.MapPinsNow = soon
+  WorldMapFrame:HookScript("OnShow", function() for _, f in ipairs(mapBound) do f:Show() end soon() end)
   WorldMapFrame:HookScript("OnHide", function() for _, f in ipairs(mapBound) do f:Hide() end end)
+  if type(WorldMapFrame.OnMapChanged) == "function" and hooksecurefunc then
+    pcall(hooksecurefunc, WorldMapFrame, "OnMapChanged", soon)
+  end
   return true
 end
 function PSS:OnlyWithWorldMap(f)

@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.70
+- World map: quest, beast and rare pins are laid out the moment the map opens or changes
+  (they stood at the previous map's places for a moment and then jumped).
+
 3.7.69
 - Rare beasts tab: attack speed of each rare, read in the game when you hover or target it.
 
