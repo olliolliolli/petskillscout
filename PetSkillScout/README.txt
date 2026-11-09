@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.72
+- Data update 2026-11-09 (2): AllTheThings 9fe40f7 (4625 quests: +2 new - Tome of Twilight, Learning to Ride;
+  7 Riverglades quests got giver NPC/position; Darkmoon Faire ticket turn-ins removed by ATT).
+  Pet data and gear source unchanged.
+
+3.7.71
+- Route: "learned X of Y" is said once per goal; ranks your pet knows are remembered.
+
 3.7.70
 - World map: quest, beast and rare pins are laid out the moment the map opens or changes
   (they stood at the previous map's places for a moment and then jumped).
