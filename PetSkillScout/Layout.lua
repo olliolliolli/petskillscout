@@ -574,7 +574,18 @@ function LY:LayoutBars()
   local row = 0
   for _, def in ipairs(BAR_ROWS) do
     if Shown(def[2]) then
-      for i = 1, 12 do PlaceButton(G(def[1] .. i), BTN, barHolder, (i - 1) * (BTN + GAP), row * (BTN + GAP)) end
+      for i = 1, 12 do
+        local b = G(def[1] .. i)
+        PlaceButton(b, BTN, barHolder, (i - 1) * (BTN + GAP), row * (BTN + GAP))
+        -- Some buttons of bars 2/3 sit at frame level 3 (others ~52): a frame
+        -- nearby then covers them. All on the main buttons' layer.
+        local ref = G("ActionButton1")
+        if b and ref and b ~= ref then
+          pcall(b.SetFrameStrata, b, Plain(Call(ref.GetFrameStrata, ref)) or "MEDIUM")
+          local lv = Plain(Call(ref.GetFrameLevel, ref))
+          if lv then pcall(b.SetFrameLevel, b, lv) end
+        end
+      end
       row = row + 1
     end
   end
