@@ -1684,7 +1684,7 @@ function UI:UpdateRares(rebuild)
       tile.view:SetSubject({display=e.beast.displayID, npc=e.beast.npcID}, FamilyIcon(e.family))
       tile.name:SetText(e.name)
       local spd = R.Speed and R:Speed(e)
-      tile.level:SetText(L("level") .. " " .. LevelText(e) .. (spd and ("  ·  " .. string.format(L("rareAtk"), spd)) or ""))
+      tile.level:SetText(L("level") .. " " .. LevelText(e) .. "  ·  " .. (spd and string.format(L("rareAtk"), spd) or (L("rareAtk"):gsub("%%%.1f", "?"))))
       local meta = (e.family and PSS:NameFamily(e.family) or "?")
       if e.dist then
         meta = meta .. "  ·  |cff8fe0a0" .. (e.approx and "~" or "") .. string.format(L("yardsDir"), math.floor(e.dist + 0.5), e.dir) .. "|r"
