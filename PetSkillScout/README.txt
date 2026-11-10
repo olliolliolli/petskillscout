@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.73
+- Data update 2026-11-10: AllTheThings 007a007 (4633 quests: +8 new - Saltseer quests, Lost Shipping Crates,
+  The Web of Magic, Vengeance of the Highborne...), learned data +1 quest +2 vendors +4 rare spots.
+  Pet data and gear source unchanged.
+
 3.7.72
 - Data update 2026-11-09 (2): AllTheThings 9fe40f7 (4625 quests: +2 new - Tome of Twilight, Learning to Ride;
   7 Riverglades quests got giver NPC/position; Darkmoon Faire ticket turn-ins removed by ATT).
