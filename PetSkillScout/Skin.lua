@@ -747,6 +747,19 @@ poiEvents:SetScript("OnEvent", function()
   if S.active then PSS:Soon("tracker-poi", function() if S.active then pcall(SkinTrackerBlocks) end end, 0.2) end
 end)
 
+-- A turned-in or abandoned quest sometimes leaves its empty space in the
+-- tracker until the next full update: ask for one shortly after.
+local relayEvents = CreateFrame("Frame")
+for _, e in ipairs({"QUEST_TURNED_IN", "QUEST_REMOVED"}) do pcall(relayEvents.RegisterEvent, relayEvents, e) end
+relayEvents:SetScript("OnEvent", function()
+  local function relayout()
+    local mgr = G("ObjectiveTrackerManager")
+    if mgr and type(mgr.UpdateAll) == "function" then pcall(mgr.UpdateAll, mgr)
+    elseif type(_G.ObjectiveTracker_Update) == "function" then pcall(_G.ObjectiveTracker_Update) end
+  end
+  if C_Timer then C_Timer.After(0.5, relayout); C_Timer.After(2, relayout) end
+end)
+
 local trackerHooked = false
 local function HookTracker()
   if trackerHooked or not hooksecurefunc then return end
