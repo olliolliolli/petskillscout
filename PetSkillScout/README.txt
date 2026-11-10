@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.76
+- CPU: the quest tracker no longer relays itself out without end (3.7.74), and the Gear tab
+  redraws only while the window is open (item data asked for by 3.7.75 kept it busy).
+
 3.7.75
 - Gear tab: the skill a crafted item needs is read from the game (pattern tooltips and the
   trainer window), so Forever values replace the Classic ones (e.g. Barbaric Bracers 140).

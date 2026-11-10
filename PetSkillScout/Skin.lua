@@ -617,7 +617,9 @@ local function TrackFontObject(fs, size)
   local ok, fo = pcall(fs.GetFontObject, fs)
   if not ok or type(fo) ~= "table" or not fo.GetName or not fo.SetFont then return end
   local name = fo:GetName()
-  if type(name) ~= "string" or not name:find("^ObjectiveTracker") or trackFontObjs[name] == size then return end
+  -- Once per font object: a title and a line can share one, and setting it to
+  -- 12 then 11 again and again relaid the tracker without end.
+  if type(name) ~= "string" or not name:find("^ObjectiveTracker") or trackFontObjs[name] then return end
   trackFontObjs[name] = size
   pcall(fo.SetFont, fo, TRACK_FONT, size, "")
   PSS:Soon("tracker-relayout", function()

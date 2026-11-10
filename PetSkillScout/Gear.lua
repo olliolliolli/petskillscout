@@ -631,8 +631,7 @@ G.frame:SetScript("OnUpdate", function(_, e)
   t = 0
   if dirty then
     dirty = false
-    local UI = PSS.UI
-    if UI and UI.view == "gear" and UI.UpdateGear then pcall(UI.UpdateGear, UI) end
+    RedrawGear()
   end
 end)
 G.frame.pssKey = "Gear"

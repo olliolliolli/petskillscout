@@ -82,7 +82,7 @@ local function Step()
     local e = table.remove(queue)
     if not e then
       passes = passes + 1
-      if passes < 4 then
+      if passes < 3 then
         Fill()
         if C_Timer then C_Timer.After(20, Step) end
       end
@@ -92,7 +92,7 @@ local function Step()
     if skill then
       CR:Learn(e[1], skill)
       PSS.CraftPatterns[e[1]] = nil
-    elseif C_Item and C_Item.RequestLoadItemDataByID then
+    elseif passes == 0 and C_Item and C_Item.RequestLoadItemDataByID then
       pcall(C_Item.RequestLoadItemDataByID, e[2])
     end
   end
