@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.75
+- Gear tab: the skill a crafted item needs is read from the game (pattern tooltips and the
+  trainer window), so Forever values replace the Classic ones (e.g. Barbaric Bracers 140).
+
 3.7.74
 - Quest tracker theme: no more empty gaps between quests after turning one in (the tracker
   now measures lines with the theme font).
