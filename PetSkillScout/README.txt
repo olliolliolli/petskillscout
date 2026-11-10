@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.74
+- Quest tracker theme: no more empty gaps between quests after turning one in (the tracker
+  now measures lines with the theme font).
+
 3.7.73
 - Data update 2026-11-10: AllTheThings 007a007 (4633 quests: +8 new - Saltseer quests, Lost Shipping Crates,
   The Web of Magic, Vengeance of the Highborne...), learned data +1 quest +2 vendors +4 rare spots.

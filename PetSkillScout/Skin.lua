@@ -606,7 +606,29 @@ end
 local TRACK_FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
 local poiMarks = setmetatable({}, {__mode = "k"})
 
+-- The tracker measures each line with its font object before laying the
+-- blocks out. Changing only the font string afterwards left the block sized
+-- for the old font (gaps after a quest was turned in and lines were rebuilt),
+-- so the tracker's own font objects get the theme font too, and the tracker
+-- is laid out once more when one of them changes.
+local trackFontObjs = {}
+local function TrackFontObject(fs, size)
+  if not fs.GetFontObject then return end
+  local ok, fo = pcall(fs.GetFontObject, fs)
+  if not ok or type(fo) ~= "table" or not fo.GetName or not fo.SetFont then return end
+  local name = fo:GetName()
+  if type(name) ~= "string" or not name:find("^ObjectiveTracker") or trackFontObjs[name] == size then return end
+  trackFontObjs[name] = size
+  pcall(fo.SetFont, fo, TRACK_FONT, size, "")
+  PSS:Soon("tracker-relayout", function()
+    local mgr = G("ObjectiveTrackerManager")
+    if mgr and type(mgr.UpdateAll) == "function" then pcall(mgr.UpdateAll, mgr)
+    elseif type(_G.ObjectiveTracker_Update) == "function" then pcall(_G.ObjectiveTracker_Update) end
+  end, 0.1)
+end
+
 local function SetTrackFont(fs, size)
+  if type(fs) == "table" then pcall(TrackFontObject, fs, size) end
   if type(fs) == "table" and fs.SetFont then pcall(fs.SetFont, fs, TRACK_FONT, size, "") end
   if type(fs) == "table" and fs.SetShadowOffset then
     pcall(fs.SetShadowOffset, fs, 1, -1)
