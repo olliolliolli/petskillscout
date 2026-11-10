@@ -6,7 +6,7 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.76"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.77"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -502,6 +502,27 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
             n = n + 1
         end
         if n == 0 then PSS:Print("nothing under the mouse") end
+    elseif msg == "tracker" then
+        -- Quest tracker blocks: position, size and visibility (gaps hunt).
+        local root = _G.ObjectiveTrackerFrame
+        local n = 0
+        local function walk(fr, depth)
+            if type(fr) ~= "table" or depth > 7 or not fr.GetChildren or n >= 40 then return end
+            for _, c in ipairs({fr:GetChildren()}) do
+                local h = rawget(c, "HeaderText")
+                if type(h) == "table" or rawget(c, "questID") ~= nil and c:GetObjectType() ~= "Button" then
+                    n = n + 1
+                    local top = c.GetTop and c:GetTop()
+                    local txt = type(h) == "table" and h.GetText and h:GetText() or "-"
+                    PSS:Print(string.format("%d. %s q=%s shown=%s vis=%s a=%.2f top=%s h=%s %s", n, tostring(c:GetName() or "?"),
+                        tostring(rawget(c, "questID")), tostring(c:IsShown()), tostring(c:IsVisible()), c:GetEffectiveAlpha() or -1,
+                        top and string.format("%.0f", top) or "nil", string.format("%.0f", c:GetHeight() or 0), tostring(txt):sub(1, 30)))
+                end
+                walk(c, depth + 1)
+            end
+        end
+        if root then walk(root, 1) else PSS:Print("no ObjectiveTrackerFrame") end
+        if n == 0 then PSS:Print("no tracker blocks found") end
     elseif msg == "bars" then
         if PSS.Layout and PSS.Layout.SideDiag then PSS.Layout.SideDiag() end
     elseif msg == "cpu" then
