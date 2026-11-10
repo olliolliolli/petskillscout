@@ -623,6 +623,7 @@ local function TrackFontObject(fs, size)
   trackFontObjs[name] = size
   pcall(fo.SetFont, fo, TRACK_FONT, size, "")
   PSS:Soon("tracker-relayout", function()
+    if InCombatLockdown and InCombatLockdown() then return end
     local mgr = G("ObjectiveTrackerManager")
     if mgr and type(mgr.UpdateAll) == "function" then pcall(mgr.UpdateAll, mgr)
     elseif type(_G.ObjectiveTracker_Update) == "function" then pcall(_G.ObjectiveTracker_Update) end
@@ -753,6 +754,7 @@ local relayEvents = CreateFrame("Frame")
 for _, e in ipairs({"QUEST_TURNED_IN", "QUEST_REMOVED"}) do pcall(relayEvents.RegisterEvent, relayEvents, e) end
 relayEvents:SetScript("OnEvent", function()
   local function relayout()
+    if InCombatLockdown and InCombatLockdown() then return end
     local mgr = G("ObjectiveTrackerManager")
     if mgr and type(mgr.UpdateAll) == "function" then pcall(mgr.UpdateAll, mgr)
     elseif type(_G.ObjectiveTracker_Update) == "function" then pcall(_G.ObjectiveTracker_Update) end
