@@ -637,6 +637,9 @@ function LY:LayoutBars()
     self.pageNote:ClearAllPoints()
     self.pageNote:SetPoint("BOTTOMRIGHT", barHolder, "BOTTOMLEFT", self.leftSide and -(sideW + sideGap + 6) or -6, 2)
   end
+  -- Broken / damaged gear figure: between the chat (left) and the bars.
+  LY.durX = -((self.leftSide and (sideW + sideGap) or 0) + 14)
+  if LY.PlaceDurability then LY.PlaceDurability() end
   local top = row * (BTN + GAP) + 4
   local small = 30
   -- Stance buttons on the left; the pet bar centred (right aligned when a
@@ -657,6 +660,22 @@ end
 function LY.PageText(page)
   if type(page) ~= "number" or page <= 1 then return nil end
   return string.format(L("barPage"), page)
+end
+
+local durBusy = false
+function LY.PlaceDurability()
+  local d = G("DurabilityFrame")
+  if type(d) ~= "table" or not barHolder or durBusy then return end
+  if InCombatLockdown and InCombatLockdown() then return end
+  durBusy = true
+  pcall(d.ClearAllPoints, d)
+  pcall(d.SetPoint, d, "BOTTOMRIGHT", barHolder, "BOTTOMLEFT", LY.durX or -14, 18)
+  durBusy = false
+  if not d.pssHooked and hooksecurefunc then
+    d.pssHooked = true
+    -- The game puts it back beside the minimap on its own layout passes.
+    pcall(PSS.HookSecure, d, "SetPoint", function() if not durBusy then LY.PlaceDurability() end end)
+  end
 end
 
 local function BuildBars()
