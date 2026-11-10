@@ -669,6 +669,27 @@ local function BuildBars()
     "MainMenuBarRightEndCap"}) do
     Park(G(n))
   end
+  -- Modern main bar: page arrows live in MainActionBar.ActionBarPageNumber.
+  -- Invisible under the theme but still clickable (switched bar 1 to another
+  -- page when the spell beside them was clicked): no mouse, no alpha.
+  for _, bn in ipairs({"MainActionBar", "MainMenuBar"}) do
+    local bar = G(bn)
+    local pn = type(bar) == "table" and rawget(bar, "ActionBarPageNumber")
+    if type(pn) == "table" then
+      for _, k in ipairs({"UpButton", "DownButton"}) do
+        local btn = rawget(pn, k)
+        if type(btn) == "table" then
+          pcall(btn.EnableMouse, btn, false)
+          pcall(btn.SetAlpha, btn, 0)
+          if btn.HookScript and not btn.pssOff then
+            btn.pssOff = true
+            pcall(btn.HookScript, btn, "OnShow", function(self) pcall(self.EnableMouse, self, false); self:SetAlpha(0) end)
+          end
+        end
+      end
+      pcall(pn.SetAlpha, pn, 0)
+    end
+  end
   -- These stay with their parent: Edit Mode calls into it, and a parked bar
   -- gave "attempt to call a nil value". Only made invisible.
   for _, n in ipairs({"StatusTrackingBarManager", "MainStatusTrackingBarContainer",
