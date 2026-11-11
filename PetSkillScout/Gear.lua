@@ -112,6 +112,32 @@ local STAT_KEYS = {
   {"INTELLECT", "int"}, {"SPIRIT", "spi"}, {"STRENGTH", "str"}, {"DAMAGE_PER_SECOND", "dps"},
   {"RESISTANCE0", "armor"}, {"MANA_REGENERATION", "mp5"}, {"POWER_REGEN0", "mp5"},
 }
+-- Hit / crit in percent as the tooltip prints them ("Improves your chance to
+-- hit by 0.3%"). GetItemStats gives Forever's own unit (3 for 0.3 %), which
+-- was read as 3 % and made such items look far better than they are.
+local pctCache = {}
+local function TooltipPercents(link)
+  local c = pctCache[link]
+  if c ~= nil then return c or nil end
+  if not (C_TooltipInfo and C_TooltipInfo.GetHyperlink) then pctCache[link] = false; return nil end
+  local ok, data = pcall(C_TooltipInfo.GetHyperlink, link)
+  if not ok or type(data) ~= "table" or type(data.lines) ~= "table" then return nil end
+  local out = {}
+  for _, line in ipairs(data.lines) do
+    local t = line.leftText
+    if type(t) == "string" and not (PSS.IsSecret and PSS.IsSecret(t)) then
+      local low = t:lower()
+      local n = tonumber(low:match("([%d%.]+)%s*%%"))
+      if n then
+        if low:find("critical") or low:find("крит") then out.crit = (out.crit or 0) + n
+        elseif low:find("to hit") or low:find("влуч") then out.hit = (out.hit or 0) + n end
+      end
+    end
+  end
+  pctCache[link] = out
+  return out
+end
+
 local function RuntimeStats(link)
   if type(link) ~= "string" then return nil end
   local fn = (C_Item and C_Item.GetItemStats) or GetItemStats
@@ -130,6 +156,13 @@ local function RuntimeStats(link)
           if k:find(m[1]) then st[m[2]] = (st[m[2]] or 0) + v; break end
         end
       end
+    end
+  end
+  if st.hit or st.crit then
+    local pct = TooltipPercents(link)
+    if pct then
+      if st.hit and pct.hit then st.hit = pct.hit end
+      if st.crit and pct.crit then st.crit = pct.crit end
     end
   end
   return next(st) and st or nil
