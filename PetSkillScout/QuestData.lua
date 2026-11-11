@@ -50,7 +50,7 @@ PSS.QuestData = {
     tag="dungeon", inst="Razorfen Kraul", forever="new",
     name="The Crone of the Kraul", quests={1101}, final={1101, 1102}, items={274084},
     inames={[274084]="Quilboar Blaster"}},
-  {key="library", kind="ranged", lvl=30, req=40, zone="Stormwind City", forever="new", note="qNoteBooks", prereq="qBooks",
+  {key="library", kind="ranged", lvl=30, req=40, zone="Stormwind City", forever="new", note="qNoteBooks", prereq="qBooks", prereqNote="qBooksNote",
     bySide={A={npc="Garion Wendell", zone="Stormwind City", x=49.0, y=86.3},
             H={npc="Owen Thadd", zone="Undercity", x=74.0, y=32.5}},
     name="Greater Friend of the Library", quests={82208}, items={277254}, inames={[277254]="Truthseeker's Bow"}},
