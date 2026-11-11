@@ -206,6 +206,29 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.91
+- Data update 2026-11-11 (2): AllTheThings 57b62d2 (4673 quests: +17 new - Shen'dralas pylons chain,
+  Mana Mania, A Taste of Home, The Orphan, Sisters In Duty...), learned data +3 quests +3 vendors +7 rare spots.
+  Pet data and gear source unchanged.
+
+3.7.90
+- /pss cpu login: measures the first 30 s after login (load time, work, longest pass).
+
+3.7.89
+- Quests tab: the row text and the map button show the first NPC of a chain still to do.
+
+3.7.88
+- Quests tab: the arrow goes to the start of the chain; quest names without later-expansion variants.
+
+3.7.87
+- Quests tab: a quest that needs earlier quests shows how many are done instead of "available now".
+
+3.7.86
+- Quest givers' names without later-expansion variants ("Hemet Nesingwary Jr. [TBC+]").
+
+3.7.83 - 3.7.85
+- Greater Friend of the Library: library books turned in (x / 25) and a note.
+
 3.7.82
 - Gear compare: hit and crit chance are read in percent from the item tooltip (+0.3% hit was
   counted as +3% and made such items look much better than they are).
