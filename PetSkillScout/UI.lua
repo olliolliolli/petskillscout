@@ -2709,7 +2709,7 @@ function UI:OpenQuestMap(e, mapID, target)
   if target and target.mapID == mapID and PSS.Map and PSS.Map.Ping then pcall(PSS.Map.Ping, PSS.Map, target) end
 end
 
-local STATUS_COLOR = {done = "green", active = "gold", ready = "green", outgrown = "muted", soon = "cream", later = "muted"}
+local STATUS_COLOR = {done = "green", active = "gold", ready = "green", outgrown = "muted", soon = "cream", later = "muted", locked = "cream"}
 
 -- Quest IDs in your quest log.
 function UI:QuestLogIDs()
@@ -2847,6 +2847,7 @@ function UI:FillHunterRow(row, r, level)
   if s == "done" then s1 = L("qDone")
   elseif s == "active" then s1 = L("qActive")
   elseif s == "ready" then s1 = L("qReady")
+  elseif s == "locked" then s1 = string.format(L("qPrereq"), r.have or 0, r.need or 0)
   elseif s == "outgrown" then s1 = L("qOutgrown")
   elseif s == "soon" then s1 = string.format(L("qSoon"), min - level)
   else s1 = string.format(L("qFrom"), min) end

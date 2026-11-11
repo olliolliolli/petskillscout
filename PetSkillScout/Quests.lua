@@ -235,6 +235,13 @@ function Q:Status(e, level)
   if self:IsDone(e) then return "done" end
   if self:InLog(e) then return "active" end
   local min = self:MinLevel(e)
+  -- Quests opened by N of a list (25 library books): not available before.
+  local r = PSS.QuestDB and e.quests and PSS.QuestDB[e.quests[1]]
+  if r and type(r.p) == "table" and r.pn and r.pn > 1 then
+    local have = 0
+    for _, id in ipairs(r.p) do if self:QuestDone(id) then have = have + 1 end end
+    if have < r.pn then return "locked", have, r.pn end
+  end
   if level >= min then
     local gain, _, known = self:Gain(e)
     if known and gain <= 0 then return "outgrown" end
@@ -268,13 +275,13 @@ function Q:Rows(filter, level)
   level = level or self:Level()
   local out = {}
   for _, e in ipairs(self:List()) do
-    local s = self:Status(e, level)
+    local s, have, need = self:Status(e, level)
     local hidden = self:Hidden(e)
     local keep
     if filter == "done" then keep = s == "done"
     elseif filter == "all" then keep = true
-    else keep = not hidden and (s == "ready" or s == "active" or s == "soon") end
-    if keep then out[#out + 1] = {e = e, status = s, hidden = hidden} end
+    else keep = not hidden and (s == "ready" or s == "active" or s == "soon" or (s == "locked" and level >= self:MinLevel(e))) end
+    if keep then out[#out + 1] = {e = e, status = s, hidden = hidden, have = have, need = need} end
   end
   return out
 end
