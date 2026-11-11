@@ -5,8 +5,9 @@ local ADDON, PSS = ...
 PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
+PSS.loadStart = debugprofilestop and debugprofilestop() or nil
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.89"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.90"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -525,6 +526,10 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if n == 0 then PSS:Print("no tracker blocks found") end
     elseif msg == "bars" then
         if PSS.Layout and PSS.Layout.SideDiag then PSS.Layout.SideDiag() end
+    elseif msg == "cpu login" then
+        -- Measure the first 30 s after the next login / reload.
+        PetSkillScoutDB.cpuAtLogin = true
+        PSS:Print("CPU check will run for 30 s after the next /reload or login.")
     elseif msg == "cpu" then
         if PSS.Profiler then PSS.Profiler:Start() end
     elseif msg == "net" or msg == "network" then

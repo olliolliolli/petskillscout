@@ -30,6 +30,7 @@ end
 function P:Add(key, ms)
   if not self.cost then return end
   self.cost[key] = (self.cost[key] or 0) + ms
+  if self.peak and ms > (self.peak[key] or 0) then self.peak[key] = ms end
 end
 
 local function Wrap(f, script, key)
@@ -46,8 +47,10 @@ local function Wrap(f, script, key)
   end)
 end
 
-function P:Start()
+function P:Start(secs, login)
   if self.cost then PSS:Print("CPU check is already running.") return end
+  self.login = login
+  self.peak = login and {} or nil
   if InCombatLockdown and InCombatLockdown() then PSS:Print("Not in combat - try again after the fight.") return end
   if not (debugprofilestop and EnumerateFrames) then PSS:Print("This client has no profiling functions.") return end
   self.cost, self.saved = {}, {}
@@ -63,8 +66,8 @@ function P:Start()
     f = EnumerateFrames(f)
   end
   self.started = debugprofilestop()
-  PSS:Print(string.format("CPU check: %d frames watched for %d s. Play normally.", n, DURATION))
-  C_Timer.After(DURATION, function() P:Stop() end)
+  PSS:Print(string.format("CPU check: %d frames watched for %d s. Play normally.", n, secs or DURATION))
+  C_Timer.After(secs or DURATION, function() P:Stop() end)
 end
 
 function P:Stop()
@@ -76,6 +79,20 @@ function P:Stop()
   for k, v in pairs(self.cost) do list[#list + 1] = {k, v}; total = total + v end
   table.sort(list, function(a, b) return a[2] > b[2] end)
   self.cost, self.saved = nil, nil
+  if self.login then
+    -- Login check: total milliseconds and the longest single pass (a freeze).
+    local peak = self.peak or {}
+    PSS:Print(string.format("Login CPU: files loaded in %.0f ms, %.0f ms of work in %d s. Heaviest:", P.loadMs or -1, total, secs))
+    for i = 1, math.min(10, #list) do
+      PSS:Print(string.format("%2d. %.0f ms total, longest %.0f ms  %s", i, list[i][2], peak[list[i][1]] or 0, list[i][1]))
+    end
+    local keep = {at = time and time() or 0, login = true, load = P.loadMs, total = total, top = {}}
+    for i = 1, math.min(25, #list) do keep.top[i] = {list[i][1], list[i][2], peak[list[i][1]] or 0} end
+    if PetSkillScoutDB then PetSkillScoutDB.cpuLog = keep end
+    self.cost, self.saved, self.peak, self.login = nil, nil, nil, nil
+    PSS:Print("Saved. Do /reload so the developer can read it.")
+    return
+  end
   PSS:Print(string.format("CPU check: %.2f ms per second in total. Heaviest:", total / secs))
   for i = 1, math.min(10, #list) do
     PSS:Print(string.format("%2d. %.3f ms/s  %s", i, list[i][2] / secs, list[i][1]))
@@ -86,3 +103,17 @@ function P:Stop()
   if PetSkillScoutDB then PetSkillScoutDB.cpuLog = keep end
   PSS:Print("Saved. Do /reload so the developer can read it.")
 end
+
+-- "/pss cpu login": the check starts as soon as all files are loaded, so the
+-- login work (PLAYER_LOGIN, PLAYER_ENTERING_WORLD, first passes) is measured.
+local boot = CreateFrame("Frame")
+boot:RegisterEvent("ADDON_LOADED")
+boot:SetScript("OnEvent", function(self, _, name)
+  if name ~= PSS.name then return end
+  self:UnregisterAllEvents()
+  if PSS.loadStart and debugprofilestop then P.loadMs = debugprofilestop() - PSS.loadStart end
+  if PetSkillScoutDB and PetSkillScoutDB.cpuAtLogin then
+    PetSkillScoutDB.cpuAtLogin = nil
+    P:Start(30, true)
+  end
+end)
