@@ -2698,7 +2698,11 @@ end
 -- World map on a zone (not in combat: the map is a protected panel then).
 -- target (optional): {name, mapID, points} - pinged on the map for a few seconds.
 function UI:OpenQuestMap(e, mapID, target)
-  if e then mapID = PSS.Quests:ZoneMapID(e); target = target or PSS.Quests:Target(e) end
+  if e then
+    target = target or PSS.Quests:Target(e)
+    -- The chain start may be in another zone than the last quest.
+    mapID = (target and target.mapID) or PSS.Quests:ZoneMapID(e)
+  end
   if not mapID then PSS:Print(string.format(L("qNoMap"), e and PSS.Quests:Info(e).zone or "?")); return end
   if InCombatLockdown and InCombatLockdown() then PSS:Print(L("qMapCombat")); return end
   if OpenWorldMap then pcall(OpenWorldMap, mapID)
@@ -2819,6 +2823,15 @@ function UI:FillHunterRow(row, r, level)
   local tags = QuestTags(Q, e)
   local sub = Q:ZoneName(e)
   if info.npc then sub = info.npc .. "  ·  " .. sub end
+  -- Earlier quests still to do: the first NPC of the chain and its zone.
+  local first = e.quests and e.quests[1] and Q:FirstStep(e.quests[1])
+  local fr = first and PSS.QuestDB[first]
+  if fr then
+    local who = (fr.g and PSS.QuestNPC and PSS.QuestNPC[fr.g]) or "?"
+    local zi = C_Map and C_Map.GetMapInfo and select(2, pcall(C_Map.GetMapInfo, fr.m))
+    local zone = type(zi) == "table" and zi.name or Q:ZoneName(e)
+    sub = string.format(L("qStartAt"), who, zone, fr.n or "?")
+  end
   if #tags > 0 then sub = sub .. "  ·  " .. table.concat(tags, ", ") end
   row.name:SetText(Q:Title(e))
   row.name:SetTextColor(C.cream[1], C.cream[2], C.cream[3])

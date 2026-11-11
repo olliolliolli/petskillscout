@@ -566,6 +566,7 @@ T["qNoteNesingwary"] = "Último passo das cadeias de tigre, pantera e raptor de 
 T["qNotePoison"] = "Precisa da bolsa de veneno de Venoxis (Zul'Gurub) e da bolsa de veneno de Kurinnaxx (Ruínas de Ahn'Qiraj)."
 T["qOutgrown"] = "o seu é melhor"
 T["qReady"] = "disponível agora"
+T["qStartAt"] = "início: %s · %s (%s)"
 T["qBooks"] = "livros: %d / %d"
 T["qBooksNote"] = "entregue livros"
 T["qPrereq"] = "requer missões anteriores: %d / %d"
