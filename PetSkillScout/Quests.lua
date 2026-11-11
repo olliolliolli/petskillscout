@@ -304,8 +304,49 @@ function Q:Rows(filter, level)
   return out
 end
 
--- Arrow target to the quest giver (only when the position is known).
+-- First step still to do on the way to quest id: walks the previous quests
+-- (QuestDB p) down to one whose own previous quests are done, is not done,
+-- not in the log, of your faction and has a known giver position.
+function Q:FirstStep(id)
+  local db = PSS.QuestDB
+  if not db then return nil end
+  local f = PSS.player and PSS.player.faction
+  local side = f == "Alliance" and "A" or f == "Horde" and "H" or nil
+  local seen = {}
+  local function walk(q, depth)
+    if seen[q] or depth > 30 then return nil end
+    seen[q] = true
+    local r = db[q]
+    if not r or (side and r.s and r.s ~= side) or self:QuestDone(q) then return nil end
+    local open = false
+    if type(r.p) == "table" then
+      local done = 0
+      for _, p in ipairs(r.p) do if self:QuestDone(p) then done = done + 1 end end
+      if done < (r.pn or #r.p) then
+        open = true
+        for _, p in ipairs(r.p) do
+          if not self:QuestDone(p) then
+            local hit = walk(p, depth + 1)
+            if hit then return hit end
+          end
+        end
+      end
+    end
+    if not open and depth > 0 and not self:InLogQuest(q) and r.x and r.y and r.m then return q end
+    return nil
+  end
+  return walk(id, 0)
+end
+
+-- Arrow target to the quest giver (only when the position is known). When
+-- earlier quests are still needed, the arrow points to the start of the chain.
 function Q:Target(e)
+  local first = e.quests and e.quests[1] and self:FirstStep(e.quests[1])
+  local r = first and PSS.QuestDB[first]
+  if r then
+    local name = (r.g and PSS.QuestNPC and PSS.QuestNPC[r.g]) or r.n
+    return {name = string.format("%s: %s", r.n or "?", name or "?"), mapID = r.m, points = {{r.x, r.y}}, quest = first}
+  end
   local info = self:Info(e)
   local mapID = self:ZoneMapID(e)
   if not (mapID and info.x and info.y) then return nil end

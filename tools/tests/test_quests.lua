@@ -214,5 +214,12 @@ for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
 end
 ok(nkeys > 40, "locale keys checked " .. nkeys)
 
+-- Chain start: Big Game Hunter (208) points to Welcome to the Jungle (583).
+reset()
+MOCK.level = 30
+ok(Q:FirstStep(208) == 583, "first step of Big Game Hunter (" .. tostring(Q:FirstStep(208)) .. ")")
+local tg = Q:Target(Q:Get("nesingwary"))
+ok(tg and tg.quest == 583 and tg.mapID == 1434, "arrow to the chain start")
+
 print(string.format("passed %d, failed %d", pass, fail))
 os.exit(fail == 0 and 0 or 1)

@@ -7,6 +7,22 @@ local function removed(tl)
   local last = tl[#tl]
   return type(last) == "string" and (last:find("^removed") or last:find("^deleted")) ~= nil
 end
+-- ATT names some NPCs and quests per expansion ("X Jr. [TBC+] / X",
+-- "Tiger Hunting [CATA+] / Tiger Mastery (1/4)"): keep the Forever (Classic /
+-- untagged) one and drop its tag. A name with only later variants stays as it
+-- is (quest pins skip "[CATA+]" quests).
+local LATER = {TBC = true, Wrath = true, WRATH = true, Cata = true, CATA = true, MoP = true, MOP = true,
+  WoD = true, Legion = true, BfA = true, SL = true, DF = true, TWW = true, Retail = true}
+local function ForeverName(n)
+  if type(n) ~= "string" or not n:find(" / ", 1, true) and not n:find("%[Classic%]") then return n end
+  local keep
+  for part in (n .. " / "):gmatch("(.-) / ") do
+    local tag = part:match("%[(%a+)%+?%]")
+    if not (tag and LATER[tag]) then keep = keep or part end
+  end
+  if not keep then return n end
+  return (keep:gsub("%s*%[Classic%]", ""))
+end
 local ALLY, HORDE = {}, {}
 for _, r in ipairs(ALLIANCE_ONLY or {}) do ALLY[r] = true end
 for _, r in ipairs(HORDE_ONLY or {}) do HORDE[r] = true end
@@ -96,7 +112,7 @@ for _, id in ipairs(ids) do
     if ox then f[#f + 1] = string.format("ox=%s,oy=%s,om=%d", num(ox[1]), num(ox[2]), ox[3]) end
     if #items > 0 then f[#f + 1] = "i=" .. arr(items) end
     if Q[id].holiday then f[#f + 1] = "hol=" .. num(Q[id].holiday) end
-    if QNAME[id] then f[#f + 1] = "n=" .. string.format("%q", QNAME[id]) end
+    if QNAME[id] then f[#f + 1] = "n=" .. string.format("%q", ForeverName(QNAME[id])) end
     lines[#lines + 1] = string.format("[%d]={%s},", id, table.concat(f, ","))
     stats.kept = stats.kept + 1
   end
@@ -115,20 +131,6 @@ fh:write("-- o objectives (n kill, i item, o object, x other), ox/oy/om first ob
 fh:write("local PSS = PetSkillScout\nPSS.QuestDB = {\n")
 fh:write(table.concat(lines, "\n"))
 fh:write("\n}\nPSS.QuestNPC = {\n")
--- ATT names some NPCs per expansion ("X Jr. [TBC+] / X", "A [Wrath+] / B
--- [Classic]"): keep the Forever (Classic / untagged) one, drop the tags.
-local LATER = {TBC = true, Wrath = true, WRATH = true, Cata = true, CATA = true, MoP = true, MOP = true,
-  WoD = true, Legion = true, BfA = true, SL = true, DF = true, TWW = true, Retail = true}
-local function ForeverName(n)
-  if type(n) ~= "string" or (not n:find(" / ", 1, true) and not n:find("%[")) then return n end
-  local keep
-  for part in (n .. " / "):gmatch("(.-) / ") do
-    local tag = part:match("%[(%a+)%+?%]")
-    if not (tag and LATER[tag]) then keep = keep or part end
-  end
-  keep = keep or n
-  return (keep:gsub("%s*%[%a+%+?%]", ""))
-end
 for _, g in ipairs(nids) do fh:write(string.format("[%d]=%q,\n", g, ForeverName(NNAME[g]))) end
 fh:write("}\n")
 -- Reward items: name, quality, item level, required level, equip slot type (ATT ItemDB export).
