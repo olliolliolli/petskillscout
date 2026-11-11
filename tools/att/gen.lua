@@ -115,7 +115,21 @@ fh:write("-- o objectives (n kill, i item, o object, x other), ox/oy/om first ob
 fh:write("local PSS = PetSkillScout\nPSS.QuestDB = {\n")
 fh:write(table.concat(lines, "\n"))
 fh:write("\n}\nPSS.QuestNPC = {\n")
-for _, g in ipairs(nids) do fh:write(string.format("[%d]=%q,\n", g, NNAME[g])) end
+-- ATT names some NPCs per expansion ("X Jr. [TBC+] / X", "A [Wrath+] / B
+-- [Classic]"): keep the Forever (Classic / untagged) one, drop the tags.
+local LATER = {TBC = true, Wrath = true, WRATH = true, Cata = true, CATA = true, MoP = true, MOP = true,
+  WoD = true, Legion = true, BfA = true, SL = true, DF = true, TWW = true, Retail = true}
+local function ForeverName(n)
+  if type(n) ~= "string" or (not n:find(" / ", 1, true) and not n:find("%[")) then return n end
+  local keep
+  for part in (n .. " / "):gmatch("(.-) / ") do
+    local tag = part:match("%[(%a+)%+?%]")
+    if not (tag and LATER[tag]) then keep = keep or part end
+  end
+  keep = keep or n
+  return (keep:gsub("%s*%[%a+%+?%]", ""))
+end
+for _, g in ipairs(nids) do fh:write(string.format("[%d]=%q,\n", g, ForeverName(NNAME[g]))) end
 fh:write("}\n")
 -- Reward items: name, quality, item level, required level, equip slot type (ATT ItemDB export).
 local IDB = (AllTheThings and AllTheThings.ItemDB) or {}
