@@ -237,10 +237,28 @@ function Q:Status(e, level)
   local min = self:MinLevel(e)
   -- Quests opened by N of a list (25 library books): not available before.
   local r = PSS.QuestDB and e.quests and PSS.QuestDB[e.quests[1]]
-  if r and type(r.p) == "table" and r.pn and r.pn > 1 then
+  -- Only for single-quest entries (a chain entry starts with its first step)
+  -- and once your level is high enough (below it "soon" / "later" tell more).
+  local outgrown
+  if level >= min then
+    local gain, _, known = self:Gain(e)
+    outgrown = known and gain <= 0
+  end
+  if outgrown then return "outgrown" end
+  if r and type(r.p) == "table" and #r.p > 0 and not e.final and level >= min then
+    -- All previous quests are needed unless pn says how many (25 books).
+    -- Previous quests of the other faction do not count.
+    local f = PSS.player and PSS.player.faction
+    local side = f == "Alliance" and "A" or f == "Horde" and "H" or nil
+    local list = {}
+    for _, id in ipairs(r.p) do
+      local pr = PSS.QuestDB[id]
+      if not (side and pr and pr.s and pr.s ~= side) then list[#list + 1] = id end
+    end
+    local need = math.min(r.pn or #list, #list)
     local have = 0
-    for _, id in ipairs(r.p) do if self:QuestDone(id) then have = have + 1 end end
-    if have < r.pn then return "locked", have, r.pn end
+    for _, id in ipairs(list) do if self:QuestDone(id) then have = have + 1 end end
+    if have < need then return "locked", have, need end
   end
   if level >= min then
     local gain, _, known = self:Gain(e)
@@ -302,7 +320,7 @@ function Q:RemindersOn() return DB().questAlert ~= false end
 function Q:Worth(e, level)
   if self:Hidden(e) then return false end
   local s = self:Status(e, level)
-  if s ~= "ready" then return false end
+  if s ~= "ready" and s ~= "locked" then return false end
   local gain, _, known = self:Gain(e)
   if known and gain > 0 then return true end
   return level - self:MinLevel(e) <= self.REMIND_SPAN
