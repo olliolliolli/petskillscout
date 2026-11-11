@@ -2847,7 +2847,9 @@ function UI:FillHunterRow(row, r, level)
   if s == "done" then s1 = L("qDone")
   elseif s == "active" then s1 = L("qActive")
   elseif s == "ready" then s1 = L("qReady")
-  elseif s == "locked" then s1 = string.format(L("qPrereq"), r.have or 0, r.need or 0)
+  elseif s == "locked" then
+    s1 = string.format(L(e.prereq or "qPrereq"), r.have or 0, r.need or 0)
+    if e.note then s2 = L(e.note) end
   elseif s == "outgrown" then s1 = L("qOutgrown")
   elseif s == "soon" then s1 = string.format(L("qSoon"), min - level)
   else s1 = string.format(L("qFrom"), min) end
