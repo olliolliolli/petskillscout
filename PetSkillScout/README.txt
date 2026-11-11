@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.82
+- Gear compare: hit and crit chance are read in percent from the item tooltip (+0.3% hit was
+  counted as +3% and made such items look much better than they are).
+
 3.7.81
 - Data update 2026-11-11: AllTheThings c973dee (4656 quests: +23 new - Krol'dok quests, Eye of Mugg,
   Gettin' Buzzed, Treaty Obligations, Fledgling Rescue, WANTED: Ohk'zi...; 153 quests got giver NPC/position),
