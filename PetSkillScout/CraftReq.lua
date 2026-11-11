@@ -77,7 +77,8 @@ local function Fill()
   for item, pattern in pairs(PSS.CraftPatterns or {}) do queue[#queue + 1] = {item, pattern} end
 end
 
-local function Step()
+local Step
+local function StepRaw()
   for _ = 1, 6 do
     local e = table.remove(queue)
     if not e then
@@ -98,6 +99,8 @@ local function Step()
   end
   if C_Timer then C_Timer.After(0.3, Step) end
 end
+
+Step = PSS:Timed("CraftReq pattern scan", StepRaw)
 
 -- Trainer window: the skill each recipe needs, straight from the trainer.
 local function ScanTrainer()
