@@ -206,6 +206,23 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.81
+- Data update 2026-11-11: AllTheThings c973dee (4656 quests: +23 new - Krol'dok quests, Eye of Mugg,
+  Gettin' Buzzed, Treaty Obligations, Fledgling Rescue, WANTED: Ohk'zi...; 153 quests got giver NPC/position),
+  learned data +5 quests +2 vendors +5 rare spots. Pet data and gear source unchanged.
+
+3.7.80
+- The broken-gear figure sits between the chat and the action bars.
+
+3.7.79
+- Quest tracker: a full update shortly after a quest is turned in or abandoned (empty gaps).
+
+3.7.78
+- Main bar page arrows hidden by the theme can no longer be clicked by accident.
+
+3.7.77
+- /pss tracker: quest tracker diagnostics.
+
 3.7.76
 - CPU: the quest tracker no longer relays itself out without end (3.7.74), and the Gear tab
   redraws only while the window is open (item data asked for by 3.7.75 kept it busy).
