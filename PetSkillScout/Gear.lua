@@ -134,7 +134,7 @@ local function TooltipPercents(link)
       end
     end
   end
-  pctCache[link] = out
+  if next(out) then pctCache[link] = out end
   return out
 end
 
