@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.92
+- Data update 2026-11-12: AllTheThings 21a4229 (4703 quests: +30 new - riding quests "Your First ..." and
+  "Learning to Ride" for every race, Dunemaul Dues, Gritty Business, Gnomish Garbage, Oasis, The Dragon's Journal...;
+  56 quests updated), learned data +3 quests. Pet data and gear source unchanged.
+
 3.7.91
 - Data update 2026-11-11 (2): AllTheThings 57b62d2 (4673 quests: +17 new - Shen'dralas pylons chain,
   Mana Mania, A Taste of Home, The Orphan, Sisters In Duty...), learned data +3 quests +3 vendors +7 rare spots.
