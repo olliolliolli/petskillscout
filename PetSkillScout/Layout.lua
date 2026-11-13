@@ -1765,8 +1765,18 @@ function LY:ArrangeButtonBar()
     end
   end
   table.sort(list, function(a, b) return (a:GetName() or "") < (b:GetName() or "") end)
-  local perCol = math.max(1, math.floor((self:MinimapSize() + BAR_GAP) / (BAR_BTN + BAR_GAP)))
+  -- One column the height of the minimap: when there are more buttons than
+  -- fit, they get smaller (down to 20 px) before a second column is started
+  -- (a lone button in a half-empty second column looked broken).
+  local H = self:MinimapSize()
+  local size = BAR_BTN
+  if #list > 0 and #list * (BAR_BTN + BAR_GAP) - BAR_GAP > H then
+    size = math.max(20, math.floor((H + BAR_GAP) / #list) - BAR_GAP)
+  end
+  local perCol = math.max(1, math.floor((H + BAR_GAP) / (size + BAR_GAP)))
   local cols = math.max(1, math.ceil(#list / perCol))
+  -- Columns filled evenly.
+  perCol = math.max(1, math.ceil(#list / cols))
   for i, b in ipairs(list) do
     local col, row = math.floor((i - 1) / perCol), (i - 1) % perCol
     if b:GetParent() ~= bar then pcall(b.SetParent, b, bar) end
@@ -1776,12 +1786,12 @@ function LY:ArrangeButtonBar()
     -- Same size for all: square, from the button's own size.
     local bw, bh = Plain(b:GetWidth()) or BAR_BTN, Plain(b:GetHeight()) or BAR_BTN
     if bw ~= bh then pcall(b.SetHeight, b, bw) end
-    local sc = BAR_BTN / math.max(20, bw)
+    local sc = size / math.max(20, bw)
     pcall(b.SetScale, b, sc)
     -- Offsets of a scaled frame are in its own scale: divide, so the buttons
     -- sit edge to edge with the bar and leave no empty space.
     pcall(b.ClearAllPoints, b)
-    pcall(b.SetPoint, b, "TOPRIGHT", bar, "TOPRIGHT", -col * (BAR_BTN + BAR_GAP) / sc, -row * (BAR_BTN + BAR_GAP) / sc)
+    pcall(b.SetPoint, b, "TOPRIGHT", bar, "TOPRIGHT", -col * (size + BAR_GAP) / sc, -row * (size + BAR_GAP) / sc)
     if not b.pssBarHooked and b.HookScript then
       -- A button shown or hidden later (an addon added, an icon toggled): re-pack.
       b.pssBarHooked = true
@@ -1793,7 +1803,7 @@ function LY:ArrangeButtonBar()
   end
   if not self:Saved("buttons") then bar:ClearAllPoints() end
   if not self:Saved("buttons") then bar:SetPoint("TOPRIGHT", mmHolder, "TOPLEFT", -8, 0) end
-  bar:SetSize(cols * (BAR_BTN + BAR_GAP) - BAR_GAP, math.min(#list, perCol) * (BAR_BTN + BAR_GAP) - BAR_GAP)
+  bar:SetSize(cols * (size + BAR_GAP) - BAR_GAP, math.min(#list, perCol) * (size + BAR_GAP) - BAR_GAP)
   if #list > 0 then bar:Show() else bar:Hide() end
 end
 
