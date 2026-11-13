@@ -72,7 +72,7 @@ function PSS:CreateLauncher()
     launcher:SetScript("OnEnter", function(self)
         if GameTooltip then
             GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-            GameTooltip:AddLine(PSS:Safe("PetSkillScout"))
+            GameTooltip:AddDoubleLine(PSS:Safe("PetSkillScout"), PSS:Safe(PSS:Credit(true)), 1, 0.82, 0, 0.6, 0.6, 0.6)
             GameTooltip:AddLine(PSS:Safe(PSS:L("launcherHint")), 0.8, 0.8, 0.8)
             GameTooltip:Show()
         end
@@ -164,7 +164,7 @@ function PSS:CreateMinimapButton()
     mmButton:SetScript("OnEnter", function(self)
         if not GameTooltip then return end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine(PSS:Safe("PetSkillScout"))
+        GameTooltip:AddDoubleLine(PSS:Safe("PetSkillScout"), PSS:Safe(PSS:Credit(true)), 1, 0.82, 0, 0.6, 0.6, 0.6)
         GameTooltip:AddLine(PSS:Safe(PSS:L("minimapBtnHint")), 0.8, 0.8, 0.8, true)
         local ammo = PSS.Ammo and PSS.Ammo:StatusText()
         if ammo then GameTooltip:AddLine(PSS:Safe(ammo), 1, 1, 1) end

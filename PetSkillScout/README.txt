@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.96
+- Author line in the window, the settings and the button tooltips; one chat line per new version.
+
 3.7.95
 - Data update 2026-11-13: AllTheThings 1c4d146 (4727 quests: +24 new - State Secrets, Our Man in Theramore,
   The Secret Prison, The Man in the Iron Chains, Finding Tan'jani, A Bit of Wet Work, Weed Whacked...; 58 updated),

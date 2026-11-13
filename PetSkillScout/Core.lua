@@ -6,8 +6,18 @@ PSS = PSS or {}
 _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 PSS.loadStart = debugprofilestop and debugprofilestop() or nil
+-- Author credit, shown in the window, the settings, the button tooltips and
+-- once per version in chat. PetSkillScout is All Rights Reserved (LICENSE.txt):
+-- copies must keep it.
+PSS.AUTHOR = "DarthRev1"
+PSS.HOME = "curseforge.com/wow/addons/petskillscout"
+function PSS:Credit(short)
+  local v = tostring(PSS.version or "")
+  if short then return "by " .. PSS.AUTHOR end
+  return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
+end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.95"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.96"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }

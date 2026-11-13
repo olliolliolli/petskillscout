@@ -735,7 +735,22 @@ function UI:Create()
   end)
   frame:SetScript("OnHide", function() UI.moving = false; UI:PlaceFeedOverlay() end)
   -- Models may be dropped while hidden: reload them on the next refresh.
-  frame:SetScript("OnShow", function() for _, m in ipairs(allModels) do m.key = nil end end)
+  -- Author line at the bottom right; put back each time the window opens.
+  local credit = frame:CreateFontString(nil, "OVERLAY")
+  credit:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+  credit:SetTextColor(0.55, 0.55, 0.5)
+  credit:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 6)
+  self.credit = credit
+  local function Credit()
+    credit:SetText(PSS:Credit())
+    credit:SetAlpha(1)
+    credit:Show()
+  end
+  Credit()
+  frame:SetScript("OnShow", function()
+    for _, m in ipairs(allModels) do m.key = nil end
+    Credit()
+  end)
   local pos = PetSkillScoutDB and PetSkillScoutDB.rememberPos ~= false and PetSkillScoutDB.framePos
   if type(pos) == "table" and pos[1] and tonumber(pos[3]) and tonumber(pos[4]) then
     frame:SetPoint(pos[1], UIParent, pos[2] or pos[1], pos[3], pos[4])
@@ -4588,7 +4603,7 @@ local PREVIEW_NPC = 1132 -- Timber (Dun Morogh): a rare wolf
 function UI:RefreshSettings()
   if not self.sNav then return end
   self.sTitle:SetText(L("settings"))
-  self.sVersion:SetText("PetSkillScout " .. tostring(PSS.version) .. "  ·  /pss")
+  self.sVersion:SetText("PetSkillScout " .. tostring(PSS.version) .. "  ·  " .. PSS:Credit(true) .. "  ·  /pss")
   local current
   for _, b in ipairs(self.sNav) do
     b:SetText(L(b.section.title))
