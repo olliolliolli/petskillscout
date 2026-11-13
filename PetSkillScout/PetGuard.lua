@@ -31,6 +31,13 @@ end
 local function Plain(v) if PSS.IsSecret and PSS.IsSecret(v) then return nil end return v end
 local function InCombat() return InCombatLockdown and InCombatLockdown() end
 local function Opt(key) return not PetSkillScoutDB or PetSkillScoutDB[key] ~= false end
+-- Dungeon pet alerts are off unless turned on in the options (3.7.100).
+local OFF_BY_DEFAULT = {guardFall = true, guardAggro = true, guardAggressive = true}
+local plainOpt = Opt
+Opt = function(key)
+  if OFF_BY_DEFAULT[key] then return PetSkillScoutDB and PetSkillScoutDB[key] == true or false end
+  return plainOpt(key)
+end
 local function Quiet() return PetSkillScoutDB and PetSkillScoutDB.guardQuiet == true end
 
 local function HasPet()
