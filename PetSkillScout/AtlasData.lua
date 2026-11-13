@@ -362,7 +362,7 @@ D.rows = {
 {253283,"Shriekling Matriarch",11,9,9,0,0,1,{16593},{}},
 {2544,"Southern Sand Crawler",6,40,41,0,0,0,{33},{[33]="x2mex*mRx(mSx)mlyJmdyMmbyUmHyZmjydmAyhl*yol4yrmVy0liy-lE"}},
 {254588,"Windsong Crawler",6,8,9,0,0,1,{16593},{}},
-{254589,"Vulgara the Insatiable",17,8,8,1,0,1,{16593},{}},
+{254589,"Vulgara the Insatiable",0,8,8,1,0,1,{16593},{}},
 {255851,"Mature Paletusk",3,38,39,0,0,1,{16591},{}},
 {255887,"Slydris",8,0,0,3,0,1,{16593},{}},
 {2559,"Highland Strider",11,30,31,0,0,0,{45,267},{[45]="1QQ)1sQV2ORg2WRT2cRf2rRv23Rb2(RT3TQ(3dRP3rRX3yQ!36Q.3~Q!"}},

@@ -94,7 +94,7 @@ local catalogue = {
   {name="Mystmane",family="Bear",minLevel=13,maxLevel=13,zone="Zephras Isle",npcID=259388,new=true},
   {name="Slydris",family="Fox",zone="Zephras Isle",npcID=255887,new=true,elite=true},
   -- Named Forever elites that can be tamed (AtlasData, quest targets in ATT).
-  {name="Vulgara the Insatiable",family="Wolf",minLevel=8,maxLevel=8,zone="Zephras Isle",npcID=254589,new=true,elite=true},
+  {name="Vulgara the Insatiable",family="Bat",minLevel=8,maxLevel=8,zone="Zephras Isle",npcID=254589,new=true,elite=true},
   {name="Ukorsbane",family="Spider",minLevel=8,maxLevel=8,zone="Durotar",npcID=266851,new=true,elite=true},
   {name="Elmpaw",family="Bear",minLevel=12,maxLevel=12,zone="Elwynn Forest",npcID=248299,new=true,elite=true},
   {name="Ghostmaw",family="Crocolisk",minLevel=42,maxLevel=42,zone="Riverglades",npcID=263380,new=true,elite=true},
