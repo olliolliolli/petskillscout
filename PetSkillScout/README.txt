@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.99
+- Data update 2026-11-13 (2): AllTheThings 5692632 (4757 quests: +30 new - Mount Hyjal / Ashenvale / Felwood
+  quests: Beneath Nordrassil, Reclaiming Ravencrest, Preserving Eldarath, Slay the Spitelash, Forlorn Gardens,
+  Agamaggan's Blood...; 70 updated), learned data +13 quests +8 rare spots. Pet data and gear source unchanged.
+
+3.7.98
+- Addon button bar: one column; buttons get smaller to fit instead of starting a half-empty column.
+
 3.7.97
 - Addon button bar: every icon fills its square the same way (some were smaller).
 
