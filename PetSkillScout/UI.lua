@@ -2705,11 +2705,7 @@ function UI:OpenQuestMap(e, mapID, target)
   end
   if not mapID then PSS:Print(string.format(L("qNoMap"), e and PSS.Quests:Info(e).zone or "?")); return end
   if InCombatLockdown and InCombatLockdown() then PSS:Print(L("qMapCombat")); return end
-  if OpenWorldMap then pcall(OpenWorldMap, mapID)
-  elseif WorldMapFrame and WorldMapFrame.SetMapID then
-    if ShowUIPanel then pcall(ShowUIPanel, WorldMapFrame) end
-    pcall(WorldMapFrame.SetMapID, WorldMapFrame, mapID)
-  end
+  if not PSS:OpenWorldMap(mapID) and target and PSS.Nav and PSS.Nav.SetTarget then pcall(PSS.Nav.SetTarget, PSS.Nav, target) end
   if target and target.mapID == mapID and PSS.Map and PSS.Map.Ping then pcall(PSS.Map.Ping, PSS.Map, target) end
 end
 

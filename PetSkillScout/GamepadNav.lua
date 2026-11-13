@@ -218,7 +218,8 @@ local function MenuButton()
   menuButton:SetFrameStrata("DIALOG")
   menuButton:SetText("PetSkillScout")
   menuButton:SetScript("OnClick", function()
-    if HideUIPanel then pcall(HideUIPanel, gm) else gm:Hide() end
+    -- The game menu is left to the game: closing it from addon code taints
+    -- the gamepad UI. Our window opens above it; B closes the menu.
     PetSkillScout_ToggleWindow()
   end)
   menuButton:Hide()

@@ -7,7 +7,7 @@ _G.PetSkillScout = PSS
 PSS.name = ADDON or "PetSkillScout"
 PSS.loadStart = debugprofilestop and debugprofilestop() or nil
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.92"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.93"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }

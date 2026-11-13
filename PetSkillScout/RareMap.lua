@@ -286,13 +286,7 @@ function RM:Focus(entry)
   PSS.selected = b
   self.focus = b.npcID
   dirty = true
-  if WorldMapFrame then
-    if type(ShowUIPanel) == "function" then pcall(ShowUIPanel, WorldMapFrame)
-    elseif WorldMapFrame.Show then pcall(WorldMapFrame.Show, WorldMapFrame) end
-    if b.mapID and type(WorldMapFrame.SetMapID) == "function" then
-      pcall(WorldMapFrame.SetMapID, WorldMapFrame, b.mapID)
-    end
-  end
+  PSS:OpenWorldMap(b.mapID)
 end
 
 local driver = CreateFrame("Frame")

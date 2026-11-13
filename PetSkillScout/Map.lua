@@ -34,30 +34,36 @@ end
 -- Opens the world map on the beast's zone. The selected beast's spawn points are
 -- drawn while it stays selected; it is NOT added to the persistent "Track" list,
 -- so the checkbox in the results only changes when the user ticks it.
+-- Opening / closing game panels from addon code while the gamepad UI is on
+-- taints its frame manager: the game then blocks
+-- SetPreferredGamepadInteractTarget (ADDON_ACTION_FORBIDDEN) and can freeze.
+-- With the gamepad UI on, the map is not touched: pins and the arrow are set
+-- and the player opens the map himself.
+function PSS:GamepadUI()
+  return PSS.Gamepad and PSS.Gamepad.Enabled and PSS.Gamepad:Enabled() or false
+end
+
+function PSS:OpenWorldMap(mapID)
+  if PSS:GamepadUI() then
+    PSS:Print(PSS:L("mapOpenYourself"))
+    return false
+  end
+  if not WorldMapFrame then return false end
+  if OpenWorldMap and mapID then pcall(OpenWorldMap, mapID)
+  else
+    if type(ShowUIPanel) == "function" then pcall(ShowUIPanel, WorldMapFrame)
+    elseif WorldMapFrame.Show then pcall(WorldMapFrame.Show, WorldMapFrame) end
+    if mapID and type(WorldMapFrame.SetMapID) == "function" then pcall(WorldMapFrame.SetMapID, WorldMapFrame, mapID) end
+  end
+  return true
+end
+
 function PSS.Map:Show(beast)
   if not beast then return end
   PSS.selected = beast
   local hasCoords = HasCoords(beast) and beast.mapID
 
-  -- Open the map first: several clients reset the selected map during OnShow.
-  if WorldMapFrame then
-    if type(ShowUIPanel) == "function" then
-      pcall(ShowUIPanel, WorldMapFrame)
-    elseif type(WorldMapFrame.Show) == "function" then
-      pcall(WorldMapFrame.Show, WorldMapFrame)
-    end
-    if hasCoords then
-      local set = false
-      if type(WorldMapFrame.SetMapID) == "function" then
-        set = pcall(WorldMapFrame.SetMapID, WorldMapFrame, beast.mapID)
-      end
-      if not set and type(SetMapByID) == "function" then
-        pcall(SetMapByID, beast.mapID)
-      end
-    end
-  elseif type(ToggleWorldMap) == "function" then
-    pcall(ToggleWorldMap)
-  end
+  PSS:OpenWorldMap(hasCoords and beast.mapID or nil)
   self:RefreshTrackedPins()
 end
 
