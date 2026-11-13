@@ -393,7 +393,9 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   end
   -- Falling.
   local falling = Plain(safe(IsFalling)) and not Plain(safe(UnitOnTaxi, "player"))
-  if Opt("guardFall") and falling then
+  -- Jump / fall alert removed (3.7.101): only the "pet is far away" check
+  -- below, which does not depend on how you got there.
+  if false and falling then
     fallTime = fallTime + elapsed
     if not fallAlerted and fallTime >= FALL_SECONDS and InDungeon() and HasPet() and PetMode() ~= "stay" then
       fallAlerted = true
@@ -413,11 +415,11 @@ driver:SetScript("OnUpdate", function(_, elapsed)
       end
     end
   end
-  -- Pet fighting far away: twice a second.
+  -- Pet very far from you (fighting or not): twice a second.
   tick = tick + elapsed
   if tick < 0.5 then return end
   tick = 0
-  if Opt("guardAggro") and not G.flow and InDungeon() and HasPet() and Plain(safe(UnitAffectingCombat, "pet")) then
+  if Opt("guardAggro") and not G.flow and InDungeon() and HasPet() and PetMode() ~= "stay" then
     local far = PetFar()
     -- Only a pet that stays away counts, not one running to a pull.
     if not far then G.farSince = nil elseif not G.farSince then G.farSince = now end

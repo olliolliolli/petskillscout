@@ -4376,7 +4376,6 @@ local SETTINGS = {
     {key="tooltipSeen", label="optTipSeen", hint="optTipSeenHint", kind="toggle", default=true},
   }},
   {id="dungeon", title="setDungeon", sub="setDungeonSub", rows={
-    {key="guardFall", label="optGuardFall", hint="optGuardFallHint", kind="toggle", default=false},
     {key="guardAggro", label="optGuardAggro", hint="optGuardAggroHint", kind="toggle", default=false},
     {key="guardAggressive", label="optGuardAggressive", hint="optGuardAggressiveHint", kind="toggle", default=false,
       apply=function() if PSS.PetGuard then PSS.PetGuard.CheckStance() end end},

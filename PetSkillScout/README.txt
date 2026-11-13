@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.101
+- Pet guard: no jump / fall alert any more; one alert when your pet is very far from you in a dungeon
+  (over 70 yards for a few seconds, fighting or not, not on Stay).
+
 3.7.100
 - Pet guard alerts in dungeons (jump down, pet fighting far away, aggressive pet) are off by default;
   turn them on in the options.
