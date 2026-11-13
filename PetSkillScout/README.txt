@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.94
+- Rare pets list: named Forever elites you can tame - Vulgara the Insatiable (Zephras Isle), Ukorsbane
+  (Durotar), Elmpaw (Elwynn Forest), Ghostmaw (Riverglades).
+
+3.7.93
+- Gamepad UI: the addon no longer opens the world map or closes the game menu itself (the game blocked
+  SetPreferredGamepadInteractTarget); pin and arrow are set, open the map yourself.
+
 3.7.92
 - Data update 2026-11-12: AllTheThings 21a4229 (4703 quests: +30 new - riding quests "Your First ..." and
   "Learning to Ride" for every race, Dunemaul Dues, Gritty Business, Gnomish Garbage, Oasis, The Dragon's Journal...;
