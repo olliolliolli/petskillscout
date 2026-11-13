@@ -1700,12 +1700,11 @@ local function SkinBarButton(b)
       end
     end
   end
-  if icon then
-    pcall(icon.ClearAllPoints, icon)
-    pcall(icon.SetPoint, icon, "TOPLEFT", b, "TOPLEFT", 3, -3)
-    pcall(icon.SetPoint, icon, "BOTTOMRIGHT", b, "BOTTOMRIGHT", -3, 3)
-    pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
-  end
+  -- The button's own icon field when it has one (LibDBIcon: .icon), else the
+  -- largest picture. Kept for FitBarIcon, which runs on every arrange.
+  local own = rawget(b, "icon") or rawget(b, "Icon")
+  if type(own) == "table" and own.GetObjectType and own:GetObjectType() == "Texture" then icon = own end
+  b.pssIcon = icon
   local edge = b:CreateTexture(nil, "BACKGROUND", nil, -8)
   edge:SetTexture("Interface/Buttons/WHITE8X8"); edge:SetAllPoints(b)
   edge:SetVertexColor(0.55, 0.47, 0.3, 0.9)
@@ -1717,6 +1716,27 @@ local function SkinBarButton(b)
   if hl then
     pcall(hl.ClearAllPoints, hl); pcall(hl.SetAllPoints, hl, b)
     pcall(hl.SetTexture, hl, "Interface/Buttons/WHITE8X8"); pcall(hl.SetVertexColor, hl, 1, 1, 1, 0.15)
+  end
+end
+
+-- Icon filling the square the same way on every button. Run on every arrange
+-- and whenever the addon moves or resizes its icon again (sizes differed:
+-- some addons set their icon to 18 px after our pass).
+local fitting = false
+local function FitBarIcon(b)
+  local icon = b.pssIcon
+  if not icon or fitting then return end
+  fitting = true
+  pcall(icon.ClearAllPoints, icon)
+  pcall(icon.SetPoint, icon, "TOPLEFT", b, "TOPLEFT", 3, -3)
+  pcall(icon.SetPoint, icon, "BOTTOMRIGHT", b, "BOTTOMRIGHT", -3, 3)
+  pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+  fitting = false
+  if not b.pssIconHooked then
+    b.pssIconHooked = true
+    local function again() if not fitting and barButtons[b] then FitBarIcon(b) end end
+    pcall(PSS.HookSecure, icon, "SetSize", again)
+    pcall(PSS.HookSecure, icon, "SetPoint", again)
   end
 end
 
@@ -1751,6 +1771,8 @@ function LY:ArrangeButtonBar()
     local col, row = math.floor((i - 1) / perCol), (i - 1) % perCol
     if b:GetParent() ~= bar then pcall(b.SetParent, b, bar) end
     pcall(SkinBarButton, b)
+    barButtons[b] = true
+    pcall(FitBarIcon, b)
     -- Same size for all: square, from the button's own size.
     local bw, bh = Plain(b:GetWidth()) or BAR_BTN, Plain(b:GetHeight()) or BAR_BTN
     if bw ~= bh then pcall(b.SetHeight, b, bw) end

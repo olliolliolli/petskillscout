@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.97
+- Addon button bar: every icon fills its square the same way (some were smaller).
+
 3.7.96
 - Author line in the window, the settings and the button tooltips; one chat line per new version.
 
