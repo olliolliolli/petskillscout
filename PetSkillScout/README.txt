@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.103
+- Prairie Wolf Alpha (Mulgore) no longer listed for Furious Howl 1: players report it does not teach it in
+  Forever. Furious Howl 1: Worg (Silverpine), Coyote Packleader (Westfall), Mist Howler (Ashenvale).
+
 3.7.102
 - Data update 2026-11-14: AllTheThings d8dedab (4759 quests: +2 new - Uncanny Crystal, Unstable Magic; 7 updated),
   learned data +2 quests +2 rare spots. Pet data and gear source unchanged.

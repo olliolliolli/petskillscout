@@ -54,6 +54,10 @@ for rec in db:gmatch("{id=[^\n]+") do
   local c, z = rec:match('continent="([^"]+)"'), rec:match('zone="([^"]+)"')
   if c and z then cont[z] = c end
 end
+-- Teachers players reported in game as no longer teaching (ATT not updated
+-- yet): kept out. Database.lua drops them too. "npc:ability:rank".
+local REPORTED_NO = {["2960:Furious Howl:1"] = true} -- Prairie Wolf Alpha, Mulgore (CurseForge comment 2026-11-14)
+for k in pairs(REPORTED_NO) do have[k] = true end
 local old = read(OUT)
 for c, z in old:gmatch('continent="([^"]+)",zone="([^"]+)"') do cont[z] = c end
 
