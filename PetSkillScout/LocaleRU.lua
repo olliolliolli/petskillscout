@@ -120,6 +120,7 @@ T["careReminderOpt"] = "Напоминать, когда питомец недо
 T["character"] = "Персонаж"
 T["chipFast"] = "Быстрые"
 T["chipMyPet"] = "Для моего питомца"
+T["chipUnknown"] = "Ещё не знаю"
 T["chipRare"] = "Редкие"
 T["chipTeach"] = "Учит навыку"
 T["colEmpty"] = "Нет обликов для этого фильтра."

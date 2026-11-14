@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.104
+- Beasts tab: "Not known yet" filter - hides beasts that only teach skill ranks you already know (ranks
+  learned at Beast Training plus your active pet's).
+
 3.7.103
 - Prairie Wolf Alpha (Mulgore) no longer listed for Furious Howl 1: players report it does not teach it in
   Forever. Furious Howl 1: Worg (Silverpine), Coyote Packleader (Westfall), Mist Howler (Ashenvale).

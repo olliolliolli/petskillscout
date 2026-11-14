@@ -1058,17 +1058,17 @@ function UI:BuildBeasts()
   local st = self.beastState
   self.dropdowns = self.dropdowns or {}
 
-  self.bSearch = SearchBox(p, 300, function() UI:UpdateBeastList(true) end)
+  self.bSearch = SearchBox(p, 280, function() UI:UpdateBeastList(true) end)
   self.bSearch:SetPoint("TOPLEFT", p, "TOPLEFT", 0, 0)
   self.bChips = {}
-  for i, def in ipairs({{"fast", "chipFast"}, {"rare", "chipRare"}, {"teach", "chipTeach"}, {"mypet", "chipMyPet"}}) do
+  for i, def in ipairs({{"fast", "chipFast"}, {"rare", "chipRare"}, {"teach", "chipTeach"}, {"mypet", "chipMyPet"}, {"unknown", "chipUnknown"}}) do
     local key = def[1]
-    local chip = MakeButton(p, "", 120, 32, function(b)
+    local chip = MakeButton(p, "", 110, 32, function(b)
       st[key] = not st[key]
       SetActive(b, st[key])
       UI:UpdateBeastList(true)
     end, {size=12})
-    chip:SetPoint("TOPLEFT", p, "TOPLEFT", 312 + (i - 1) * 126, 0)
+    chip:SetPoint("TOPLEFT", p, "TOPLEFT", 290 + (i - 1) * 114, 0)
     chip.state, chip.key = key, def[2]
     self.bChips[i] = chip
   end
@@ -1241,6 +1241,16 @@ local function BeastMatches(rec, st, query, petKnown, petCan)
   if st.fast and not rec.fast then return false end
   if st.rare and not rec.isRare then return false end
   if st.teach and not rec.teaches then return false end
+  -- Hide skills you already know: only beasts that teach a rank above the
+  -- one you know (learned ranks + your active pet's).
+  if st.unknown then
+    local R, new = PSS.Route, false
+    for _, t in ipairs(rec.teaches or {}) do
+      local known = R and R.KnownRank and R:KnownRank(t.ability) or 0
+      if (tonumber(t.rank) or 0) > known then new = true break end
+    end
+    if not new then return false end
+  end
   if st.skill ~= "Any" or st.mypet then
     local ok = false
     for _, t in ipairs(rec.teaches or {}) do
@@ -1478,7 +1488,7 @@ end
 local function SearchFor(ability, rank)
   local st = UI.beastState
   st.skill, st.rank, st.family = ability, rank or "All", "All"
-  st.mypet, st.fast, st.rare, st.teach = false, false, false, false
+  st.mypet, st.fast, st.rare, st.teach, st.unknown = false, false, false, false, false
   UI.bSearch.edit:SetText("")
   for _, dd in ipairs(UI.dropdowns) do dd:Sync() end
   UI.bSelected = nil
