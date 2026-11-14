@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Rare pets on the world map (RareScanner style).
 -- * Every rare with known spawns gets one icon on its zone map.
 -- * Clicking an icon shows its spawn area: all spawn points plus an outline.
@@ -54,6 +55,7 @@ local function Tooltip(pin)
   local shared = PSS.Sync and PSS.Sync:Text(e)
   if shared then GameTooltip:AddLine(PSS:Safe(shared), 0.56, 0.78, 1) end
   GameTooltip:AddLine(PSS:Safe(PSS:L("rareMapHint")), 0.6, 0.6, 0.6, true)
+  GameTooltip:AddLine(PSS:Safe(PSS:L("annSpotHint")), 0.6, 0.6, 0.6, true)
   GameTooltip:Show()
 end
 
@@ -81,6 +83,8 @@ local function EnsureIcon(i, canvas)
       if not e then return end
       if button == "RightButton" then
         if RM.focus == e.beast.npcID then RM.focus = nil end
+      elseif IsAltKeyDown and IsAltKeyDown() then
+        if PSS.Announce then PSS.Announce:ShareRare(e) end
       elseif IsControlKeyDown and IsControlKeyDown() then
         if PSS.Nav then PSS.Nav:SetTarget(PSS.Nav:TargetFromBeast(e.beast)) end
       elseif IsShiftKeyDown and IsShiftKeyDown() then
@@ -227,6 +231,24 @@ local function Update()
       dot:Show()
       table.insert(pts, {p[1] / 100 * width, p[2] / 100 * height})
     end
+    -- Spots other hunters reported (also relayed from other realms) that the
+    -- built-in data does not have yet: extra dots, no outline.
+    local extra = PSS.Relay and PetSkillScoutDB and PetSkillScoutDB.rareSpots and PetSkillScoutDB.rareSpots[focusEntry.id]
+    local k = #(focusEntry.beast.spawnPoints or {})
+    for _, p in ipairs(extra or {}) do
+      if p.m == mapID then
+        local known = false
+        for _, q in ipairs(focusEntry.beast.spawnPoints or {}) do
+          if math.abs(q[1] - p.x) <= 2 and math.abs(q[2] - p.y) <= 2 then known = true end
+        end
+        if not known then
+          k = k + 1
+          local dot = EnsureDot(k, canvas)
+          PSS.Map:Place(dot, canvas, p.x, p.y, width, height, scale)
+          dot:Show()
+        end
+      end
+    end
     DrawOutline(canvas, pts, scale)
   elseif areaFrame then
     areaFrame:Hide()
@@ -264,16 +286,11 @@ function RM:Focus(entry)
   PSS.selected = b
   self.focus = b.npcID
   dirty = true
-  if WorldMapFrame then
-    if type(ShowUIPanel) == "function" then pcall(ShowUIPanel, WorldMapFrame)
-    elseif WorldMapFrame.Show then pcall(WorldMapFrame.Show, WorldMapFrame) end
-    if b.mapID and type(WorldMapFrame.SetMapID) == "function" then
-      pcall(WorldMapFrame.SetMapID, WorldMapFrame, b.mapID)
-    end
-  end
+  PSS:OpenWorldMap(b.mapID)
 end
 
 local driver = CreateFrame("Frame")
+PSS:OnlyWithWorldMap(driver)
 RM._driver = driver
 driver:SetScript("OnUpdate", function(_, elapsed)
   elapsedSince = elapsedSince + (elapsed or 0)
@@ -282,3 +299,5 @@ driver:SetScript("OnUpdate", function(_, elapsed)
   local ok, err = pcall(Update)
   if not ok then RM._lastError = tostring(err) end
 end)
+driver.pssKey = "RareMap"
+PSS:Every(driver, 0.2)

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Hunter quests (Quests tab): which useful quest chains this character can
 -- do now, which are done, and a reminder when a new one becomes available.
 -- Data: PSS.QuestData. Everything about progress is read from the game:
@@ -114,7 +115,9 @@ function Q:Finals(e)
   return list
 end
 
+-- Same completed list as the map pins (game flag + server list + hand-ins).
 function Q:QuestDone(id)
+  if PSS.QuestWorth and PSS.QuestWorth.Done then return PSS.QuestWorth:Done(id) end
   local api = QL()
   local v
   if api and api.IsQuestFlaggedCompleted then v = Call(api.IsQuestFlaggedCompleted, id)
@@ -232,6 +235,31 @@ function Q:Status(e, level)
   if self:IsDone(e) then return "done" end
   if self:InLog(e) then return "active" end
   local min = self:MinLevel(e)
+  -- Quests opened by N of a list (25 library books): not available before.
+  local r = PSS.QuestDB and e.quests and PSS.QuestDB[e.quests[1]]
+  -- Only for single-quest entries (a chain entry starts with its first step)
+  -- and once your level is high enough (below it "soon" / "later" tell more).
+  local outgrown
+  if level >= min then
+    local gain, _, known = self:Gain(e)
+    outgrown = known and gain <= 0
+  end
+  if outgrown then return "outgrown" end
+  if r and type(r.p) == "table" and #r.p > 0 and not e.final and level >= min then
+    -- All previous quests are needed unless pn says how many (25 books).
+    -- Previous quests of the other faction do not count.
+    local f = PSS.player and PSS.player.faction
+    local side = f == "Alliance" and "A" or f == "Horde" and "H" or nil
+    local list = {}
+    for _, id in ipairs(r.p) do
+      local pr = PSS.QuestDB[id]
+      if not (side and pr and pr.s and pr.s ~= side) then list[#list + 1] = id end
+    end
+    local need = math.min(r.pn or #list, #list)
+    local have = 0
+    for _, id in ipairs(list) do if self:QuestDone(id) then have = have + 1 end end
+    if have < need then return "locked", have, need end
+  end
   if level >= min then
     local gain, _, known = self:Gain(e)
     if known and gain <= 0 then return "outgrown" end
@@ -265,19 +293,60 @@ function Q:Rows(filter, level)
   level = level or self:Level()
   local out = {}
   for _, e in ipairs(self:List()) do
-    local s = self:Status(e, level)
+    local s, have, need = self:Status(e, level)
     local hidden = self:Hidden(e)
     local keep
     if filter == "done" then keep = s == "done"
     elseif filter == "all" then keep = true
-    else keep = not hidden and (s == "ready" or s == "active" or s == "soon") end
-    if keep then out[#out + 1] = {e = e, status = s, hidden = hidden} end
+    else keep = not hidden and (s == "ready" or s == "active" or s == "soon" or (s == "locked" and level >= self:MinLevel(e))) end
+    if keep then out[#out + 1] = {e = e, status = s, hidden = hidden, have = have, need = need} end
   end
   return out
 end
 
--- Arrow target to the quest giver (only when the position is known).
+-- First step still to do on the way to quest id: walks the previous quests
+-- (QuestDB p) down to one whose own previous quests are done, is not done,
+-- not in the log, of your faction and has a known giver position.
+function Q:FirstStep(id)
+  local db = PSS.QuestDB
+  if not db then return nil end
+  local f = PSS.player and PSS.player.faction
+  local side = f == "Alliance" and "A" or f == "Horde" and "H" or nil
+  local seen = {}
+  local function walk(q, depth)
+    if seen[q] or depth > 30 then return nil end
+    seen[q] = true
+    local r = db[q]
+    if not r or (side and r.s and r.s ~= side) or self:QuestDone(q) then return nil end
+    local open = false
+    if type(r.p) == "table" then
+      local done = 0
+      for _, p in ipairs(r.p) do if self:QuestDone(p) then done = done + 1 end end
+      if done < (r.pn or #r.p) then
+        open = true
+        for _, p in ipairs(r.p) do
+          if not self:QuestDone(p) then
+            local hit = walk(p, depth + 1)
+            if hit then return hit end
+          end
+        end
+      end
+    end
+    if not open and depth > 0 and not self:InLogQuest(q) and r.x and r.y and r.m then return q end
+    return nil
+  end
+  return walk(id, 0)
+end
+
+-- Arrow target to the quest giver (only when the position is known). When
+-- earlier quests are still needed, the arrow points to the start of the chain.
 function Q:Target(e)
+  local first = e.quests and e.quests[1] and self:FirstStep(e.quests[1])
+  local r = first and PSS.QuestDB[first]
+  if r then
+    local name = (r.g and PSS.QuestNPC and PSS.QuestNPC[r.g]) or r.n
+    return {name = string.format("%s: %s", r.n or "?", name or "?"), mapID = r.m, points = {{r.x, r.y}}, quest = first}
+  end
   local info = self:Info(e)
   local mapID = self:ZoneMapID(e)
   if not (mapID and info.x and info.y) then return nil end
@@ -292,7 +361,7 @@ function Q:RemindersOn() return DB().questAlert ~= false end
 function Q:Worth(e, level)
   if self:Hidden(e) then return false end
   local s = self:Status(e, level)
-  if s ~= "ready" then return false end
+  if s ~= "ready" and s ~= "locked" then return false end
   local gain, _, known = self:Gain(e)
   if known and gain > 0 then return true end
   return level - self:MinLevel(e) <= self.REMIND_SPAN

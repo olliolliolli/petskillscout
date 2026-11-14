@@ -13,7 +13,7 @@ function GetQuestLogRewardXP(id) return MOCK.logXP[id] or 0 end
 C_QuestLog.GetQuestObjectives = function(id) return MOCK.objectives[id] end
 C_QuestLog.GetQuestTagInfo = function(id) return MOCK.tags[id] end
 local function reset()
-  PetSkillScoutDB = {language = "en"}; PSS:InitializeDB()
+  PetSkillScoutDB = {language = "en", questPins = true}; PSS:InitializeDB()
   MOCK.done, MOCK.inlog, MOCK.owned, MOCK.prints, MOCK.equipped = {}, {}, {}, {}, {}
   MOCK.level, MOCK.faction, MOCK.class, MOCK.classID, MOCK.race = 12, "Alliance", "HUNTER", 3, 1
   MOCK.logXP, MOCK.objectives, MOCK.tags = {}, {}, {}
@@ -43,6 +43,7 @@ MOCK.faction = "Alliance"
 MOCK.done[257] = true
 ok(select(2, W:Available(257, 12)) == "done", "done")
 MOCK.done[257] = nil
+PetSkillScoutDB.questDone = nil -- the test un-completes the quest
 MOCK.inlog[257] = 2
 ok(select(2, W:Available(257, 12)) == "log", "in log")
 MOCK.inlog[257] = nil
@@ -122,11 +123,39 @@ for _, g in ipairs(groups) do if g.npc == 1187 then daryl = g end end
 ok(daryl and daryl.best == "great", "Daryl's pin is purple")
 QP:Refresh(); QP.Update()
 ok((QP.shown or 0) > 0, "pins drawn " .. tostring(QP.shown))
+do -- off by default for a fresh install
+  local keep = PetSkillScoutDB.questPins
+  PetSkillScoutDB.questPins = nil
+  ok(not QP:Enabled(), "quest pins off by default")
+  PetSkillScoutDB.questPins = keep
+end
 local shownAll = QP.shown
 PetSkillScoutDB.questPinsSkip = true; QP:Refresh(); QP.Update()
 ok(QP.shown >= shownAll, "grey pins on request")
 PetSkillScoutDB.questPins = false; QP:Refresh(); QP.Update()
 ok(true, "pins off ok")
+-- Minimap: quest givers nearby get the same coloured "!" (Settings > Quests > on the minimap).
+PetSkillScoutDB.questPins = true
+local Nav, MMp = PSS.Nav, PSS.Minimap
+local oldPos, oldNear = Nav.PlayerPos, Nav.Nearest
+Nav.PlayerPos = function() return 1432, 0.5, 0.5 end
+Nav.Nearest = function() return 20, 0, 20 end
+local function minimapQuests()
+  MMp:Refresh(); MMp._driver.pssTick(MMp._driver, 1)
+  local n, purple = 0, false
+  for _, p in ipairs(MMp._pins) do
+    if p.shown and p.group then n = n + 1; if p.group.npc == 1187 then purple = p.group.best == "great" end end
+  end
+  return n, purple
+end
+local mn, mpurple = minimapQuests()
+ok(mn > 0 and mpurple, "minimap quest givers " .. mn .. ", Daryl purple")
+PetSkillScoutDB.questMinimap = false
+ok(minimapQuests() == 0, "minimap quest givers can be switched off")
+PetSkillScoutDB.questMinimap = nil
+PetSkillScoutDB.questPins = false
+ok(minimapQuests() == 0, "no minimap quest givers when quest markers are off")
+Nav.PlayerPos, Nav.Nearest = oldPos, oldNear
 -- Horde sees no Daryl.
 PetSkillScoutDB.questPins = true
 MOCK.faction = "Horde"
@@ -164,7 +193,11 @@ IsShiftKeyDown = function() return false end
 PetSkillScoutDB.questAuto = "worth"
 local gsel
 function GetNumAvailableQuests() return 2 end
-function GetAvailableQuestInfo(i) if i == 1 then return true, 0, false, false, found end return false, 0, false, false, 257 end
+-- A trivial (grey) quest the database does not know: skipped by the trivial flag,
+-- independent of which low quest pairs() happened to pick above.
+local greyNew = 999999
+assert(PSS.QuestDB[greyNew] == nil)
+function GetAvailableQuestInfo(i) if i == 1 then return true, 0, false, false, greyNew end return false, 0, false, false, 257 end
 function SelectAvailableQuest(i) gsel = i end
 MOCK.level = 12
 QA:OnGreeting()
@@ -214,7 +247,7 @@ C_QuestLog.GetInfo = function(i) if i == 1 then return {isHeader = true} end ret
 UI.questState.mode = "log"; UI:UpdateQuests()
 ok(UI.qRows[1].data and UI.qRows[1].data.id == 257, "log row")
 ok(UI.qSummary:GetText():find("log"), "log summary")
-for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es"}) do
+for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
   for k, v in pairs(PSS.Locale.en) do
     if k:match("^qw") or k:match("^qMode") or k:match("^optQuest") or k:match("^qAuto") or k == "setQuests" or k == "setQuestsSub" or k == "qUnconfirmed" then
       local t = PSS.Locale[lang][k]

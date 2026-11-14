@@ -1,0 +1,144 @@
+-- Build PetSkillScout/PetDataATT.lua from ATT's Forever database (MIT).
+-- Usage (from tools/att): lua5.1 genpets.lua <.contrib/.db> <PetDataATT.lua> <commit>
+-- * Teaching beasts: forever/character/hunter/beast training.lua, those missing
+--   from Database.lua are added to PSS.Beasts.
+-- * Positions: coordinates of the beast's own ATT entries, merged with the file
+--   already in the addon. Points are only added: older ones came from ATT
+--   sources that no longer exist in this form.
+local BASE, OUT, COMMIT = arg[1], arg[2], arg[3]
+local found, side = {}, {}
+__visit = function(node)
+  local id = rawget(node, "npcID") or rawget(node, "creatureID")
+  if type(id) ~= "number" then return end
+  local r = rawget(node, "races")
+  if r ~= nil and r == rawget(_G, "ALLIANCE_ONLY") then side[id] = "A" elseif r ~= nil and r == rawget(_G, "HORDE_ONLY") then side[id] = "H" end
+  local list = {}
+  local c = rawget(node, "coord")
+  if type(c) == "table" then list[1] = c end
+  local cs = rawget(node, "coords")
+  if type(cs) == "table" then for _, p in ipairs(cs) do list[#list + 1] = p end end
+  if #list == 0 then return end
+  found[id] = found[id] or {}
+  for _, p in ipairs(list) do
+    if type(p) == "table" and tonumber(p[1]) and tonumber(p[2]) and tonumber(p[3]) then
+      found[id][#found[id] + 1] = {tonumber(p[1]), tonumber(p[2]), tonumber(p[3])}
+    end
+  end
+end
+dofile("driver.lua")
+
+local function read(path)
+  local f = assert(io.open(path, "rb")); local s = f:read("*a"); f:close(); return s
+end
+
+-- Teachers from the training file: recipe comment + crs comments.
+local teachers, ability, rank = {}, nil, nil
+for line in (read(BASE .. "/forever/character/hunter/beast training.lua") .. "\n"):gmatch("(.-)\r?\n") do
+  local a, r = line:match("recipeID%s*=%s*%d+,%s*%-%-%s*(.-)%s*%[Rank (%d+)%]")
+  if a then ability, rank = a, tonumber(r) end
+  local id, name, fam, l1, l2, zone = line:match("^%s*(%d+),%s*%-%-%s*(.-)%s*%(([^,]+),%s*(%d+)%-?(%d*),%s*(.-)%)%s*$")
+  if fam == "Owl" then fam = "Bird of Prey" end -- the family name the addon uses
+  if id and ability then
+    teachers[#teachers + 1] = {npc = tonumber(id), name = name, family = fam, min = tonumber(l1),
+      max = tonumber(l2) or tonumber(l1), zone = zone, ability = ability, rank = rank}
+  end
+end
+
+-- What Database.lua already has, and which continent a zone is on.
+local db = read("../../PetSkillScout/Database.lua")
+local have, cont = {}, {}
+for rec in db:gmatch("{id=[^\n]+") do
+  local n = rec:match("npcID=(%d+)")
+  local a, r = rec:match('ability="([^"]+)"'), rec:match("rank=(%d+)")
+  if n and a and r then have[n .. ":" .. a .. ":" .. r] = true end
+  local c, z = rec:match('continent="([^"]+)"'), rec:match('zone="([^"]+)"')
+  if c and z then cont[z] = c end
+end
+-- Teachers players reported in game as no longer teaching (ATT not updated
+-- yet): kept out. Database.lua drops them too. "npc:ability:rank".
+local REPORTED_NO = {["2960:Furious Howl:1"] = true} -- Prairie Wolf Alpha, Mulgore (CurseForge comment 2026-11-14)
+for k in pairs(REPORTED_NO) do have[k] = true end
+local old = read(OUT)
+for c, z in old:gmatch('continent="([^"]+)",zone="([^"]+)"') do cont[z] = c end
+
+local esc = function(s) return (s:gsub('\\', '\\\\'):gsub('"', '\\"')) end
+local add, seen = {}, {}
+for _, t in ipairs(teachers) do
+  local key = t.npc .. ":" .. t.ability .. ":" .. t.rank
+  if not have[key] and not seen[key] then
+    seen[key] = true
+    local slug = t.ability:lower():gsub("[^%w]", "")
+    local kept = old:match('\n(  {id="att%-' .. slug .. t.rank .. '%-' .. t.npc .. '"[^\n]+)')
+    add[#add + 1] = kept or string.format('  {id="att-%s%d-%d",npcID=%d,name="%s",family="%s",minLevel=%d,maxLevel=%d,ability="%s",rank=%d,continent="%s",zone="%s",faction="All",source="AllTheThings Forever DB (MIT)",confidence="zone-level only",verifiedCoords=false,notes="From ATT beast training (Forever)."},',
+      slug, t.rank, t.npc, t.npc, esc(t.name), esc(t.family), t.min, t.max, esc(t.ability), t.rank,
+      esc(cont[t.zone] or "Unknown"), esc(t.zone))
+  end
+end
+
+-- Positions: the old table first, new points on the same map after it.
+local pos = {}
+for id, map, pts in old:gmatch("%[(%d+)%]={mapID=(%d+),points={(.-)}}}") do
+  local rec = {map = tonumber(map), pts = {}}
+  for x, y in pts:gmatch("{?([%d.]+),([%d.]+)") do rec.pts[#rec.pts + 1] = {tonumber(x), tonumber(y)} end
+  pos[tonumber(id)] = rec
+end
+local function near(list, x, y)
+  for _, p in ipairs(list) do if (p[1] - x) ^ 2 + (p[2] - y) ^ 2 < 0.25 then return true end end
+end
+local want = {}
+for id in pairs(pos) do want[id] = true end
+for _, t in ipairs(teachers) do want[t.npc] = true end
+local gained = 0
+for id in pairs(want) do
+  for _, p in ipairs(found[id] or {}) do
+    pos[id] = pos[id] or {map = p[3], pts = {}}
+    local rec = pos[id]
+    if rec.map == p[3] and #rec.pts < 12 and not near(rec.pts, p[1], p[2]) then
+      rec.pts[#rec.pts + 1] = {p[1], p[2]}
+      gained = gained + 1
+    end
+  end
+end
+
+-- Hunter and pet trainers: "n(id, { -- Name <Hunter Trainer>" in the zone
+-- files (the name is only in the comment), positions from the same entries.
+local trainers, tseen = {}, {}
+for _, file in ipairs(__files(BASE .. "/forever")) do
+  if not file:find("/.config/", 1, true) and not file:find("Missing DB", 1, true) then
+    for line in (read(file) .. "\n"):gmatch("(.-)\r?\n") do
+      local id, name, role = line:match("n%((%d+),.-%-%-%s*(.-)%s*<([^>]*Trainer)>")
+      id = tonumber(id)
+      local kind = role == "Hunter Trainer" and "hunter" or role == "Pet Trainer" and "pet" or nil
+      if id and kind and not tseen[id] and found[id] and found[id][1] then
+        tseen[id] = true
+        local p = found[id][1]
+        trainers[#trainers + 1] = string.format('{npc=%d,name="%s",kind="%s",mapID=%d,x=%g,y=%g%s},',
+          id, esc(name), kind, p[3], p[1], p[2], side[id] and (',f="' .. side[id] .. '"') or "")
+      end
+    end
+  end
+end
+table.sort(trainers)
+
+local ids = {}
+for id in pairs(pos) do ids[#ids + 1] = id end
+table.sort(ids)
+local f = assert(io.open(OUT, "wb"))
+f:write("-- Hunter pet data from the WoW Forever database of AllTheThings (generated by tools/att/genpets.lua, do not edit by hand).\n")
+f:write("-- https://github.com/ATTWoWAddon/AllTheThings, commit " .. COMMIT .. ", MIT licence (QuestDB-LICENSE.txt).\n")
+f:write("-- Teaching beasts missing from Database.lua are added to PSS.Beasts; PSS.BeastPositionsATT\n")
+f:write("-- holds ATT positions of tameable beasts on their own zone map (zone %), used when a\n")
+f:write("-- beast has no spawn points otherwise.\n")
+f:write("local PSS = PetSkillScout\nPSS.Beasts = PSS.Beasts or {}\nlocal add = {\n")
+f:write(table.concat(add, "\n") .. "\n}\nfor _, b in ipairs(add) do table.insert(PSS.Beasts, b) end\nPSS.BeastPositionsATT = {\n")
+for _, id in ipairs(ids) do
+  local p = {}
+  for _, q in ipairs(pos[id].pts) do p[#p + 1] = string.format("{%g,%g}", q[1], q[2]) end
+  f:write(string.format("[%d]={mapID=%d,points={%s}},\n", id, pos[id].map, table.concat(p, ",")))
+end
+f:write("}\n")
+f:write("-- Hunter and pet trainers (ATT zone entries): f = faction when only one may use them.\n")
+f:write("PSS.TrainersATT = {\n" .. table.concat(trainers, "\n") .. "\n}\n")
+f:close()
+io.stderr:write(string.format("trainers %d\n", #trainers))
+io.stderr:write(string.format("teachers %d, added beasts %d, positions %d, new points %d\n", #teachers, #add, #ids, gained))

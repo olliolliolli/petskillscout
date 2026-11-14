@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- 3D creature viewer adapted from the PlayerModel approach used by HunterPetAtlas.
 -- Uses the client's creature database (NPC IDs); no external model files are bundled.
 local PSS = PetSkillScout
@@ -543,7 +544,7 @@ function Preview:ShowStable(pet)
   -- The pet that is currently summoned can be rendered straight from its unit,
   -- even when the stable record has no NPC or display ID.
   local view = pet
-  if UnitExists and UnitExists("pet") and UnitName and UnitName("pet") == pet.name then
+  if UnitExists and UnitExists("pet") and UnitName and PSS.Plain(UnitName("pet")) == pet.name then
     view = setmetatable({unit="pet"}, {__index=pet})
   end
   self:Show(view)

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Game interface skin (optional, off by default), in the spirit of ElvUI:
 -- the Blizzard art of windows, tooltips, chat, minimap, unit frames and
 -- (separate toggle) action bars is faded out and replaced with flat panels
@@ -105,7 +106,7 @@ local function Fade(region)
   end
   if not hookedAlpha[region] and hooksecurefunc then
     hookedAlpha[region] = true
-    pcall(hooksecurefunc, region, "SetAlpha", OnAlpha)
+    pcall(PSS.HookSecure, region, "SetAlpha", OnAlpha)
   end
   busy = true; pcall(region.SetAlpha, region, 0); busy = false
 end
@@ -353,10 +354,69 @@ local TOOLTIPS = {"GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "Shopping
 local function HookShow(frame, fn)
   if type(frame) ~= "table" or hookedShow[frame] or not frame.HookScript then return end
   hookedShow[frame] = true
-  pcall(frame.HookScript, frame, "OnShow", function(f) if S.active then pcall(fn, f) end end)
+  pcall(PSS.HookScript, frame, "OnShow", function(f) if S.active then pcall(fn, f) end end)
 end
 
-local function WindowNow(f) S:Window(f) end
+-- Quest window pages keep their own parchment (textures of the panels and
+-- their scroll frames, not of the window): faded too, so the light text the
+-- theme uses stays readable. Only the panels' own textures: reward icons live
+-- in buttons and are not touched.
+local QUEST_PAGES = {"QuestFrameDetailPanel", "QuestFrameProgressPanel", "QuestFrameRewardPanel",
+  "QuestFrameGreetingPanel", "QuestDetailScrollFrame", "QuestProgressScrollFrame", "QuestRewardScrollFrame",
+  "QuestGreetingScrollFrame", "QuestDetailScrollChildFrame", "QuestRewardScrollChildFrame",
+  "QuestProgressScrollChildFrame", "GossipFrameGreetingPanel", "QuestLogDetailScrollFrame"}
+local function QuestPages()
+  for _, n in ipairs(QUEST_PAGES) do
+    local f = G(n)
+    if f then
+      for _, k in ipairs({"Bg", "Background", "MaterialTopLeft", "MaterialTopRight", "MaterialBotLeft", "MaterialBotRight", "SealMaterialBG"}) do
+        if F(f, k) then Fade(F(f, k)) end
+      end
+      for _, r in ipairs(Regions(f)) do
+        if IsTexture(r) then
+          local layer = Layer(r)
+          if layer == "BACKGROUND" or layer == "BORDER" then Fade(r) end
+        end
+      end
+    end
+  end
+end
+-- Fallback: any parchment texture deeper in the quest windows (by its atlas
+-- or file name), whatever the panel is called on this client.
+local PARCH = {"parchment", "questbg", "questbackground", "questdetail", "material"}
+local function IsParchment(r)
+  local okA, atlas = pcall(r.GetAtlas, r)
+  local okT, file = pcall(r.GetTexture, r)
+  local name = ((okA and type(atlas) == "string") and atlas or "") .. " " .. ((okT and type(file) == "string") and file or "")
+  name = name:lower()
+  for _, k in ipairs(PARCH) do if name:find(k, 1, true) then return true end end
+  return false
+end
+local function WalkParchment(f, depth)
+  if depth > 6 or type(f) ~= "table" then return end
+  for _, r in ipairs(Regions(f)) do
+    if IsTexture(r) and IsParchment(r) then Fade(r) end
+  end
+  for _, c in ipairs(Children(f)) do
+    -- Buttons hold reward and item icons: never faded.
+    local okT, t = pcall(c.GetObjectType, c)
+    if not (okT and (t == "Button" or t == "CheckButton" or t == "ItemButton")) then WalkParchment(c, depth + 1) end
+  end
+end
+local function QuestPagesAll()
+  QuestPages()
+  for _, n in ipairs({"QuestFrame", "GossipFrame", "QuestLogFrame", "QuestLogDetailFrame"}) do
+    local f = G(n)
+    if f then WalkParchment(f, 0) end
+  end
+end
+S.QuestPages = QuestPagesAll
+
+local function WindowNow(f)
+  S:Window(f)
+  local n = f.GetName and f:GetName()
+  if n == "QuestFrame" or n == "GossipFrame" or n == "QuestLogFrame" or n == "QuestLogDetailFrame" then pcall(QuestPagesAll) end
+end
 
 local function SkinWindows()
   local list = {}
@@ -364,8 +424,10 @@ local function SkinWindows()
   for i = 1, 13 do list[#list + 1] = G("ContainerFrame" .. i) end
   for i = 1, 4 do list[#list + 1] = G("StaticPopup" .. i) end
   for _, f in pairs(list) do
-    if f then S:Window(f); HookShow(f, WindowNow) end
+    if f then WindowNow(f); HookShow(f, WindowNow) end
   end
+  -- Quest pages switch inside the window (details, progress, reward).
+  for _, n in ipairs(QUEST_PAGES) do HookShow(G(n), function() pcall(QuestPagesAll) end) end
 end
 
 -- Tooltips -------------------------------------------------------------------
@@ -544,7 +606,32 @@ end
 local TRACK_FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
 local poiMarks = setmetatable({}, {__mode = "k"})
 
+-- The tracker measures each line with its font object before laying the
+-- blocks out. Changing only the font string afterwards left the block sized
+-- for the old font (gaps after a quest was turned in and lines were rebuilt),
+-- so the tracker's own font objects get the theme font too, and the tracker
+-- is laid out once more when one of them changes.
+local trackFontObjs = {}
+local function TrackFontObject(fs, size)
+  if not fs.GetFontObject then return end
+  local ok, fo = pcall(fs.GetFontObject, fs)
+  if not ok or type(fo) ~= "table" or not fo.GetName or not fo.SetFont then return end
+  local name = fo:GetName()
+  -- Once per font object: a title and a line can share one, and setting it to
+  -- 12 then 11 again and again relaid the tracker without end.
+  if type(name) ~= "string" or not name:find("^ObjectiveTracker") or trackFontObjs[name] then return end
+  trackFontObjs[name] = size
+  pcall(fo.SetFont, fo, TRACK_FONT, size, "")
+  PSS:Soon("tracker-relayout", function()
+    if InCombatLockdown and InCombatLockdown() then return end
+    local mgr = G("ObjectiveTrackerManager")
+    if mgr and type(mgr.UpdateAll) == "function" then pcall(mgr.UpdateAll, mgr)
+    elseif type(_G.ObjectiveTracker_Update) == "function" then pcall(_G.ObjectiveTracker_Update) end
+  end, 0.1)
+end
+
 local function SetTrackFont(fs, size)
+  if type(fs) == "table" then pcall(TrackFontObject, fs, size) end
   if type(fs) == "table" and fs.SetFont then pcall(fs.SetFont, fs, TRACK_FONT, size, "") end
   if type(fs) == "table" and fs.SetShadowOffset then
     pcall(fs.SetShadowOffset, fs, 1, -1)
@@ -657,25 +744,46 @@ local poiEvents = CreateFrame("Frame")
 for _, e in ipairs({"SUPER_TRACKING_CHANGED", "QUEST_LOG_UPDATE", "QUEST_WATCH_LIST_CHANGED"}) do
   pcall(poiEvents.RegisterEvent, poiEvents, e)
 end
-poiEvents:SetScript("OnEvent", function() if S.active then pcall(SkinTrackerBlocks) end end)
+poiEvents:SetScript("OnEvent", function()
+  if S.active then PSS:Soon("tracker-poi", function() if S.active then pcall(SkinTrackerBlocks) end end, 0.2) end
+end)
+
+-- A turned-in or abandoned quest sometimes leaves its empty space in the
+-- tracker until the next full update: ask for one shortly after.
+local relayEvents = CreateFrame("Frame")
+for _, e in ipairs({"QUEST_TURNED_IN", "QUEST_REMOVED"}) do pcall(relayEvents.RegisterEvent, relayEvents, e) end
+relayEvents:SetScript("OnEvent", function()
+  local function relayout()
+    if InCombatLockdown and InCombatLockdown() then return end
+    local mgr = G("ObjectiveTrackerManager")
+    if mgr and type(mgr.UpdateAll) == "function" then pcall(mgr.UpdateAll, mgr)
+    elseif type(_G.ObjectiveTracker_Update) == "function" then pcall(_G.ObjectiveTracker_Update) end
+  end
+  if C_Timer then C_Timer.After(0.5, relayout); C_Timer.After(2, relayout) end
+end)
 
 local trackerHooked = false
 local function HookTracker()
   if trackerHooked or not hooksecurefunc then return end
   trackerHooked = true
-  local function again() if S.active then pcall(SkinTracker); pcall(SkinTrackerBlocks) end end
+  -- Every tracker section calls Update, often several times per frame, and
+  -- restyling it marks the tracker for another layout: one pass per burst.
+  local function again()
+    if not S.active then return end
+    PSS:Soon("tracker", function() if S.active then pcall(SkinTracker); pcall(SkinTrackerBlocks) end end, 0.2)
+  end
   local otf = G("ObjectiveTrackerFrame")
   if otf then
     for _, m in ipairs({"Update", "Layout"}) do
-      if type(otf[m]) == "function" then pcall(hooksecurefunc, otf, m, again) end
+      if type(otf[m]) == "function" then pcall(PSS.HookSecure, otf, m, again) end
     end
   end
   for _, fn in ipairs({"ObjectiveTracker_Update", "ObjectiveTracker_Expand", "ObjectiveTracker_Collapse"}) do
-    if type(_G[fn]) == "function" then hooksecurefunc(fn, again) end
+    if type(_G[fn]) == "function" then PSS.HookSecure(fn, again) end
   end
   for _, n in ipairs(TRACKER_MODULES) do
     local m = G(n)
-    if m and type(m.Update) == "function" then pcall(hooksecurefunc, m, "Update", again) end
+    if m and type(m.Update) == "function" then pcall(PSS.HookSecure, m, "Update", again) end
   end
 end
 
@@ -799,7 +907,7 @@ local function SkinActionButton(b)
   StyleHotkey(b)
   if not hookedShow[b] and hooksecurefunc then
     hookedShow[b] = true
-    if type(b.UpdateHotkeys) == "function" then pcall(hooksecurefunc, b, "UpdateHotkeys", StyleHotkey) end
+    if type(b.UpdateHotkeys) == "function" then pcall(PSS.HookSecure, b, "UpdateHotkeys", StyleHotkey) end
   end
   -- Border on the button edge, fill behind the icon.
   S:Backdrop(b, "slot", {0, 0, 0, 0}, "OVERLAY")
@@ -807,11 +915,13 @@ local function SkinActionButton(b)
   if bd and bd.bg.SetDrawLayer then pcall(bd.bg.SetDrawLayer, bd.bg, "BACKGROUND", -8) end
 end
 
+S.SkinActionButton = SkinActionButton -- also used by GamepadTheme.lua
+
 local hotkeyHooked = false
 local function SkinBars()
   if not hotkeyHooked and type(ActionButton_UpdateHotkeys) == "function" and hooksecurefunc then
     hotkeyHooked = true
-    hooksecurefunc("ActionButton_UpdateHotkeys", function(b) pcall(StyleHotkey, b) end)
+    PSS.HookSecure("ActionButton_UpdateHotkeys", function(b) pcall(StyleHotkey, b) end)
   end
   for _, def in ipairs(BAR_BUTTONS) do
     for i = 1, def[2] do SkinActionButton(G(def[1] .. i)) end

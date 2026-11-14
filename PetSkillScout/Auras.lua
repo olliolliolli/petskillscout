@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Buffs and debuffs in the interface theme (part of the "units" layout).
 --   * Player: the Blizzard buff and debuff frames are kept (right-click to
 --     cancel a buff stays a Blizzard action) but moved above the player
@@ -200,8 +201,16 @@ local function Stack(list, anchor, baseY)
     local h = Plain(b:GetHeight()) or side
     local step, rowH = side + 4, math.max(h, side + 12) + 2
     local col, row = (k - 1) % PER_ROW_PLAYER, math.floor((k - 1) / PER_ROW_PLAYER)
-    pcall(b.ClearAllPoints, b)
-    pcall(b.SetPoint, b, "BOTTOMRIGHT", anchor, "TOPRIGHT", -col * step, baseY * ratio + row * rowH)
+    -- Only move a button that is not already there: every move makes the
+    -- aura container lay itself out again, which calls our hook again.
+    local x, y = -col * step, baseY * ratio + row * rowH
+    local p, rel, rp, ox, oy = b:GetPoint(1)
+    local n = b.GetNumPoints and b:GetNumPoints() or 1
+    if not (n == 1 and p == "BOTTOMRIGHT" and rel == anchor and rp == "TOPRIGHT" and type(ox) == "number"
+        and type(oy) == "number" and math.abs(ox - x) < 0.5 and math.abs(oy - y) < 0.5) then
+      pcall(b.ClearAllPoints, b)
+      pcall(b.SetPoint, b, "BOTTOMRIGHT", anchor, "TOPRIGHT", x, y)
+    end
     used = math.max(used, (row + 1) * rowH / ratio)
   end
   return used
@@ -399,24 +408,24 @@ function A:Apply()
   self:Arrange()
   if not hooked and hooksecurefunc then
     hooked = true
-    local function restyle() pcall(A.StyleAll, A); pcall(A.Arrange, A) end
+    local function restyle() PSS:Soon("auras", function() pcall(A.StyleAll, A); pcall(A.Arrange, A) end) end
     for _, n in ipairs({"BuffFrame", "DebuffFrame"}) do
       local f = G(n)
       if f then
         for _, m in ipairs({"UpdateAuraButtons", "Update", "UpdateGridLayout"}) do
-          if type(f[m]) == "function" then pcall(hooksecurefunc, f, m, restyle) end
+          if type(f[m]) == "function" then pcall(PSS.HookSecure, f, m, restyle) end
         end
         -- The modern container lays itself out on its own (dirty flag).
         local c = F(f, "AuraContainer")
         if c then
           for _, m in ipairs({"Layout", "UpdateGridLayout"}) do
-            if type(c[m]) == "function" then pcall(hooksecurefunc, c, m, restyle) end
+            if type(c[m]) == "function" then pcall(PSS.HookSecure, c, m, restyle) end
           end
         end
       end
     end
     for _, fn in ipairs({"BuffFrame_Update", "AuraButton_Update", "BuffFrame_UpdateAllBuffAnchors"}) do
-      if type(_G[fn]) == "function" then hooksecurefunc(fn, restyle) end
+      if type(_G[fn]) == "function" then PSS.HookSecure(fn, restyle) end
     end
     if EventRegistry and EventRegistry.RegisterCallback then
       pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Exit", function() pcall(A.Place, A) end, A)
@@ -432,7 +441,7 @@ end
 A.frame:SetScript("OnEvent", function(_, event, unit)
   if not A.on then return end
   if event == "PLAYER_REGEN_ENABLED" then
-    pcall(A.Place, A); pcall(A.StyleAll, A); pcall(A.Arrange, A)
+    PSS:Soon("auras-regen", function() pcall(A.Place, A); pcall(A.StyleAll, A); pcall(A.Arrange, A) end, 0.5)
   elseif event == "PLAYER_TARGET_CHANGED" or unit == "target" then
     pcall(A.UpdateTarget, A)
   elseif unit == "player" then

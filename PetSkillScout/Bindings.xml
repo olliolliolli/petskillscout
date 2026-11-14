@@ -1,5 +1,8 @@
 <Bindings>
-  <Binding name="CLICK PetSkillScoutPetStay:LeftButton" header="PETSKILLSCOUT" category="ADDONS">
+  <Binding name="PETSKILLSCOUT_TOGGLE" header="PETSKILLSCOUT" category="ADDONS">
+    PetSkillScout_ToggleWindow()
+  </Binding>
+  <Binding name="CLICK PetSkillScoutPetStay:LeftButton" category="ADDONS">
   </Binding>
   <Binding name="CLICK PetSkillScoutPetFollow:LeftButton" category="ADDONS">
   </Binding>

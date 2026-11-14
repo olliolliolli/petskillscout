@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Atlas of every tameable beast (AtlasData.lua): decoding, lookups and filters.
 local PSS = PetSkillScout
 PSS.Atlas = { list = {}, byNpc = {}, built = false }
@@ -96,6 +97,15 @@ function A:Build()
       if rec.x and math.abs(rec.x) <= 1 then rec.x, rec.y = rec.x * 100, rec.y * 100 end
       table.insert(self.list, rec)
       self.byNpc[b.npcID] = rec
+    end
+  end
+  -- Beasts still without a position: ATT positions on their own zone map (PetDataATT.lua).
+  for _, rec in ipairs(self.list) do
+    local att = PSS.BeastPositionsATT and PSS.BeastPositionsATT[rec.npcID]
+    if att and not (rec.spawnPoints and #rec.spawnPoints > 0) then
+      rec.mapID, rec.spawnPoints = att.mapID, att.points
+      rec.x, rec.y = att.points[1][1], att.points[1][2]
+      rec.verifiedCoords, rec.source = true, "AllTheThings"
     end
   end
   table.sort(self.list, function(x, y)

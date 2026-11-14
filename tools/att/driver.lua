@@ -107,6 +107,7 @@ io.stderr:write(string.format("data files ok %d, failed %d\n", nok, nfail))
 local quests, count = {}, 0
 local function walk(node, ctx, depth)
   if type(node) ~= "table" or depth > 60 then return end
+  if __visit then __visit(node) end -- genpets.lua
   local c = ctx
   if node.mapID or node.instanceID or node.maps or node.headerID or node.npcID then
     c = {}
@@ -115,12 +116,23 @@ local function walk(node, ctx, depth)
     if node.instanceID then c.inst = node.instanceID end
     if node.maps and not node.questID then c.maps = node.maps end
   end
+  -- Holiday content (ROOTS.Holidays, or a node with an event): seasonal NPCs
+  -- stand there only during the event.
+  -- holiday = the event ID (EVENTS.*, the same IDs as the game calendar), or
+  -- -1 when the node is under ROOTS.Holidays without an event.
+  local ev = tonumber(rawget(node, "e"))
+  if ev or (ctx.root and ROOTS and ctx.root == tostring(ROOTS.Holidays) and not c.holiday) then
+    if c == ctx then c = {}; for k, v in pairs(ctx) do c[k] = v end end
+    c.holiday = ev or c.holiday or -1
+  end
   if rawget(node, "questID") then
     count = count + 1
     local id = node.questID
     local prev = quests[id]
     if not prev or (not prev.coord and (node.coord or node.coords)) then
-      quests[id] = {node = node, ctx = c}
+      quests[id] = {node = node, ctx = c, holiday = c.holiday or (prev and prev.holiday)}
+    elseif c.holiday and not prev.holiday then
+      prev.holiday = c.holiday
     end
   end
   local g = rawget(node, "groups") or rawget(node, "g")

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Look collection ("skins"), families and the pet log (where and when each pet
 -- joined you). Looks are collected from your active pet, your stable and the
 -- rares you tamed. Data: SkinData.lua.
@@ -126,7 +127,7 @@ end
 -- Pet log -----------------------------------------------------------------------
 -- PetSkillScoutDB.petLog[guid] = { first, zone, npc, family, name, level, tamed }
 local function PetGUID()
-  local guid = UnitGUID and UnitGUID("pet")
+  local guid = UnitGUID and PSS.Plain(UnitGUID("pet"))
   if type(guid) ~= "string" then return nil end
   local _, _, _, _, _, id = strsplit("-", guid)
   return guid, tonumber(id)
@@ -200,3 +201,5 @@ C.frame:SetScript("OnEvent", function(self, event, unit)
   delay = 1.0 -- after MyPet's own rescan
   self:Show()
 end)
+C.frame.pssKey = "Collection"
+PSS:Every(C.frame, 0.2)

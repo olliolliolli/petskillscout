@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 local PSS = PetSkillScout
 PSS.Map = {}
 
@@ -33,30 +34,36 @@ end
 -- Opens the world map on the beast's zone. The selected beast's spawn points are
 -- drawn while it stays selected; it is NOT added to the persistent "Track" list,
 -- so the checkbox in the results only changes when the user ticks it.
+-- Opening / closing game panels from addon code while the gamepad UI is on
+-- taints its frame manager: the game then blocks
+-- SetPreferredGamepadInteractTarget (ADDON_ACTION_FORBIDDEN) and can freeze.
+-- With the gamepad UI on, the map is not touched: pins and the arrow are set
+-- and the player opens the map himself.
+function PSS:GamepadUI()
+  return PSS.Gamepad and PSS.Gamepad.Enabled and PSS.Gamepad:Enabled() or false
+end
+
+function PSS:OpenWorldMap(mapID)
+  if PSS:GamepadUI() then
+    PSS:Print(PSS:L("mapOpenYourself"))
+    return false
+  end
+  if not WorldMapFrame then return false end
+  if OpenWorldMap and mapID then pcall(OpenWorldMap, mapID)
+  else
+    if type(ShowUIPanel) == "function" then pcall(ShowUIPanel, WorldMapFrame)
+    elseif WorldMapFrame.Show then pcall(WorldMapFrame.Show, WorldMapFrame) end
+    if mapID and type(WorldMapFrame.SetMapID) == "function" then pcall(WorldMapFrame.SetMapID, WorldMapFrame, mapID) end
+  end
+  return true
+end
+
 function PSS.Map:Show(beast)
   if not beast then return end
   PSS.selected = beast
   local hasCoords = HasCoords(beast) and beast.mapID
 
-  -- Open the map first: several clients reset the selected map during OnShow.
-  if WorldMapFrame then
-    if type(ShowUIPanel) == "function" then
-      pcall(ShowUIPanel, WorldMapFrame)
-    elseif type(WorldMapFrame.Show) == "function" then
-      pcall(WorldMapFrame.Show, WorldMapFrame)
-    end
-    if hasCoords then
-      local set = false
-      if type(WorldMapFrame.SetMapID) == "function" then
-        set = pcall(WorldMapFrame.SetMapID, WorldMapFrame, beast.mapID)
-      end
-      if not set and type(SetMapByID) == "function" then
-        pcall(SetMapByID, beast.mapID)
-      end
-    end
-  elseif type(ToggleWorldMap) == "function" then
-    pcall(ToggleWorldMap)
-  end
+  PSS:OpenWorldMap(hasCoords and beast.mapID or nil)
   self:RefreshTrackedPins()
 end
 
@@ -151,8 +158,21 @@ local function EnsureTrackedPin(index, canvas)
           GameTooltip:AddLine(PSS:Safe(self.ability .. " " .. PSS:L("rank") .. " " .. tostring(self.rank or "?")), 0.4, 1, 0.5)
         end
         if self.px and self.py then GameTooltip:AddLine(PSS:Safe(string.format("%.1f, %.1f", self.px, self.py)), 1, 1, 1) end
+        if self.beastID then GameTooltip:AddLine(PSS:Safe(PSS:L("untrackHint")), 0.6, 0.6, 0.6) end
         GameTooltip:Show()
       end
+    end)
+    -- Right click: stop tracking this beast (no need to find it in the addon).
+    pin:RegisterForClicks("RightButtonUp")
+    pin:SetScript("OnClick", function(self, button)
+      if button ~= "RightButton" or not self.beastID then return end
+      PSS:SetTracked(self.beastID, false)
+      if PSS.selected and PSS.selected.id == self.beastID then PSS.selected = nil end
+      if GameTooltip then GameTooltip:Hide() end
+      self:Hide()
+      if PSS.Minimap then PSS.Minimap:Refresh() end
+      if PSS.UI and PSS.UI.Refresh then pcall(PSS.UI.Refresh, PSS.UI) end
+      PSS:Print(string.format(PSS:L("untrackedPin"), self.beastName or "?"))
     end)
     pin:SetScript("OnLeave", function(self)
       if self.label then self.label:Hide() end
@@ -224,7 +244,7 @@ local function UpdateTrackedPins()
         if math.abs(y) <= 1 then y = y * 100 end
         used = used + 1
         local pin = EnsureTrackedPin(used, canvas)
-        pin.beastName, pin.zone = beast.name, beast.zone
+        pin.beastName, pin.zone, pin.beastID = beast.name, beast.zone, beast.id
         pin.label:SetText(beast.name or "Pet")
         pin.ability, pin.rank = abilityName, beast.rank
         pin.px, pin.py = x, y
@@ -239,6 +259,7 @@ local function UpdateTrackedPins()
 end
 
 local pinDriver = CreateFrame("Frame")
+PSS:OnlyWithWorldMap(pinDriver)
 PSS.Map._driver = pinDriver
 pinDriver:SetScript("OnUpdate", function(_, elapsed)
   mapRefreshElapsed = mapRefreshElapsed + (elapsed or 0)
@@ -247,3 +268,58 @@ pinDriver:SetScript("OnUpdate", function(_, elapsed)
   local ok, err = pcall(UpdateTrackedPins)
   if not ok and PSS.Map then PSS.Map._lastPinError = tostring(err) end
 end)
+pinDriver.pssKey = "Map pins"
+PSS:Every(pinDriver, 0.25)
+
+-- Ping: a pulsing gold ring with a label at a point of the world map for a
+-- few seconds (e.g. "show the quest giver"), so it is easy to spot.
+local ping
+local PING_TIME = 8
+function PSS.Map:Ping(target)
+  if not (target and target.mapID and target.points and target.points[1]) then return end
+  if not ping then
+    ping = CreateFrame("Frame", nil, UIParent)
+    ping:SetSize(40, 40)
+    ping:EnableMouse(false)
+    ping.ring = ping:CreateTexture(nil, "OVERLAY")
+    ping.ring:SetTexture("Interface\\Cooldown\\star4")
+    ping.ring:SetBlendMode("ADD")
+    ping.ring:SetPoint("CENTER")
+    ping.dot = ping:CreateTexture(nil, "OVERLAY")
+    ping.dot:SetTexture("Interface\\Minimap\\Ping\\ping5")
+    ping.dot:SetBlendMode("ADD")
+    ping.dot:SetPoint("CENTER")
+    ping.dot:SetSize(26, 26)
+    ping.mark = ping:CreateTexture(nil, "OVERLAY")
+    ping.mark:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
+    ping.mark:SetPoint("CENTER")
+    ping.mark:SetSize(18, 18)
+    ping.label = ping:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ping.label:SetPoint("BOTTOM", ping, "TOP", 0, 2)
+    ping.label:SetTextColor(1, 0.85, 0.2)
+    if ping.label.SetFont then
+      local font, size = GameFontNormal:GetFont()
+      ping.label:SetFont(font, (size or 12) + 1, "OUTLINE")
+    end
+    ping:SetScript("OnUpdate", function(self, elapsed)
+      self.left = (self.left or 0) - (elapsed or 0)
+      local canvas, mapID, width, height, scale = PSS.Map:GetCanvasInfo()
+      if self.left <= 0 or not canvas then self:Hide(); return end
+      if mapID ~= self.target.mapID then self:SetAlpha(0); return end
+      if self:GetParent() ~= canvas then self:SetParent(canvas) end
+      PSS.Map:RaisePin(self, 9800)
+      local p = self.target.points[1]
+      PSS.Map:Place(self, canvas, p[1], p[2], width, height, scale)
+      -- Pulse: the ring grows and fades once per second; fades out at the end.
+      local t = (GetTime and GetTime() or 0) % 1
+      self.ring:SetSize(30 + 50 * t, 30 + 50 * t)
+      self.ring:SetVertexColor(1, 0.82, 0.2, 1 - t)
+      self:SetAlpha(math.min(1, self.left))
+    end)
+  end
+  ping.target = target
+  ping.left = PING_TIME
+  ping.label:SetText(PSS:Safe(target.name or ""))
+  ping:SetAlpha(0)
+  ping:Show()
+end

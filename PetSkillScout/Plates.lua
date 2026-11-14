@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Nameplates in the interface theme (Settings > Interface > Nameplates).
 -- Blizzard's own nameplates are restyled, not replaced: flat health bar,
 -- thin theme border (accent colour on your target instead of the yellow

@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Gear advisor for hunters (WoW Forever): best items per slot for a spec,
 -- upgrades for the current level, where to get them and the gain over what
 -- is equipped now.
@@ -58,10 +59,14 @@ local byId, bySlot
 local function Index()
   if byId then return end
   byId, bySlot = {}, {}
-  for _, rec in ipairs(PSS.GearData or {}) do
-    byId[rec.id] = rec
-    bySlot[rec.slot] = bySlot[rec.slot] or {}
-    table.insert(bySlot[rec.slot], rec)
+  for _, list in ipairs({PSS.GearData or {}, PSS.CraftData or {}}) do
+    for _, rec in ipairs(list) do
+      if not byId[rec.id] then
+        byId[rec.id] = rec
+        bySlot[rec.slot] = bySlot[rec.slot] or {}
+        table.insert(bySlot[rec.slot], rec)
+      end
+    end
   end
 end
 function G:Get(id) Index(); return byId[id] end
@@ -107,6 +112,32 @@ local STAT_KEYS = {
   {"INTELLECT", "int"}, {"SPIRIT", "spi"}, {"STRENGTH", "str"}, {"DAMAGE_PER_SECOND", "dps"},
   {"RESISTANCE0", "armor"}, {"MANA_REGENERATION", "mp5"}, {"POWER_REGEN0", "mp5"},
 }
+-- Hit / crit in percent as the tooltip prints them ("Improves your chance to
+-- hit by 0.3%"). GetItemStats gives Forever's own unit (3 for 0.3 %), which
+-- was read as 3 % and made such items look far better than they are.
+local pctCache = {}
+local function TooltipPercents(link)
+  local c = pctCache[link]
+  if c ~= nil then return c or nil end
+  if not (C_TooltipInfo and C_TooltipInfo.GetHyperlink) then pctCache[link] = false; return nil end
+  local ok, data = pcall(C_TooltipInfo.GetHyperlink, link)
+  if not ok or type(data) ~= "table" or type(data.lines) ~= "table" then return nil end
+  local out = {}
+  for _, line in ipairs(data.lines) do
+    local t = line.leftText
+    if type(t) == "string" and not (PSS.IsSecret and PSS.IsSecret(t)) then
+      local low = t:lower()
+      local n = tonumber(low:match("([%d%.]+)%s*%%"))
+      if n then
+        if low:find("critical") or low:find("крит") then out.crit = (out.crit or 0) + n
+        elseif low:find("to hit") or low:find("влуч") then out.hit = (out.hit or 0) + n end
+      end
+    end
+  end
+  if next(out) then pctCache[link] = out end
+  return out
+end
+
 local function RuntimeStats(link)
   if type(link) ~= "string" then return nil end
   local fn = (C_Item and C_Item.GetItemStats) or GetItemStats
@@ -125,6 +156,13 @@ local function RuntimeStats(link)
           if k:find(m[1]) then st[m[2]] = (st[m[2]] or 0) + v; break end
         end
       end
+    end
+  end
+  if st.hit or st.crit then
+    local pct = TooltipPercents(link)
+    if pct then
+      if st.hit and pct.hit then st.hit = pct.hit end
+      if st.crit and pct.crit then st.crit = pct.crit end
     end
   end
   return next(st) and st or nil
@@ -202,36 +240,104 @@ function G:Sources(rec)
   local fac = Faction()
   local out = {}
   for _, s in ipairs(rec.src or {}) do
-    if not (s.t == "q" and s.f and fac and s.f ~= fac) then table.insert(out, s) end
+    if s.t == "c" then
+      -- Crafted: only for your own professions (also when the skill is still too low).
+      if self:ProfSkill(s.p) then table.insert(out, s) end
+    elseif not (s.t == "q" and s.f and fac and s.f ~= fac) then
+      table.insert(out, s)
+    end
   end
   return out
 end
 
+-- Professions -------------------------------------------------------------------
+-- Learned professions and skill, by English name (skill line IDs are the same
+-- in every language). Cached for 10 s.
+G.PROF_LINES = {[165] = "Leatherworking", [164] = "Blacksmithing", [197] = "Tailoring",
+  [202] = "Engineering", [171] = "Alchemy", [333] = "Enchanting"}
+local PROF_EN = {}
+for _, n in pairs(G.PROF_LINES) do PROF_EN[n] = true end
+local profCache, profAt = nil, -1e9
+function G:Professions()
+  local now = GetTime and GetTime() or 0
+  if profCache and now - profAt < 10 then return profCache end
+  local out = {}
+  if type(GetProfessions) == "function" and type(GetProfessionInfo) == "function" then
+    local list = {Call(GetProfessions)}
+    for i = 1, 2 do
+      local idx = Plain(list[i])
+      if idx then
+        local _, _, rank, maxRank, _, _, line = Call(GetProfessionInfo, idx)
+        local name = self.PROF_LINES[tonumber(Plain(line)) or 0]
+        if name then out[name] = {rank = tonumber(Plain(rank)) or 0, max = tonumber(Plain(maxRank)) or 0} end
+      end
+    end
+  end
+  if not next(out) and type(GetNumSkillLines) == "function" and type(GetSkillLineInfo) == "function" then
+    -- Older clients: the skill list (English names only; other languages
+    -- fall back to the localised names below).
+    local n = tonumber(Plain(Call(GetNumSkillLines))) or 0
+    for i = 1, n do
+      local name, header, _, rank, _, _, maxRank = Call(GetSkillLineInfo, i)
+      name = Plain(name)
+      if name and not Plain(header) then
+        local en = PROF_EN[name] and name
+        if not en then
+          for line, eng in pairs(self.PROF_LINES) do
+            local loc = C_TradeSkillUI and C_TradeSkillUI.GetTradeSkillDisplayName and Call(C_TradeSkillUI.GetTradeSkillDisplayName, line)
+            if Plain(loc) == name then en = eng end
+          end
+        end
+        if en then out[en] = {rank = tonumber(Plain(rank)) or 0, max = tonumber(Plain(maxRank)) or 0} end
+      end
+    end
+  end
+  -- Anything missing: the quest module merges the skill list and spell book.
+  if PSS.QuestWorth and PSS.QuestWorth.Skills then
+    for line, rank in pairs(PSS.QuestWorth:Skills()) do
+      local name = type(line) == "number" and self.PROF_LINES[line]
+      if name and not out[name] then out[name] = {rank = rank, max = 0} end
+    end
+  end
+  profCache, profAt = out, now
+  return out
+end
+function G:ProfSkill(name)
+  local p = self:Professions()[name]
+  return p and p.rank
+end
+function G:ProfName(en)
+  local k = "prof" .. tostring(en)
+  local t = L(k)
+  return t ~= k and t or tostring(en)
+end
+
 function G:Practical(rec)
   for _, s in ipairs(self:Sources(rec)) do
-    if s.t == "q" or s.t == "v" then return true end
+    if s.t == "q" or s.t == "v" or s.t == "c" then return true end
     if s.t == "d" and (s.c or 0) >= self.MIN_CHANCE then return true end
   end
   return false
 end
 
-function G:Allowed(rec, maxLevel)
+-- relaxed: also rare drops (used when the slot is empty and nothing practical exists).
+function G:Allowed(rec, maxLevel, relaxed)
   if rec.lvl > maxLevel then return false end
   local fac = Faction()
   if rec.fac and fac and rec.fac ~= fac then return false end
   if rec.raid and not self:IncludeRaids() then return false end
   if rec.pvp and not self:IncludePvp() then return false end
   if #self:Sources(rec) == 0 then return false end
-  return self:IncludeRare() or self:Practical(rec)
+  return relaxed or self:IncludeRare() or self:Practical(rec)
 end
 
 -- Ranked candidates for a slot key at a level.
-function G:Candidates(slotDef, spec, maxLevel, limit)
+function G:Candidates(slotDef, spec, maxLevel, limit, relaxed)
   Index()
   local list = {}
   for _, kind in ipairs(slotDef.kinds) do
     for _, rec in ipairs(bySlot[kind] or {}) do
-      if self:Allowed(rec, maxLevel) then
+      if self:Allowed(rec, maxLevel, relaxed) then
         list[#list + 1] = {rec = rec, score = self:Score(self:Stats(rec.id), rec.slot, spec)}
       end
     end
@@ -264,6 +370,25 @@ function G:Plan(mode, spec)
       if not used[c.rec.id] then
         if not e.pick then e.pick = c else table.insert(e.alts, c) end
       end
+    end
+    -- Empty slot and nothing practical: anything is better than nothing, so
+    -- rare drops are offered too.
+    if not e.pick and not eqId then
+      for _, c in ipairs(self:Candidates(def, spec, level, 12, true)) do
+        if not used[c.rec.id] then
+          if not e.pick then e.pick = c; e.relaxed = true else table.insert(e.alts, c) end
+        end
+      end
+    end
+    -- Still nothing at your level: the nearest item that comes later
+    -- (lowest required level, best score among those), shown as "from level N".
+    if not e.pick and not eqId and mode ~= "max" then
+      local best
+      for _, c in ipairs(self:Candidates(def, spec, self:MaxLevel(), nil, true)) do
+        if not used[c.rec.id] and (not best or c.rec.lvl < best.rec.lvl
+           or (c.rec.lvl == best.rec.lvl and c.score > best.score)) then best = c end
+      end
+      e.upcoming = best
     end
     if e.pick and def.pair then used[e.pick.rec.id] = true end
     bySlotKey[def.key] = e
@@ -300,7 +425,7 @@ function G:Plan(mode, spec)
       elseif eq > 0 then
         e.gain = (e.pick.score - eq) / eq * 100
       end
-      e.better = e.pick.score > eq + 0.5 and not e.wearing
+      e.better = (e.pick.score > eq + 0.5 or not e.equipped.id) and not e.wearing
     end
   end
   return plan, level
@@ -352,6 +477,55 @@ function G:DiffParts(new, old, slot, max)
 end
 
 -- The main source as two short lines: who / what, and kind · place · chance.
+-- Quest behind the first quest source of an item: QuestDB entry matched by the
+-- quest name (gear data has no quest IDs). Prefers your faction and a quest
+-- with a known quest giver position.
+local questByName
+-- Name of the first quest source of an item (nil when it is not a quest reward).
+function G:QuestSourceName(rec)
+  for _, x in ipairs(self:Sources(rec)) do if x.t == "q" then return x.n end end
+end
+function G:QuestFor(rec)
+  local s
+  for _, x in ipairs(self:Sources(rec)) do if x.t == "q" then s = x; break end end
+  if not (s and s.n and PSS.QuestDB) then return nil end
+  if not questByName then
+    questByName = {}
+    for id, r in pairs(PSS.QuestDB) do
+      if r.n then
+        -- Chains are stored as "Name (2/7)": index them under the plain name.
+        local k = r.n:gsub("%s*%(%d+/%d+%)$", ""):lower()
+        questByName[k] = questByName[k] or {}
+        table.insert(questByName[k], id)
+      end
+    end
+    for _, ids in pairs(questByName) do table.sort(ids) end
+  end
+  local fac = Faction()
+  local best, bestScore
+  for _, id in ipairs(questByName[s.n:lower()] or {}) do
+    local r = PSS.QuestDB[id]
+    local score = 0
+    if r.s and fac and r.s ~= fac then score = score - 10 end
+    if r.m and r.x then score = score + 2 end
+    -- A chain starts at its first step: that is where you go.
+    local step, total = (r.n or ""):match("%((%d+)/(%d+)%)$")
+    if step == "1" then score = score + 1 end
+    if not bestScore or score > bestScore then best, bestScore = id, score end
+  end
+  if not best or bestScore < 0 or not (PSS.QuestDB[best].m and PSS.QuestDB[best].x) then
+    -- Not in the database (or no giver position there): quests learned in game.
+    local L = PSS.QuestLearn
+    local lid, lr
+    if L then lid, lr = L:ByTitle(s.n) end
+    if lid and lr.m and lr.x then return lid, lr end
+    if not best or bestScore < 0 then return nil end
+  end
+  local r = PSS.QuestDB[best]
+  local _, total = (r.n or ""):match("%((%d+)/(%d+)%)$")
+  return best, r, tonumber(total)
+end
+
 function G:SourceShort(rec)
   local s = self:Sources(rec)[1]
   if not s then return nil end
@@ -375,6 +549,12 @@ function G:SourceShort(rec)
     return s.n, L("gearKindQuest") .. where .. rep .. tail
   elseif s.t == "v" then
     return s.n, L("gearKindVendor") .. (s.i and ("  ·  " .. s.i) or "") .. rep .. tail
+  elseif s.t == "c" then
+    local have = self:ProfSkill(s.p) or 0
+    local need = tonumber(s.s) or 1
+    local state = have >= need and ("|cff70d070" .. L("gearCraftReady") .. "|r")
+      or ("|cffff7a5a" .. string.format(L("gearCraftNeed"), have) .. "|r")
+    return self:ProfName(s.p) .. " " .. need, L("gearKindCraft") .. "  ·  " .. state .. tail
   end
 end
 
@@ -425,6 +605,16 @@ function G:SourceLines(rec)
       end
     elseif s.t == "v" then
       table.insert(lines, string.format(L("gearSrcVendor"), s.n .. (s.i and (" (" .. s.i .. ")") or "")))
+    elseif s.t == "c" then
+      local have = self:ProfSkill(s.p) or 0
+      table.insert(lines, string.format(L("gearSrcCraft"), self:ProfName(s.p), tonumber(s.s) or 1, have))
+      local parts = {}
+      for _, r in ipairs(s.r or {}) do
+        local name = C_Item and C_Item.GetItemNameByID and Call(C_Item.GetItemNameByID, r[1])
+        if not Plain(name) and C_Item and C_Item.RequestLoadItemDataByID then Call(C_Item.RequestLoadItemDataByID, r[1]) end
+        parts[#parts + 1] = (r[2] or 1) .. "x " .. (Plain(name) or ("#" .. r[1]))
+      end
+      if #parts > 0 then table.insert(lines, L("gearReagents") .. ": " .. table.concat(parts, ", ")) end
     end
   end
   return lines
@@ -446,11 +636,27 @@ end
 
 -- Cache refresh: when items arrive, the open tab redraws (throttled).
 G.frame = CreateFrame("Frame")
+-- Not UNIT_INVENTORY_CHANGED: it fires on every shot (ammo count).
 for _, e in ipairs({"GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT", "PLAYER_EQUIPMENT_CHANGED", "PLAYER_LEVEL_UP"}) do
   pcall(G.frame.RegisterEvent, G.frame, e)
 end
 local dirty = false
-G.frame:SetScript("OnEvent", function() dirty = true end)
+local function RedrawGear()
+  local UI = PSS.UI
+  local f = _G.PetSkillScoutFrame
+  if UI and UI.view == "gear" and UI.UpdateGear and f and f:IsShown() then pcall(UI.UpdateGear, UI) end
+end
+G.Redraw = RedrawGear
+G.frame:SetScript("OnEvent", function(_, event, unit)
+  dirty = true
+  -- New gear: redraw at once and again when the item's stats have arrived.
+  -- Slot 0 is ammo (changes on every shot): nothing to redraw.
+  if event == "PLAYER_EQUIPMENT_CHANGED" and unit ~= 0 and C_Timer then
+    if PSS.GearCompare and PSS.GearCompare.Reset then pcall(PSS.GearCompare.Reset, PSS.GearCompare) end
+    C_Timer.After(0.2, RedrawGear)
+    C_Timer.After(1.5, RedrawGear)
+  end
+end)
 local t = 0
 G.frame:SetScript("OnUpdate", function(_, e)
   t = t + (e or 0)
@@ -458,7 +664,8 @@ G.frame:SetScript("OnUpdate", function(_, e)
   t = 0
   if dirty then
     dirty = false
-    local UI = PSS.UI
-    if UI and UI.view == "gear" and UI.UpdateGear then pcall(UI.UpdateGear, UI) end
+    RedrawGear()
   end
 end)
+G.frame.pssKey = "Gear"
+PSS:Every(G.frame, 0.5)

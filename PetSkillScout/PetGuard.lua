@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet guard for dungeons: helps you stop the pet from running through the
 -- whole instance after you jump down somewhere.
 -- * Warning when you drop from a height in a dungeon with your pet following.
@@ -12,7 +13,7 @@ local G = PSS.PetGuard
 local FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local STAY, FOLLOW, DEFENSIVE = "PetSkillScoutPetStay", "PetSkillScoutPetFollow", "PetSkillScoutPetDefensive"
-local FALL_SECONDS = 0.9     -- a normal jump is shorter than this
+local FALL_SECONDS = 1.8     -- longer than a jump or a small drop
 local SHOW_SECONDS = 8
 local STEP_SECONDS = 25      -- each step of the after-jump helper
 local DISMISS_PET, CALL_PET = 2641, 883
@@ -30,6 +31,13 @@ end
 local function Plain(v) if PSS.IsSecret and PSS.IsSecret(v) then return nil end return v end
 local function InCombat() return InCombatLockdown and InCombatLockdown() end
 local function Opt(key) return not PetSkillScoutDB or PetSkillScoutDB[key] ~= false end
+-- Dungeon pet alerts are off unless turned on in the options (3.7.100).
+local OFF_BY_DEFAULT = {guardFall = true, guardAggro = true, guardAggressive = true}
+local plainOpt = Opt
+Opt = function(key)
+  if OFF_BY_DEFAULT[key] then return PetSkillScoutDB and PetSkillScoutDB[key] == true or false end
+  return plainOpt(key)
+end
 local function Quiet() return PetSkillScoutDB and PetSkillScoutDB.guardQuiet == true end
 
 local function HasPet()
@@ -76,15 +84,33 @@ local function SpellName(id, fallback)
 end
 
 -- true = pet is far, false = near, nil = the client cannot tell.
+-- Exact distance where the client gives it, otherwise the 40 yd party range;
+-- the 28 yd interact range fired on any normal pull. See G.FAR_HOLD too.
+G.FAR_YARDS, G.FAR_HOLD = 70, 4
 local function PetFar()
-  local ok, near = pcall(CheckInteractDistance, "pet", 4)
-  near = ok and Plain(near)
-  if near ~= nil and near ~= false and near ~= true then near = nil end
-  if near ~= nil then return not near end
+  if UnitDistanceSquared then
+    local ok0, sq, seen = pcall(UnitDistanceSquared, "pet")
+    sq, seen = ok0 and Plain(sq), ok0 and Plain(seen)
+    if seen and type(sq) == "number" then return sq > G.FAR_YARDS * G.FAR_YARDS end
+  end
+  -- The party range check alone can say "out of range" for a pet right next
+  -- to you: the 28 yd interact check must agree, and without both no alert.
   local ok2, inRange, checked = pcall(UnitInRange, "pet")
   inRange, checked = ok2 and Plain(inRange), ok2 and Plain(checked)
-  if checked then return not inRange end
-  return nil
+  -- CheckInteractDistance is blocked in combat on this client (it was blocked
+  -- thousands of times per dungeon): in combat only the party range check,
+  -- and the hold time (G.FAR_HOLD) filters a short wrong "out of range".
+  if InCombatLockdown and InCombatLockdown() then
+    if not checked then return nil end
+    return inRange == false
+  end
+  local ok3, near = pcall(CheckInteractDistance, "pet", 4)
+  if ok3 then near = Plain(near) else near = nil end -- failed check: unknown, not far
+  return G.BothFar(inRange, checked, near)
+end
+function G.BothFar(inRange, checked, near)
+  if not checked or near == nil then return nil end
+  return inRange == false and near == false
 end
 
 local function KeyText(button)
@@ -343,15 +369,33 @@ local fallTime, fallAlerted = 0, false
 local lastAggroAlert = -1e9
 local tick = 0
 local driver = CreateFrame("Frame")
+local dungeonCheck, inDungeon = 0, false
+-- Outside dungeons the per-frame watcher is switched off entirely.
+if C_Timer and C_Timer.NewTicker then
+  C_Timer.NewTicker(1, function()
+    local want = (InDungeon() and true or false) or G.flow or (banner and banner:IsShown())
+    driver:SetShown(want and true or false)
+  end)
+end
+local sinceCheck = 0
 driver:SetScript("OnUpdate", function(_, elapsed)
-  elapsed = elapsed or 0
+  -- 10 checks a second are enough for a fall that takes over a second.
+  sinceCheck = sinceCheck + (elapsed or 0)
+  if sinceCheck < 0.1 then return end
+  elapsed, sinceCheck = sinceCheck, 0
+  -- Outside dungeons there is nothing to watch: check that once a second only.
+  dungeonCheck = dungeonCheck - elapsed
+  if dungeonCheck <= 0 then dungeonCheck = 1; inDungeon = InDungeon() and true or false end
+  if not inDungeon and not G.flow and not (banner and banner:IsShown()) then return end
   local now = Now()
   if banner and banner:IsShown() and now > hideAt and not G.dragging then
     if G.flow then G:EndFlow(false) else G:HideAlert() end
   end
-  -- Falling: checked every frame for a quick reaction.
+  -- Falling.
   local falling = Plain(safe(IsFalling)) and not Plain(safe(UnitOnTaxi, "player"))
-  if Opt("guardFall") and falling then
+  -- Jump / fall alert removed (3.7.101): only the "pet is far away" check
+  -- below, which does not depend on how you got there.
+  if false and falling then
     fallTime = fallTime + elapsed
     if not fallAlerted and fallTime >= FALL_SECONDS and InDungeon() and HasPet() and PetMode() ~= "stay" then
       fallAlerted = true
@@ -371,14 +415,15 @@ driver:SetScript("OnUpdate", function(_, elapsed)
       end
     end
   end
-  -- Pet fighting far away: twice a second.
+  -- Pet very far from you (fighting or not): twice a second.
   tick = tick + elapsed
   if tick < 0.5 then return end
   tick = 0
-  if Opt("guardAggro") and not G.flow and InDungeon() and HasPet() and Plain(safe(UnitAffectingCombat, "pet")) then
+  if Opt("guardAggro") and not G.flow and InDungeon() and HasPet() and PetMode() ~= "stay" then
     local far = PetFar()
-    if far == nil then far = not Plain(safe(UnitAffectingCombat, "player")) end
-    if far and now - lastAggroAlert > 15 then
+    -- Only a pet that stays away counts, not one running to a pull.
+    if not far then G.farSince = nil elseif not G.farSince then G.farSince = now end
+    if far and now - G.farSince >= G.FAR_HOLD and now - lastAggroAlert > 15 then
       lastAggroAlert = now
       G:Alert("aggro")
     end

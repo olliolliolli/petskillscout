@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Extra lines in the unit tooltip of tameable beasts (hunters only):
 -- tameable / family / attack speed, taming level, rare, skills it teaches
 -- (and whether the active pet already knows them), last rare sighting.
@@ -14,7 +15,7 @@ local function Enabled()
 end
 
 local function NpcID(unit)
-  local guid = UnitGUID and UnitGUID(unit)
+  local guid = UnitGUID and PSS.Plain(UnitGUID(unit))
   if type(guid) ~= "string" or not strsplit then return nil end
   local kind, _, _, _, _, id = strsplit("-", guid)
   if kind ~= "Creature" then return nil end
@@ -30,7 +31,9 @@ local function PetRank(ability)
   end
 end
 
-function TT:Lines(npc)
+-- unitLevel: level of the beast under the mouse, when known. Taming needs
+-- the beast to be the hunter's level or lower - one level above is not enough.
+function TT:Lines(npc, unitLevel)
   local showSkills = not PetSkillScoutDB or PetSkillScoutDB.tooltipSkills ~= false
   local showSeen = not PetSkillScoutDB or PetSkillScoutDB.tooltipSeen ~= false
   local lines = {}
@@ -46,8 +49,16 @@ function TT:Lines(npc)
     if rec.fast then head = head .. " (" .. PSS:L("ttFast") .. ")" end
     table.insert(lines, { head, rec.fast and 0.47 or 0.8, rec.fast and 0.88 or 0.8, rec.fast and 0.55 or 0.8 })
     local level = (UnitLevel and UnitLevel("player")) or (PSS.player and PSS.player.level) or 1
-    if rec.minLevel and rec.minLevel > level then
+    if type(unitLevel) == "number" and unitLevel > 0 then
+      if unitLevel > level then
+        table.insert(lines, { string.format(PSS:L("tameTooLow"), unitLevel), 1, 0.45, 0.45 })
+      else
+        table.insert(lines, { PSS:L("tameLevelOK"), 0.7, 0.85, 0.7 })
+      end
+    elseif rec.minLevel and rec.minLevel > level then
       table.insert(lines, { string.format(PSS:L("tameTooLow"), rec.minLevel), 1, 0.45, 0.45 })
+    elseif rec.maxLevel and rec.maxLevel > level then
+      table.insert(lines, { PSS:L("tamePartial"), 1, 0.82, 0.3 })
     elseif rec.minLevel then
       table.insert(lines, { PSS:L("tameLevelOK"), 0.7, 0.85, 0.7 })
     end
@@ -93,10 +104,16 @@ end
 local function OnUnit(tooltip)
   if tooltip ~= GameTooltip or tooltip.pssDone or not Enabled() then return end
   local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
-  if not ok or not unit or not UnitExists(unit) or (UnitIsPlayer and UnitIsPlayer(unit)) then return end
+  if not ok or not unit or (PSS.IsSecret and PSS.IsSecret(unit)) then return end
+  if not UnitExists(unit) or (UnitIsPlayer and UnitIsPlayer(unit)) then return end
   local npc = NpcID(unit)
   if not npc then return end
-  local lines = TT:Lines(npc)
+  local lvl
+  if UnitLevel then
+    local okL, v = pcall(UnitLevel, unit)
+    if okL and not (PSS.IsSecret and PSS.IsSecret(v)) and type(v) == "number" then lvl = v end
+  end
+  local lines = TT:Lines(npc, lvl)
   if #lines == 0 then return end
   tooltip.pssDone = true
   tooltip:AddLine(PSS:Safe("|cff70d6ffPetSkillScout|r"))
@@ -107,11 +124,11 @@ TT.OnUnit = OnUnit
 
 -- Modern clients use TooltipDataProcessor; older ones fire OnTooltipSetUnit.
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
-  TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnUnit)
+  TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, PSS:Timed("unit tooltip", OnUnit))
 elseif GameTooltip and GameTooltip.HookScript then
-  pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetUnit", OnUnit)
+  pcall(PSS.HookScript, GameTooltip, "OnTooltipSetUnit", OnUnit)
 end
 if GameTooltip and GameTooltip.HookScript then
-  GameTooltip:HookScript("OnTooltipCleared", function(self) self.pssDone = nil end)
-  GameTooltip:HookScript("OnHide", function(self) self.pssDone = nil end)
+  PSS.HookScript(GameTooltip, "OnTooltipCleared", function(self) self.pssDone = nil end)
+  PSS.HookScript(GameTooltip, "OnHide", function(self) self.pssDone = nil end)
 end

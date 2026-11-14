@@ -1,12 +1,14 @@
 -- Fake WoW client for lua5.1 tests: frames, fonts, quest log, items, timers.
 MOCK = {level = 30, faction = "Alliance", class = "HUNTER", done = {}, inlog = {}, owned = {},
   titles = {}, items = {}, prints = {}, timers = {}, events = {}, combat = false, equipped = {}, warnings = {}}
+MOCK.track = MOCK_TRACK_EARLY and {} or nil
 local frames = {}
 MOCK_VERBS = {"Set", "Get", "Is", "Has", "Create", "Enable", "Disable", "Register", "Unregister", "Show", "Hide",
   "Clear", "Add", "Hook", "Start", "Stop", "Play", "Raise", "Lower", "Click", "Lock", "Unlock", "Update", "Release",
   "Highlight", "Unhighlight", "Can", "Adjust", "Refresh", "Stretch", "Flash", "Apply", "Reset"}
 local function newObj(kind)
   local o = {kind = kind, shown = true, text = "", scripts = {}, points = {}}
+  if MOCK.track then MOCK.track[#MOCK.track + 1] = o end
   local mt = {}
   mt.__index = function(t, k)
     local f = rawget(mt, "m_" .. k)
@@ -21,6 +23,8 @@ local function newObj(kind)
   end
   mt.m_SetText = function(self, t) self.text = t == nil and "" or tostring(t); if self.fs then self.fs.text = self.text end end
   mt.m_GetText = function(self) return self.text end
+  mt.m_SetAttribute = function(self, k, v) self.attr = self.attr or {}; self.attr[k] = v end
+  mt.m_GetAttribute = function(self, k) return self.attr and self.attr[k] end
   mt.m_GetStringWidth = function(self) local n = select(2, (self.text or ""):gsub("[^\128-\191]", "")); return n * ((self.fontSize or 13) * 0.55) end
   mt.m_SetFont = function(self, f, s) self.fontSize = s end
   mt.m_Show = function(self) self.shown = true end
@@ -148,3 +152,17 @@ UISpecialFrames = {}
 setmetatable(_G, {__index = function(_, k)
   if type(k) == "string" and k:match("^%u%w*_%u") and not k:match("^C_") then return function() return nil end end
 end})
+-- WoW string helper: strsplit(sep, text) -> parts (plain separator).
+if not strsplit then
+  function strsplit(sep, text)
+    local out, start = {}, 1
+    text = tostring(text or "")
+    while true do
+      local i = text:find(sep, start, true)
+      if not i then out[#out + 1] = text:sub(start); break end
+      out[#out + 1] = text:sub(start, i - 1)
+      start = i + #sep
+    end
+    return unpack(out)
+  end
+end

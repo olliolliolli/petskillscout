@@ -1,0 +1,20 @@
+PetSkillScout
+Copyright (c) 2025-2026 DarthRev1. All rights reserved.
+
+The source code, interface texts and translations, artwork and the data compiled
+for this addon are the work of the author. You may download, install and use the
+addon for your own play.
+
+Without the author's written permission you may NOT:
+- copy, modify, translate or adapt the code or parts of it;
+- publish, upload or share the addon, changed or unchanged, on any site;
+- use its code, texts or compiled data in another addon or project.
+
+Third-party parts keep their own licence:
+- QuestDB.lua, PetDataATT.lua - AllTheThings, see QuestDB-LICENSE.txt
+- GearData.lua - wow-classic-items, see GearData-LICENSE.txt
+- Fonts/ - Noto Sans, see Fonts/FONT-LICENSE.txt (SIL Open Font License)
+Those files can be used under their own licence; this does not extend to the
+rest of the addon.
+
+Contact: CurseForge, user DarthRev1.

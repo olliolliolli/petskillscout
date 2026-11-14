@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Auto Shot timer for hunters. A bar runs from one Auto Shot to the next;
 -- the last 0.5 s (the aiming part of Auto Shot) is marked: moving there
 -- delays the shot, so the bar turns red and says "Stand still" when you move
@@ -28,12 +29,23 @@ function ST:Enabled()
 end
 
 -- Ranged attack speed; the last good value is kept for secret values.
-local lastSpeed = 2.8
+-- The game value can be hidden (secret) or stale after a weapon swap, so the
+-- real time between Auto Shots is measured too: the shortest of the last
+-- three intervals (longer ones include moving or casting) wins when it is
+-- clearly shorter than the game value, or when there is no game value.
+local lastSpeed, apiFresh = 2.8, false
+local recent = {}
 function ST:Speed()
   local s = Plain(Call(UnitRangedDamage, "player"))
-  if type(s) == "number" and s > 0.5 and s < 6 then lastSpeed = s end
+  if type(s) == "number" and s > 0.5 and s < 6 then lastSpeed, apiFresh = s, true else apiFresh = false end
+  local measured
+  for _, v in ipairs(recent) do if not measured or v < measured then measured = v end end
+  if measured and (#recent >= 2 or not apiFresh) and (not apiFresh or measured < lastSpeed - 0.12) then
+    return measured
+  end
   return lastSpeed
 end
+function ST:ResetMeasure() for i = #recent, 1, -1 do recent[i] = nil end end
 
 local function AutoShotName()
   local name = C_Spell and C_Spell.GetSpellName and Call(C_Spell.GetSpellName, AUTO_SHOT)
@@ -79,12 +91,14 @@ function ST:Build()
   f:Hide()
   self.bar = f
   f:SetScript("OnUpdate", function(_, e) ST:OnUpdate(e) end)
+  f:SetScript("OnSizeChanged", function(s) s.pssW, s.pssFill, s.pssAim = nil, nil, nil end)
   return f
 end
 
 function ST:Colours()
   local f = self.bar
   if not f then return end
+  f.pssState, f.pssW = nil, nil
   local e = Col("edge") or {0.3, 0.3, 0.35}
   for _, t in ipairs(f.edge) do t:SetVertexColor(e[1], e[2], e[3], 1) end
 end
@@ -93,7 +107,15 @@ end
 ST.shooting, ST.last = false, nil
 
 function ST:Shot()
-  self.last = Now()
+  local now = Now()
+  if self.last and self.shooting then
+    local dt = now - self.last
+    if dt > 0.8 and dt < 6 then
+      recent[#recent + 1] = dt
+      while #recent > 3 do table.remove(recent, 1) end
+    end
+  end
+  self.last = now
   self.speed = self:Speed()
   self:Show()
 end
@@ -120,31 +142,50 @@ function ST:OnUpdate()
     return
   end
   local p = math.min(1, elapsed / speed)
-  local w = f:GetWidth() or 200
-  f.fill:SetWidth(math.max(1, w * p))
-  f.aim:SetWidth(w * math.min(1, self.AIM / speed))
+  local w = f.pssW or f:GetWidth() or 200
+  f.pssW = w
+  -- The bar moves every frame; text and colours only change when they differ.
+  local fw = math.max(1, math.floor(w * p + 0.5))
+  if fw ~= f.pssFill then f.pssFill = fw; f.fill:SetWidth(fw) end
+  local aw = w * math.min(1, self.AIM / speed)
+  if aw ~= f.pssAim then f.pssAim = aw; f.aim:SetWidth(aw) end
   local remain = math.max(0, speed - elapsed)
-  f.time:SetText(string.format("%.1f", remain))
+  local tenths = math.floor(remain * 10 + 0.5)
+  if tenths ~= f.pssTenths then f.pssTenths = tenths; f.time:SetText(string.format("%.1f", tenths / 10)) end
   local aiming = remain <= self.AIM and self.shooting
-  local moving = (Plain(Call(GetUnitSpeed, "player")) or 0) > 0
-  local acc = Col("accent") or {0.85, 0.7, 0.43}
-  if aiming and moving then
+  local state
+  if aiming then
+    local moving = (Plain(Call(GetUnitSpeed, "player")) or 0) > 0
+    state = moving and "move" or "aim"
+  else
+    state = self.shooting and "shoot" or "off"
+  end
+  if state == f.pssState then return end
+  f.pssState = state
+  if state == "move" then
     f.fill:SetVertexColor(1, 0.3, 0.3, 1)
     f.text:SetText("|cffff5555" .. L("shotStand") .. "|r")
-  elseif aiming then
+  elseif state == "aim" then
     f.fill:SetVertexColor(1, 0.85, 0.3, 1)
     f.text:SetText(L("shotAim"))
   else
+    local acc = Col("accent") or {0.85, 0.7, 0.43}
     f.fill:SetVertexColor(acc[1], acc[2], acc[3], 1)
-    f.text:SetText(self.shooting and "" or L("shotOff"))
+    f.text:SetText(state == "shoot" and "" or L("shotOff"))
   end
 end
 
 ST.frame = CreateFrame("Frame")
-for _, e in ipairs({"START_AUTOREPEAT_SPELL", "STOP_AUTOREPEAT_SPELL", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_ENTERING_WORLD"}) do
+for _, e in ipairs({"START_AUTOREPEAT_SPELL", "STOP_AUTOREPEAT_SPELL", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_ENTERING_WORLD",
+    "UNIT_INVENTORY_CHANGED", "UNIT_RANGEDDAMAGE", "PLAYER_EQUIPMENT_CHANGED"}) do
   pcall(ST.frame.RegisterEvent, ST.frame, e)
 end
 ST.frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
+  if event == "UNIT_INVENTORY_CHANGED" or event == "UNIT_RANGEDDAMAGE" or event == "PLAYER_EQUIPMENT_CHANGED" then
+    -- New weapon or speed buff: measure again.
+    if event == "PLAYER_EQUIPMENT_CHANGED" or unit == "player" then ST:ResetMeasure(); ST.speed = ST:Speed() end
+    return
+  end
   if event == "START_AUTOREPEAT_SPELL" then
     ST.shooting = true
     ST:Show()

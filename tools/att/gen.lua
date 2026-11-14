@@ -7,6 +7,22 @@ local function removed(tl)
   local last = tl[#tl]
   return type(last) == "string" and (last:find("^removed") or last:find("^deleted")) ~= nil
 end
+-- ATT names some NPCs and quests per expansion ("X Jr. [TBC+] / X",
+-- "Tiger Hunting [CATA+] / Tiger Mastery (1/4)"): keep the Forever (Classic /
+-- untagged) one and drop its tag. A name with only later variants stays as it
+-- is (quest pins skip "[CATA+]" quests).
+local LATER = {TBC = true, Wrath = true, WRATH = true, Cata = true, CATA = true, MoP = true, MOP = true,
+  WoD = true, Legion = true, BfA = true, SL = true, DF = true, TWW = true, Retail = true}
+local function ForeverName(n)
+  if type(n) ~= "string" or not n:find(" / ", 1, true) and not n:find("%[Classic%]") then return n end
+  local keep
+  for part in (n .. " / "):gmatch("(.-) / ") do
+    local tag = part:match("%[(%a+)%+?%]")
+    if not (tag and LATER[tag]) then keep = keep or part end
+  end
+  if not keep then return n end
+  return (keep:gsub("%s*%[Classic%]", ""))
+end
 local ALLY, HORDE = {}, {}
 for _, r in ipairs(ALLIANCE_ONLY or {}) do ALLY[r] = true end
 for _, r in ipairs(HORDE_ONLY or {}) do HORDE[r] = true end
@@ -41,6 +57,14 @@ for _, id in ipairs(ids) do
     local f = {}
     local g = n.qg or (type(n.qgs) == "table" and n.qgs[1])
     if g then f[#f + 1] = "g=" .. g; used[g] = true end
+    -- Started from an object (wanted poster, book...): ob = object ID.
+    if not g then
+      local pvs = type(n.providers) == "table" and n.providers or {}
+      if type(n.provider) == "table" then pvs = {n.provider} end
+      for _, pv in ipairs(pvs) do
+        if type(pv) == "table" and pv[1] == "o" and tonumber(pv[2]) then f[#f + 1] = "ob=" .. tonumber(pv[2]); break end
+      end
+    end
     local c = n.coord or (type(n.coords) == "table" and n.coords[1])
     if type(c) == "table" and type(c[1]) == "table" then c = c[1] end
     if type(c) == "table" and (type(c[1]) ~= "number" or type(c[2]) ~= "number" or type(c[3]) ~= "number") then c = nil end
@@ -62,7 +86,10 @@ for _, id in ipairs(ids) do
     if n.isBreadcrumb then f[#f + 1] = "b=1" end
     if n.repeatable then f[#f + 1] = "r=1" end
     if tonumber(n.requireSkill) then f[#f + 1] = "sk=" .. tonumber(n.requireSkill) end
-    if n.minReputation then f[#f + 1] = "mr=1" end
+    -- Reputation needed: {faction ID, reputation value} (e.g. 3000 = friendly).
+    if type(n.minReputation) == "table" and tonumber(n.minReputation[1]) then
+      f[#f + 1] = "mr={" .. tonumber(n.minReputation[1]) .. "," .. (tonumber(n.minReputation[2]) or 0) .. "}"
+    elseif n.minReputation then f[#f + 1] = "mr={0,0}" end
     if ctx.inst or ctx.root == "Instances" then f[#f + 1] = "d=1" end
     -- Objectives (n kill, i item, o object, other) and the first objective position; rewards.
     local obj, ox, items = {}, nil, {}
@@ -84,7 +111,8 @@ for _, id in ipairs(ids) do
     if #obj > 0 then f[#f + 1] = 'o="' .. table.concat(obj) .. '"' end
     if ox then f[#f + 1] = string.format("ox=%s,oy=%s,om=%d", num(ox[1]), num(ox[2]), ox[3]) end
     if #items > 0 then f[#f + 1] = "i=" .. arr(items) end
-    if QNAME[id] then f[#f + 1] = "n=" .. string.format("%q", QNAME[id]) end
+    if Q[id].holiday then f[#f + 1] = "hol=" .. num(Q[id].holiday) end
+    if QNAME[id] then f[#f + 1] = "n=" .. string.format("%q", ForeverName(QNAME[id])) end
     lines[#lines + 1] = string.format("[%d]={%s},", id, table.concat(f, ","))
     stats.kept = stats.kept + 1
   end
@@ -96,14 +124,14 @@ local fh = assert(io.open(out, "w"))
 fh:write("-- Quests of WoW Forever (generated, do not edit by hand).\n")
 fh:write("-- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/AllTheThings),\n")
 fh:write("-- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.\n")
-fh:write("-- Source commit " .. (arg[3] or "?") .. ". Fields: g quest giver NPC, x/y/m giver position (0-100, uiMapID),\n")
+fh:write("-- Source commit " .. (arg[3] or "?") .. ". Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),\n")
 fh:write("-- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),\n")
-fh:write("-- a alternative quests, b breadcrumb, r repeatable, sk profession, mr reputation, d dungeon / raid,\n")
-fh:write("-- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, n name.\n")
+fh:write("-- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,\n")
+fh:write("-- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.\n")
 fh:write("local PSS = PetSkillScout\nPSS.QuestDB = {\n")
 fh:write(table.concat(lines, "\n"))
 fh:write("\n}\nPSS.QuestNPC = {\n")
-for _, g in ipairs(nids) do fh:write(string.format("[%d]=%q,\n", g, NNAME[g])) end
+for _, g in ipairs(nids) do fh:write(string.format("[%d]=%q,\n", g, ForeverName(NNAME[g]))) end
 fh:write("}\n")
 -- Reward items: name, quality, item level, required level, equip slot type (ATT ItemDB export).
 local IDB = (AllTheThings and AllTheThings.ItemDB) or {}

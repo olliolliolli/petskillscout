@@ -1,4 +1,4 @@
-PetSkillScout 2.6.0 - WoW: Forever (Interface 16001)
+PetSkillScout 2.8.1 - WoW: Forever (Interface 16001)
 Hunter companion atlas: teaching beasts for pet skills, rare tameable beasts,
 your active pet's abilities and stable pets.
 UI languages: English, Ukrainian, Polish, German, French, Italian, Spanish.
@@ -22,6 +22,7 @@ SLASH COMMANDS
 /pss ammo         ammo count + arrow to the nearest place to buy ammo
 /pss collection   open the Collection (looks, achievements, ranking)
 /pss quests       open the hunter Quests tab
+/pss net          open the Network tab (hunters online, live feed)
 /pss passport     open your pet's passport card
 /pss share        put your pet card into the chat input (you send it)
 /pss queue        join / leave the taming queue of the rare near you
@@ -36,7 +37,7 @@ SLASH COMMANDS
 /pss tooltip      switch the unit tooltip lines on/off
 
 FEATURES
-- Beasts: all 649 tameable beasts of WoW Forever in one list. Search by name,
+- Beasts: all 653 tameable beasts of WoW Forever in one list. Search by name,
   zone or family; quick filters Fast / Rare / Teaches a skill / For my pet;
   family, skill and rank dropdowns; sort by distance (nearest first), level,
   attack speed or name.
@@ -138,6 +139,9 @@ FEATURES
   tooltip lines, pet care reminder and Feed button mode.
 
 DATA AND LIMITATIONS
+- Quest database: AllTheThings commit 1528abd (2026-11-08). Pet teachers and
+  beast positions from AllTheThings: commit d503738 (unchanged since).
+- 653 tameable beasts, 548 of them with spawn points.
 - Families use the client names (Scorpid, Tallstrider, Wind Serpent, Crocolisk);
   19 families incl. Fox and Core Hound, with shared and signature skills per family.
 - Every rank of every pet skill has its required pet level and training points.
@@ -145,13 +149,21 @@ DATA AND LIMITATIONS
   Tendon Rip, Savage Rend, Dust Cloud, Mine!, Trickster's Dance, Lava Breath)
   have no known wild teaching beasts; the addon says so instead of showing an
   empty list.
-- Not yet in the database (no public source lists the teachers): Demoralizing
-  Screech 1-4, Lightning Breath 1 and 6, Thunderstomp 4.
+- Teachers for Demoralizing Screech 1-4 and Lightning Breath 6 come from the
+  AllTheThings Forever database. Lightning Breath 1 has no wild teacher there
+  either, and that database lists only 3 ranks of Thunderstomp.
 - Data comes from the Forever beta (build 1.60.1.704xx). Re-check after launch.
 - 305 skill / rank records across 266 NPCs with 10,956 spawn points, imported
   from a community dataset (2026-10-06). Accuracy on the live realm is not
   independently verified. Coordinates that are unknown are never invented.
 - Rank and pet level data: WCLBox Forever pet database and Forever guides.
+- AllTheThings Forever database (MIT, PetDataATT.lua): 48 more teaching-beast
+  records (mostly dungeon beasts) and positions of 196 tameable beasts on their
+  own zone map, used where the addon had no spawn points (e.g. Zephras Isle).
+  Checked on 2026-11-04: 162 beasts' spawn areas match an ATT position within
+  3% of the map, 33 differ (ATT often has one point, e.g. a quest objective; to
+  be checked in game), 103 beasts (mostly in dungeons and new Forever NPCs)
+  have no known position yet.
 - The rare radar sees only units the client shows (nameplates, target,
   mouseover). It cannot detect spawns out of view.
 - "Distance" is a straight line, not a travel path. The skill route orders
@@ -159,8 +171,9 @@ DATA AND LIMITATIONS
 - Respawn windows come only from what you and your guild observed; there is
   no built-in respawn data. A window is an upper bound: the rare may have
   appeared earlier than it was seen.
-- Network data (sightings, queues, rankings) comes from other players and is
-  not verified. Everyone in the queue must have PetSkillScout to appear in it.
+- Network data (sightings, queues, rankings, learned quests) comes from other
+  players; learned quest givers count as confirmed only when two players agree.
+  Other network data is not verified. Everyone in the queue must have PetSkillScout to appear in it.
 - Pet looks: mmonster WoW Forever hunter pet data (Forever beta), 648 beasts in
   144 looks. A look is collected when a pet with it is your active pet, in your
   stable, or a rare you tamed.
@@ -182,7 +195,7 @@ NPC and display IDs: AzerothCore world database (creature_template, creature_tem
 
 CREDITS
 Quest database (quest givers, positions, levels, previous quests,
-objectives, rewards): AllTheThings by the ATT team
+objectives, rewards) and part of the pet data (PetDataATT.lua): AllTheThings by the ATT team
 (https://github.com/ATTWoWAddon/AllTheThings), WoW Forever database, MIT
 licence - the licence text is in QuestDB-LICENSE.txt.
 Gear data and the quest / item IDs of the Quests tab: wow-classic-items
@@ -193,6 +206,739 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.104
+- Beasts tab: "Not known yet" filter - hides beasts that only teach skill ranks you already know (ranks
+  learned at Beast Training plus your active pet's).
+
+3.7.103
+- Prairie Wolf Alpha (Mulgore) no longer listed for Furious Howl 1: players report it does not teach it in
+  Forever. Furious Howl 1: Worg (Silverpine), Coyote Packleader (Westfall), Mist Howler (Ashenvale).
+
+3.7.102
+- Data update 2026-11-14: AllTheThings d8dedab (4759 quests: +2 new - Uncanny Crystal, Unstable Magic; 7 updated),
+  learned data +2 quests +2 rare spots. Pet data and gear source unchanged.
+
+3.7.101
+- Pet guard: no jump / fall alert any more; one alert when your pet is very far from you in a dungeon
+  (over 70 yards for a few seconds, fighting or not, not on Stay).
+
+3.7.100
+- Pet guard alerts in dungeons (jump down, pet fighting far away, aggressive pet) are off by default;
+  turn them on in the options.
+
+3.7.99
+- Data update 2026-11-13 (2): AllTheThings 5692632 (4757 quests: +30 new - Mount Hyjal / Ashenvale / Felwood
+  quests: Beneath Nordrassil, Reclaiming Ravencrest, Preserving Eldarath, Slay the Spitelash, Forlorn Gardens,
+  Agamaggan's Blood...; 70 updated), learned data +13 quests +8 rare spots. Pet data and gear source unchanged.
+
+3.7.98
+- Addon button bar: one column; buttons get smaller to fit instead of starting a half-empty column.
+
+3.7.97
+- Addon button bar: every icon fills its square the same way (some were smaller).
+
+3.7.96
+- Author line in the window, the settings and the button tooltips; one chat line per new version.
+
+3.7.95
+- Data update 2026-11-13: AllTheThings 1c4d146 (4727 quests: +24 new - State Secrets, Our Man in Theramore,
+  The Secret Prison, The Man in the Iron Chains, Finding Tan'jani, A Bit of Wet Work, Weed Whacked...; 58 updated),
+  learned data +14 quests +26 ammo vendors +8 rare spots. Vulgara the Insatiable is a Bat (hotfix of
+  2026-11-10 moved it to its correct family). Pet data and gear source otherwise unchanged.
+
+3.7.94
+- Rare pets list: named Forever elites you can tame - Vulgara the Insatiable (Zephras Isle), Ukorsbane
+  (Durotar), Elmpaw (Elwynn Forest), Ghostmaw (Riverglades).
+
+3.7.93
+- Gamepad UI: the addon no longer opens the world map or closes the game menu itself (the game blocked
+  SetPreferredGamepadInteractTarget); pin and arrow are set, open the map yourself.
+
+3.7.92
+- Data update 2026-11-12: AllTheThings 21a4229 (4703 quests: +30 new - riding quests "Your First ..." and
+  "Learning to Ride" for every race, Dunemaul Dues, Gritty Business, Gnomish Garbage, Oasis, The Dragon's Journal...;
+  56 quests updated), learned data +3 quests. Pet data and gear source unchanged.
+
+3.7.91
+- Data update 2026-11-11 (2): AllTheThings 57b62d2 (4673 quests: +17 new - Shen'dralas pylons chain,
+  Mana Mania, A Taste of Home, The Orphan, Sisters In Duty...), learned data +3 quests +3 vendors +7 rare spots.
+  Pet data and gear source unchanged.
+
+3.7.90
+- /pss cpu login: measures the first 30 s after login (load time, work, longest pass).
+
+3.7.89
+- Quests tab: the row text and the map button show the first NPC of a chain still to do.
+
+3.7.88
+- Quests tab: the arrow goes to the start of the chain; quest names without later-expansion variants.
+
+3.7.87
+- Quests tab: a quest that needs earlier quests shows how many are done instead of "available now".
+
+3.7.86
+- Quest givers' names without later-expansion variants ("Hemet Nesingwary Jr. [TBC+]").
+
+3.7.83 - 3.7.85
+- Greater Friend of the Library: library books turned in (x / 25) and a note.
+
+3.7.82
+- Gear compare: hit and crit chance are read in percent from the item tooltip (+0.3% hit was
+  counted as +3% and made such items look much better than they are).
+
+3.7.81
+- Data update 2026-11-11: AllTheThings c973dee (4656 quests: +23 new - Krol'dok quests, Eye of Mugg,
+  Gettin' Buzzed, Treaty Obligations, Fledgling Rescue, WANTED: Ohk'zi...; 153 quests got giver NPC/position),
+  learned data +5 quests +2 vendors +5 rare spots. Pet data and gear source unchanged.
+
+3.7.80
+- The broken-gear figure sits between the chat and the action bars.
+
+3.7.79
+- Quest tracker: a full update shortly after a quest is turned in or abandoned (empty gaps).
+
+3.7.78
+- Main bar page arrows hidden by the theme can no longer be clicked by accident.
+
+3.7.77
+- /pss tracker: quest tracker diagnostics.
+
+3.7.76
+- CPU: the quest tracker no longer relays itself out without end (3.7.74), and the Gear tab
+  redraws only while the window is open (item data asked for by 3.7.75 kept it busy).
+
+3.7.75
+- Gear tab: the skill a crafted item needs is read from the game (pattern tooltips and the
+  trainer window), so Forever values replace the Classic ones (e.g. Barbaric Bracers 140).
+
+3.7.74
+- Quest tracker theme: no more empty gaps between quests after turning one in (the tracker
+  now measures lines with the theme font).
+
+3.7.73
+- Data update 2026-11-10: AllTheThings 007a007 (4633 quests: +8 new - Saltseer quests, Lost Shipping Crates,
+  The Web of Magic, Vengeance of the Highborne...), learned data +1 quest +2 vendors +4 rare spots.
+  Pet data and gear source unchanged.
+
+3.7.72
+- Data update 2026-11-09 (2): AllTheThings 9fe40f7 (4625 quests: +2 new - Tome of Twilight, Learning to Ride;
+  7 Riverglades quests got giver NPC/position; Darkmoon Faire ticket turn-ins removed by ATT).
+  Pet data and gear source unchanged.
+
+3.7.71
+- Route: "learned X of Y" is said once per goal; ranks your pet knows are remembered.
+
+3.7.70
+- World map: quest, beast and rare pins are laid out the moment the map opens or changes
+  (they stood at the previous map's places for a moment and then jumped).
+
+3.7.69
+- Rare beasts tab: attack speed of each rare, read in the game when you hover or target it.
+
+3.7.68
+- Route tab: "Hunter trainer" and "Pet trainer" buttons open the map with an arrow to the
+  nearest one. Hunter trainers come from AllTheThings; every trainer you talk to is remembered
+  (the only source for pet trainers so far).
+- Action bars 4 and 5 as 4x3 squares beside the main bars; all bar buttons on one layer
+  (one cell of bar 3 could not take spells). /pss bars and /pss under for diagnostics.
+
+3.7.64
+- Quest marks of the addon (map, minimap, objectives) are off by default now: turn on
+  "Quest pins" in the options. Quest ratings in NPC dialogue stay on.
+
+3.7.63
+- Data update 2026-11-09: AllTheThings 9bcc9ac (4633 quests: +3 new, 18 quests got giver NPC/position,
+  4 got objective marks), learned data +1 quest +2 rare spots. Pet data and gear source unchanged.
+
+3.7.62
+- Fixed: the "pet fighting far away" check in dungeons used a range check the game blocks in
+  combat (thousands of blocked-action messages). In combat only the party range check is used.
+- Data update 2026-11-08: AllTheThings 35d1d56 (+174 quests), learned data +1 quest.
+- Minimap: pins redraw at once indoors/outdoors; addon button bar is flat, square and packed.
+- Gear tab redraws right after you equip an item; quest pages lose the parchment under the theme.
+
+3.7.56
+- Data update 2026-11-08: AllTheThings d6c8eb5 (one hidden quest trigger), pet teachers, gear and
+  learned data unchanged.
+
+3.7.55
+- Minimap pins use less CPU while you move (full pass once a second, quick shift between).
+- /pss cpu keeps its result for the developer.
+
+3.7.54
+- Data update 2026-11-08: learned data from players (+2 rare spots). AllTheThings (1528abd),
+  pet teachers and gear data unchanged.
+
+3.7.53
+- Hunter network sends nothing from inside dungeons and raids (messages can be blocked there);
+  receiving is unchanged and records go out again after you leave.
+
+3.7.52
+- Data update 2026-11-08: learned data from players (+1 quest, +1 rare spot).
+- Diagnostics: blocked actions are logged per call path with counts and times.
+
+3.7.51
+- Hunter network feed: records your addon only passes on to others are no longer listed as your
+  finds; your own line appears only for a quest you found that our data lacks.
+
+3.7.50
+- Data update 2026-11-08: learned data from players (+13 quests, +9 ammo vendors, +9 rare spots).
+  AllTheThings (1528abd), pet teachers and gear data unchanged.
+
+3.7.49
+- Rare alert sound follows the beast family: wolves howl, cats roar, bears, boars, spiders, birds
+  and the others use their own creature voice from the game files. /pss raresound plays them all
+  (or /pss raresound cat for one).
+
+3.7.48
+- Hunter network feed shows only news: rares (seen, tamed, killed, queues) and quests or ammo
+  vendors our data does not have yet - each once. Hellos and already known quests/vendors are
+  no longer listed (they are still received and counted).
+- Gamepad: the hint strip sits under the window instead of over its footer.
+
+3.7.47
+- Data update 2026-11-08: quest database from AllTheThings commit 1528abd (1 quest gets its giver:
+  Locating the Lost City, Horde, Badlands); pet teachers unchanged (48 beasts, 196 positions);
+  gear data unchanged; no new learned data.
+
+3.6.4
+- Gamepad: the keyboard-and-mouse backing behind the bags no longer pops up again when the
+  theme re-skins the bags and micro menu (it stays hidden in gamepad mode and when the bars
+  are hidden).
+
+3.6.3
+- Gamepad: records the frames of the radial "Main Menu" (Start button) when it is open, to add
+  a PetSkillScout entry there later. The button is under the classic game menu ("Game Menu"
+  in the wheel).
+
+3.6.2
+- Gamepad: the window opens from the "PetSkillScout" button under the game menu; the L3 + R3
+  combo is removed.
+
+3.6.1
+- Gamepad: two ways to open the window without key bindings - a "PetSkillScout" button under
+  the game menu (Start / Menu button, pick it with the gamepad cursor), and holding both
+  sticks (L3 + R3) for half a second (the addon only reads the button state). /pss gamepad
+  shows whether both are available.
+
+3.6.0
+- Gamepad control of the window (GamepadNav.lua, only in gamepad mode while the window is
+  open): LB / RB switch tabs, the d-pad moves a gold selection frame to the nearest button,
+  A presses it (its tooltip shows), B closes the window, X goes back, Y opens settings. A hint
+  strip at the bottom of the window shows the buttons. New key binding "Open PetSkillScout"
+  (Key Bindings > AddOns) can be put on a gamepad button.
+
+3.5.2
+- Gamepad bar: every button shows a small glyph in its corner - d-pad arrows and the face
+  buttons X / Y / B / A in their colours (the game drew them into the hidden round backings).
+
+3.5.1
+- Gamepad bar: the button glyphs (A, B, X, Y, LT, RT...) are back - only the big round art of
+  the backings is hidden.
+
+3.5.0
+- Gamepad action bar in the theme (GamepadTheme.lua, only in gamepad mode): all gamepad buttons
+  get the theme's action button look (square border, cropped icon, theme fonts and colours of
+  the chosen theme), the big round backings behind the button groups are hidden, and the
+  whole gamepad bar is scaled to 85 % (out of combat; button positions stay with the game).
+
+3.4.5
+- /pss gamepad: the frame dump is fail-safe (every step protected, partial result and the error
+  are saved) and prints how many frames were saved.
+
+3.4.4
+- /pss gamepad also saves a dump of the gamepad interface frames (names, sizes, positions) to
+  the saved variables - groundwork for the themed, compact gamepad button layout.
+
+3.4.3
+- Gamepad layout: player / target frames a little further out (clear of the centre buttons);
+  the bag and micro menu backings are always hidden in gamepad mode.
+
+3.4.2
+- Gamepad layout matched to the game's own gamepad interface: player frame left above the left
+  button cluster, target mirrored on the right, cast bar above the centre buttons.
+
+3.4.1
+- Gamepad, step 2 (separate file GamepadTheme.lua, only while a gamepad is in use): the theme's
+  player and target frames move up above the gamepad button clusters (unless you placed them
+  yourself), the cast bar too; everything goes back with keyboard and mouse. The backing
+  strips of the micro menu and bags hide when the game hides those bars.
+
+3.4.0
+- Gamepad, step 1: new separate module (Gamepad.lua) that only detects the gamepad (enabled in
+  the client, last input) and reports changes to theme code - the themes themselves are not
+  changed yet. /pss gamepad prints what the client reports and the gamepad interface frames
+  on screen, to design the gamepad layouts on real data.
+
+3.3.16
+- Quest pins: a pin hidden with right click ("giver is not here") comes back by itself when
+  that NPC offers you a quest.
+
+3.3.15
+- Quest pins: pins of nearby givers are spread only when they would really cover each other
+  (0.2 % instead of 0.6 %, smaller ring), so they stay on their NPC. Grey "not worth it" pins
+  are as big as purple ones, with a light edge and a light "!" on black - easier to see.
+
+3.3.14
+- Skills: the character's skill list is always read, not only when GetProfessions returns
+  nothing - Fishing, Cooking and First Aid (with their ranks) are often only there, so
+  skill quests and their minimum levels work again. /pss skills shows every source.
+
+3.3.13
+- Quest pins: skill quests (e.g. Gaffer Jacks - Fishing) were hidden although you have the
+  skill: on WoW Forever secondary skills can be missing from the skill lists. The profession
+  spells in your spell book (Fishing, Cooking, First Aid, Skinning, crafts) count now.
+
+3.3.12
+- Quest pins checked at the NPC also when the NPC has a single quest for you (the game opens
+  that quest directly, without a list): its other database quests lose their pin, so the pin
+  colour follows only the quests the NPC really offers.
+
+3.3.11
+- Quest pins checked at the NPC: when you talk to a quest giver, its database quests that the
+  NPC does not offer (skill level too low, hidden condition) lose their pin until your level
+  or a skill changes; offered ones always keep it. The database only says which skill a quest
+  needs, not the level - known single cases are listed (Easy Strider Living: Cooking 10).
+
+3.3.10
+- Quest pins: quests that need a skill (e.g. Easy Strider Living - Cooking) showed even without
+  the skill when the client has no GetProfessions. The character's skill list is read now
+  (matched by the localised name of each skill's base spell); crafted gear uses it too.
+  /pss skills lists the skills the addon sees.
+
+3.3.9
+- Completed quests are tracked by the addon too: the server's full list is read at every login
+  (so it survives reinstalls), every hand-in is recorded, and a done quest marks the quests
+  its chain required as done. Map pins and the Quests tab ("Done") use the same list.
+  /pss questdone reloads it and shows how many completed quests are known.
+
+3.3.8
+- Quest pins: every quest an NPC actually offers you (gossip, greeting or quest window) is
+  remembered as available - its pin shows even when the database conditions (level,
+  previous quests, skill) disagree, and quests the database lacks get a pin at the NPC.
+- /pss questwhy lists the database quests near you and why each one has no pin (level N,
+  needs <quest>, skill, rep, side, race, class, holiday, no giver, hidden by you) - for
+  reporting mismatches with the game's "!".
+
+3.3.7
+- Quest pins sit right on the giver again (no offset), under the game's own quest icons on the
+  world map, so a turn-in "?" is always on top.
+
+3.3.6
+- Quest pins: quests started from an object (wanted posters, books, plaques - 293 in the
+  database) get pins again; the database now stores the start object. Before, every quest
+  without an NPC giver was left off the map.
+
+3.3.5
+- Quest pins smaller: world map 12-14 px (was 18-22), minimap 9-10 px (was 13-16), smaller
+  offset and spread ring, so the game's own quest icons stay visible.
+
+3.3.4
+- Quest pins, all zones: one pin per quest giver. Different NPCs are never merged any more
+  (245 giver spots in the database were still swallowed at 0.3 %); pins that would overlap
+  are spread in a small ring around the spot, on the world map and the minimap.
+
+3.3.3
+- Quest pins: many available quests were missing. Quests needing a profession or secondary
+  skill (Cooking, Fishing, First Aid...) are shown when you have that skill, and reputation
+  quests when your standing is enough (the database now stores the faction and value) -
+  before, all of them were hidden. Givers are merged into one pin only when they stand on
+  practically the same spot (0.3 % instead of 1 %: in towns, different NPCs were merged).
+- Data update 2026-11-06: quest database regenerated from AllTheThings b50b6d8 with
+  reputation requirements; learned data from play (+1 quest, +4 ammo vendors, +2 rare spots).
+
+3.3.2
+- Quest pins: when the game reports the quests you can take on a map (C_QuestLine, the "!" of
+  the game's map), that list is used - with the game's own giver positions - and rated as before.
+  Quests the game offers but the database lacks get a pin too (and are saved for the next data
+  update); database quests the game does not offer get none. /pss questsrc shows which source
+  is used on your map.
+
+3.3.1
+- Minimap: quest objective marks too (same as the world map), next to the merged quest giver
+  pins and exact placement from 3.3.0.
+
+3.3.0
+- Minimap: pins are placed from the game's world coordinates (exact for every zone, any zoom
+  or rotation) and the client's own minimap view radius, not from estimated zone sizes.
+- Quest pins: givers standing almost on the same spot share one pin (names listed in the
+  tooltip).
+- Quest objectives: a small mark at the first objective of each unfinished quest in your log
+  (from the quest database; Settings > Quests, on by default), under the game's own icons.
+
+3.2.4
+- Quest pins: drawn under the game's own quest icons on the world map, so turn-in "?" and the
+  game's "!" are never covered.
+
+3.2.3
+- Theme: the bag row (and micro menu) jumped to the middle of the screen on level up - the game
+  moved it back to its own spot. When the game moves them now, they are put back above the
+  info bar (right after combat if it happens in a fight).
+
+3.2.2
+- Quest learning: a quest opened at an NPC more than 3 % of the map away from the database
+  position (or on another map) is recorded and shared too, with the last three quests you
+  handed in (a hint for quests that appear only after a condition). Once two players (or you)
+  confirm the spot, the map pin moves there; a pin hidden with right click comes back at the
+  new spot.
+
+3.2.1
+- Quest pins: right-click a quest pin (world map or minimap) to hide it when the giver is not
+  there (wrong position in the database, or the NPC appears only in some phase). /pss pinsreset
+  shows hidden pins again.
+
+3.2.0
+- Gear: crafted items of your professions (Leatherworking, Blacksmithing, Tailoring,
+  Engineering, Alchemy, Enchanting) are recommended like quest and dungeon gear when they are
+  better. Items you can already wear are shown even if your skill is still too low ("your skill
+  20" in red, "you can make it" in green); the tooltip lists the skill needed and reagents.
+  Data: 244 Classic crafted hunter items from wow-classic-items (MIT), tools/gear/gencraft.py.
+  Recipes added only in WoW Forever are not in this data.
+
+3.1.13
+- Quest pins: holiday quests are shown again while their holiday is on, read from the game
+  calendar (Lunar Festival, Hallow's End, Darkmoon Faire...). The quest database stores the
+  event ID of each holiday quest. /pss holidays lists today's holidays. If the client's
+  calendar has no holidays, holiday quests stay hidden.
+
+3.1.12
+- Quest pins: holiday quests (Lunar Festival elders, Hallow's End, Darkmoon Faire and other
+  events - 219 quests) no longer get map pins; their givers stand there only during the event.
+- Data update 2026-11-06: quest database from AllTheThings commit b50b6d8 (1 new entry,
+  24 small changes, e.g. Arugal's Folly is now a 5-part chain).
+
+3.1.11
+- Network: players of other (connected) realms cannot be whispered on WoW Forever, so only
+  same-realm channel members are whispered. The "not found" filter now uses the moment the
+  whisper actually left the queue (it could be 30+ s later), with a 60 s window.
+
+3.1.10
+- Quest pins: drawn a little up and right of the giver (beside the game's own "!") on a round
+  backing in the rating colour - purple worth it, gold normal, dark with a grey edge not worth
+  it - on the world map and the minimap.
+
+3.1.9
+- Auto Shot bar: the real time between shots is measured (shortest of the last three) and used
+  when the game's speed value is hidden or stale, e.g. after switching to a faster gun. The
+  measurement restarts on a weapon change or speed buff.
+
+3.1.8
+- Theme: "blocked: MicroMenuContainer:SetPointBase()" on level up. The micro menu and bag row
+  are no longer anchored to the addon's info bar; they get a screen position instead, so the
+  game can re-lay them out in combat.
+
+3.1.7
+- Network: "player not found" lines are hidden whatever the client's wording (any system line
+  naming someone the network whispered in the last 15 s). Channel members who never answered
+  get only one hello per 30 minutes; other messages go only to hunters who have answered.
+
+3.1.6
+- Network: whisper names include the realm when the player is on another connected realm (from
+  the player GUID). Members are also read from the client's channel roster.
+
+3.1.5
+- Network: /pss netlist shows the network members (whisper targets) and who was not found.
+
+3.1.4
+- Hunter network: "No player named X is currently playing" lines for network whispers are
+  hidden from chat, and such players are left out of the network for 30 minutes.
+
+3.1.3
+- Hunter network: channel text from addons is only allowed during a key press on WoW: Forever,
+  so automatic messages were blocked (ADDON_ACTION_BLOCKED). The network now sends addon
+  whispers to each member of the network channel (members from the hidden channel list, join
+  notices and incoming messages; up to 40, paced). Hello every 10 minutes.
+
+3.1.2
+- Quests / Gear: "Open the zone map of the quest giver" now also marks the giver on the map
+  for 8 seconds (pulsing gold ring with the name).
+
+3.1.1
+- Gear: empty slots get a recommendation. If nothing practical exists at your level, rare drops
+  are offered too; if the database has nothing for the slot yet at your level (rings start at
+  14, shoulders 18, head and neck 25, trinkets 46), the nearest later item is shown greyed
+  with "from level N" and where to get it.
+
+3.1.0
+- Hunter network works on WoW: Forever. The server accepts addon messages in chat channels
+  but never delivers them (/pss netdiag), so the realm network now sends short hidden text
+  lines "PSS~..." in its channel (hidden from all chat windows, at most one line per 3 s
+  after a burst of 3). Guild, party and whisper still use addon messages. Hunters on older
+  versions cannot be heard until they update.
+
+3.0.13
+- Network: /pss netdiag also tests a whisper by full name, the logged addon message and plain
+  hidden text in the channel.
+
+3.0.12
+- Network: /pss netdiag tests whether addon messages reach the realm channel (send result and
+  echo per channel type); incoming messages are counted by type in the saved file.
+
+3.0.11
+- Quests: optional auto turn-in (Settings > Quests, off by default). Finished quests are handed
+  in at the NPC; when there is a choice of rewards the window stays open for you. Shift skips.
+
+3.0.10
+- Network: hunters seen joining the channel who have not sent their data yet show
+  "no data yet (older version?)" instead of "?".
+
+3.0.9
+- Theme: the Hunter Network tab on the right was cut off by the tab strip (invisible); the
+  right-side tabs are now drawn on the dock itself.
+
+3.0.8
+- Theme: the chat text size is right after login - the size the game puts back a moment
+  later is re-scaled at once (no need to pick the size again in the menu).
+
+3.0.7
+- Theme: a loose Hunter Network chat window (tab floating over the chat) is docked back at
+  login and placed on the right next to Combat Log. /pss chatdebug lists the chat windows.
+
+3.0.6
+- Theme: the Hunter Network tab could float over the chat; the right-side tabs are now anchored
+  to the tab strip itself.
+
+3.0.5
+- Theme: the Combat Log tab sits on the right edge of the chat tab strip with the Hunter Network tab next to it (both kept last in the dock).
+
+3.0.4
+- Minimap: the spawn area of the rare selected on the world map (purple dots and outline)
+  is drawn on the minimap too, clipped to its edge.
+- Rare alert: no alert for a rare beast that is already someone's pet - only for free ones
+  in the world.
+- Theme: dragging or swapping chat tabs no longer breaks the chat. A tab dragged out of the
+  dock is docked back after the drop, and the main chat is not pulled back while dragging.
+
+3.0.3
+- Feed button: Feed Pet is now cast straight on the food (no "/use" line), so the hunter no
+  longer eats the food himself.
+- Taming level: the tooltip uses the real level of the beast under the mouse; a beast one
+  level above you is shown as too high. Atlas records with a level range above yours say
+  "Some levels can be tamed".
+- Quest pins: only quests given by an NPC get a pin (item/object-started quests and ATT
+  entries for later expansions were shown on empty spots). Grey "not worth it" now also
+  covers quests with poor experience per minute, not only low-level ones.
+- Hunter network: hunters who join the network channel count as online at once (and get a
+  hello back); join / leave notices of the channel no longer appear in General chat.
+- Rare alert: wolf howl from the game files when a rare beast is spotted (on by default).
+- Map: right-click a tracked beast's pin (world map or minimap) to stop tracking it.
+
+3.0.2
+- Theme: swapping chat tabs by dragging could leave the tabs on top of each other (the theme
+  re-anchored the chat dock in the middle of the game's tab layout). The dock is now left alone
+  while a tab is dragged and is only moved when it is not in place.
+
+3.0.1
+- Built-in learned data (LearnedData.lua): at every data update, confirmed findings of players -
+  quests and rewards, ammo vendors, places rares were seen - go into the addon itself, so every
+  player on every realm gets them with the next version, even without the network. They are
+  merged into your saved data once per version and relayed like your own. First batch: 3 quests
+  with new rewards, 3 ammo vendors in Teldrassil, 1 Nightscreech spot.
+
+3.0.0
+- Relay between realms: the hunter network only reaches your realm, but the addon's data belongs
+  to your whole account. Whatever you learn - quests and their givers, ammo vendors, places where
+  rares were seen - is now passed on automatically when you play on another realm, and other
+  hunters pass on theirs. Nothing to do: everyone answers a small batch when a hunter connects
+  (and every 30 minutes), the records sent the longest ago first.
+- Rare spawn places reported by other hunters (from any realm) are shown as extra dots when you
+  select a rare on the world map.
+
+2.9.11
+- LICENSE.txt: PetSkillScout is (c) DarthRev1, all rights reserved; copying, changing or
+  republishing the code needs written permission. Third-party data (AllTheThings,
+  wow-classic-items) keeps its MIT licence. Every source file now carries the copyright line.
+
+2.9.10
+- Theme: the addon's minimap button no longer drops onto the minimap for ~10 s after login; with
+  the square minimap it is always placed in the addon button bar.
+
+2.9.9
+- CPU: the quest tracker theme restyled the whole tracker every time any of its sections updated
+  (more than ten sections, several times per frame) - about 5 ms of every second. It now restyles
+  once per burst of updates.
+
+2.9.8
+- /pss cpu now also times every hook on Blizzard functions and scripts (tooltips, bags, chat,
+  buffs, action buttons, quest tracker) and the chat filter, so nothing the addon runs is missed.
+
+2.9.7
+- CPU: the Auto Shot bar only changes its text and colour when they differ (the bar itself still
+  moves every frame); minimap icons skip the update while you stand still; the buff pass after
+  combat runs once.
+
+2.9.6
+- CPU (from /pss cpu in game): 20 frame handlers that ran on every rendered frame only to count
+  time now run on timers (0.1-5 s steps): minimap icons, network, message queue, pet card
+  requests, pet care, gear marks, achievements, queues, rare timers, collection, ammo, route,
+  gear tab, map pins, unit frames, info bar, minimap buttons. The dungeon pet guard runs per frame
+  only inside dungeons.
+
+2.9.5
+- /pss cpu: a one-minute CPU check in game. It times the addon's own frames, delayed passes and
+  tooltip hooks, then prints the 10 heaviest parts to chat (handlers are restored afterwards).
+
+2.9.4
+- Hunter network: Forever names are "First Last". Your own messages coming back under your full
+  name no longer list you twice (the old duplicate is removed), and other hunters keep their
+  full name with the space.
+- New chat tab "Hunters" (Settings > Hunter network, on): every network event appears there live -
+  joins, rares seen / tamed / killed, taming queues, ammo vendors, quests found. Close the tab to
+  stop it; switching the option off and on brings it back.
+
+2.9.3
+- Lower CPU: world map pin updates (beasts, rares, quests) stop while the map is closed; the
+  info bar scans bags, ammo and durability every 5 s instead of every second; minimap button
+  squaring every 10 s; unit frames no longer listen to the "frequent" health/power events and
+  their safety refresh runs every 3 s; minimap icons update 5 times a second instead of 10.
+
+2.9.2
+- Action bars (Settings > Hunter, on): out of combat, when you learn a new rank of a spell, every
+  button with an older rank gets the new one; a newly learned spell goes into the first free slot
+  of the main bar (then bottom left / bottom right). Spells you removed stay off your bars.
+
+2.9.1
+- Hunter network: the minimap button and the floating icon now connect you to the network with
+  your normal click to open the addon (they run "/join PSSNet1" while you are not in the channel),
+  so there is no separate prompt to find. Nothing is joined without a click; never in combat.
+- The Connect prompt is drawn above the main window (it was hidden behind the tabs).
+- Fixed: your own messages ("Name-Realm") listed you twice in the online list.
+
+2.9.0
+- New languages: Português (Brasil) and Русский (chosen automatically on ptBR/ruRU clients).
+- Performance: theme hooks (buffs, action bars, micro menu, minimap, chat, bags) now run once per
+  burst instead of once per call, and buff icons are only moved when they are not already in place
+  (this stopped a layout loop that used CPU every frame). The dungeon pet guard sleeps outside dungeons.
+- Fixed "Interface actions failed because of this AddOn": the network Connect prompt is placed by
+  screen position instead of being tied to the main window; chat is never re-fitted in combat.
+- Fixed: the Connect and Feed buttons did nothing with the default "cast on key down" option.
+- Pet bar (Settings > Hunter, on): out of combat a newly learned rank replaces the old one on the
+  pet bar, and a new skill goes into a free ability slot. Skills you removed stay off the bar.
+- Quests that are not worth it are now shown as grey "!" on the map and minimap by default.
+
+2.8.1
+- Window header: the network chip covered the last tab and cut the
+  character chip. The tabs now leave room for both chips (their font
+  steps down in long languages), and the character chip drops the
+  coordinates when only the zone name fits.
+
+2.8.0
+- New Network tab (header network chip, or /pss net): everything the hunter
+  network shares, live.
+  * Online now: you and every hunter seen in the last 30 minutes, with the
+    addon version (old versions marked) and when they were last heard;
+    guild members in green.
+  * Live feed, newest first: who joined, rare pets seen, tamed or killed,
+    taming queues, ammo vendors and quests learned in game. Filters: All /
+    Quests / Rares / Hunters / Other, and My events on or off. Mouse wheel
+    scrolls.
+  * Your share: messages sent and received, quests learned (confirmed and
+    your own).
+  Nothing extra is sent for the tab: it shows what arrives anyway. The
+  feed lives for the session; the counters are saved.
+- /pss net opens the Network tab.
+
+2.7.1
+- Hunter network in the window header: a gold "Connect" chip next to the
+  character chip while you are not connected (click: the connect button
+  opens right under it), and a green dot with the number of hunters online
+  once you are (click: realm ranking). No need to look in Settings.
+
+2.7.0
+- Unknown quests are learned in game (Settings > Quests > Learn unknown
+  quests, on by default). When you open a quest at an NPC and the quest
+  database does not know it, has no quest giver position for it or lists
+  other rewards, the addon notes the quest, its title, the quest giver,
+  the map position and the reward items. Rewards are also noted at turn-in.
+- Shared over the hunter network: records go to all hunters with the
+  addon on the realm, and new players ask for them after login. A quest
+  giver position counts as confirmed when two players reported the same
+  spot (or you saw it yourself); far-off reports do not move it.
+- Gear tab: quest rewards use these records when the database has no
+  quest giver: the map button works, the tooltip says how many players
+  found it or that it is not confirmed yet.
+- Confirmed records will be checked and added to the addon's own data at
+  the next data updates. Only quest data is sent; nothing goes to visible
+  chat.
+
+2.6.11
+- Gear tab: every quest reward now has the map button. When the quest is
+  not in the AllTheThings database for Forever, the button is grey and
+  says so (the quest giver is unknown) instead of being missing.
+
+2.6.10
+- Square minimap: the game's rings around quest areas (made for a round
+  minimap) showed as a stray oval; they are hidden now. The quest areas
+  themselves still show.
+
+2.6.9
+- Gear tab: items from a quest get a map button. Hover: the quest giver,
+  zone and coordinates, the level and, for a chain, how many quests it
+  has (the button leads to its first step). Click: arrow to the quest
+  giver and the world map on its zone. Quest givers come from the
+  AllTheThings quest database; quests it does not list have no button.
+
+2.6.8
+- Fox: Trickster's Dance now shows what it does (+50% dodge chance and 30%
+  faster attacks for 12 sec, 3 min cooldown). The numbers come from player
+  guides and are marked as not confirmed.
+
+2.6.7
+- Fast loot (Settings > Hunter, off by default): with auto loot every item
+  is taken at once and the loot window does not play its opening
+  animation. If something is left (full bags, a roll, a bind
+  confirmation) the window shows as usual. It switches itself off when
+  FasterLoot, SpeedyAutoLoot or a similar addon is loaded.
+
+2.6.6
+- Full interface theme: chat text could run above the chat panel when the
+  game put back its own chat window size; the chat window is now fitted
+  into the panel again after every such change.
+- Fixed "PetSkillScout: blocked: MicroMenuContainer:SetPointBase() /
+  SetSize()" in combat: the flat strips behind the micro menu and the bags
+  are now separate frames; nothing is added to the game's own frames.
+
+2.6.5
+- Chat text was too big with the interface font (Noto Sans is larger than
+  the game's font at the same size): chat windows are now drawn about 28%
+  smaller (size 14 shows as 10). The size you pick in the game (chat tab > Font Size) is still
+  the base and is followed when you change it.
+
+2.6.4
+- Quest givers on the minimap: the same "!" as on the world map for quest
+  givers nearby, in the rating colours (purple = worth it, yellow = normal,
+  grey on request). Hover for the quests, click for the arrow. Switch:
+  Settings > Quests > Quest givers on the minimap (on by default). The
+  game's own yellow "!" still shows as well; addons cannot change it.
+
+2.6.3
+- Settings: the options of a section stay inside the window and scroll with
+  the mouse wheel (a thin bar shows the position) instead of running off the
+  bottom of the window.
+- Settings: size buttons (Small ... Extra large) grow with their text, so
+  long translations are no longer cut off.
+
+2.6.2
+- Data update 2026-11-05 (AllTheThings Forever database, commit 31a8fe6):
+  quest prerequisites and objectives refreshed. Tomb Weed now needs Doom
+  Weed first; WRIGGLE. is repeatable; first objective positions for Doom
+  Weed, Tomb Weed, Coming to Terms and A Light in the Darkness.
+- Pet data checked against the same commit: no changes to pet skill
+  teachers, rares or beast positions since 2.6.1.
+- Beast count in this README corrected to 653.
+
+2.6.1
+- Data update 2026-11-04 (AllTheThings Forever database, commit d503738):
+  48 more teaching beasts for pet skills, among them the first known teachers
+  of Demoralizing Screech 1-4 and Lightning Breath 6, and four beasts that
+  were missing from the beast list (Kresh, Ghamoo-ra, Spawn of Hakkar,
+  Deviate Crocolisk).
+- Positions for 11 tameable beasts that had none, among them the Zephras
+  Isle beasts and rares (Slydris, Fernfeather, Mystmane), Rekk'tilac and
+  the Sewer Beast. Positions are only taken when they lie on the beast's own
+  zone map.
+- Quests, quest rewards and items: no changes since 2.6.0.
+
 2.6.0
 - Quest database for all of WoW Forever: 4,444 quests from the open
   AllTheThings project (MIT), updated on November 4 (launch day data).
@@ -639,7 +1385,7 @@ CHANGELOG
 - Results show up to 40 matches with a "Showing N of M" note (was a silent 14).
 - Dropdown check marks follow the live filters.
 - Launcher no longer swallows the first click after dragging.
-- Removed hard-coded English/Ukrainian strings; all new text in 7 languages.
+- Removed hard-coded English/Ukrainian strings; all new text in 9 languages.
 - Removed the in-game donation button (Blizzard add-on policy allows donation
   links only on the download page); the link is in this README and the .toc.
 - Removed dead code (unused progress tracking, distance text, duplicate helpers).

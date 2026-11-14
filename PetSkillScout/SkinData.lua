@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet looks ("skins"): beasts grouped by appearance, one group per look.
 -- Source: mmonster WoW Forever hunter pet data (Forever beta, checked 2026-10-21):
 -- every tameable beast is listed with the look it shares with others.

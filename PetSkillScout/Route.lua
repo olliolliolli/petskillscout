@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Skill route: the player picks skill ranks to learn ("Bite 6", "Dash 2"), the
 -- addon picks a teaching beast for each one (tameable at the player's level,
 -- reachable for the faction, with known spawn points) and orders the stops by
@@ -32,7 +33,15 @@ function R:KnownRank(ability)
   local pet = PSS.MyPet
   if pet and pet.active then
     for _, s in ipairs(pet.spells or {}) do
-      if s.key == ability and tonumber(s.rank) and s.rank > best then best = s.rank end
+      if s.key == ability and tonumber(s.rank) and s.rank > best then
+        best = s.rank
+        -- The hunter keeps a rank once a pet knows it: remember it, so dismissing
+        -- the pet does not reopen the goal (and re-announce it on next summon).
+        if PetSkillScoutDB then
+          PetSkillScoutDB.knownRanks = PetSkillScoutDB.knownRanks or {}
+          PetSkillScoutDB.knownRanks[ability] = best
+        end
+      end
     end
   end
   return best
@@ -288,7 +297,10 @@ local function CheckProgress()
   for _, g in ipairs(goals) do
     local key = g.a .. "#" .. g.r
     if R:IsDone(g) then
-      if lastOpen and lastOpen[key] then
+      local said = PetSkillScoutDB.routeAnnounced or {}
+      PetSkillScoutDB.routeAnnounced = said
+      if lastOpen and lastOpen[key] and not said[key] then
+        said[key] = true
         finished = true
         PetSkillScoutDB.routeLearned = (PetSkillScoutDB.routeLearned or 0) + 1
       end
@@ -326,4 +338,91 @@ R.frame:SetScript("OnEvent", function(self, event)
   -- MyPet rescans 0.2 s after pet events; check after that.
   pending = 0.6
   self:Show()
+end)
+R.frame.pssKey = "Route"
+PSS:Every(R.frame, 0.2)
+
+-- Nearest hunter / pet trainer ------------------------------------------
+-- Hunter trainers come from AllTheThings (the quest givers named
+-- "<Hunter Trainer>" with their position); every trainer you talk to is also
+-- remembered (PetSkillScoutDB.trainersSeen), which is the only source for pet trainers.
+PSS.Trainers = {}
+local TR = PSS.Trainers
+
+local function Faction()
+  local f = PSS.player and PSS.player.faction
+  return f == "Alliance" and "A" or f == "Horde" and "H" or nil
+end
+
+function TR:List(kind)
+  local out, seen = {}, {}
+  local mine = Faction()
+  if kind == "hunter" and PSS.QuestDB and PSS.QuestNPC then
+    local isTrainer = {}
+    for id, name in pairs(PSS.QuestNPC) do
+      if type(name) == "string" and name:find("<Hunter Trainer>", 1, true) then isTrainer[id] = name end
+    end
+    for _, q in pairs(PSS.QuestDB) do
+      local name = q.g and isTrainer[q.g]
+      if name and not seen[q.g] and q.m and q.x and q.y and (not q.s or not mine or q.s == mine) then
+        seen[q.g] = true
+        out[#out + 1] = {npc = q.g, name = name:gsub("%s*<.->", ""), mapID = q.m, x = q.x, y = q.y}
+      end
+    end
+  end
+  for npc, t in pairs((PetSkillScoutDB or {}).trainersSeen or {}) do
+    if t.kind == kind and not seen[npc] and t.m and t.x and t.y then
+      seen[npc] = true
+      out[#out + 1] = {npc = npc, name = t.name or "?", mapID = t.m, x = t.x, y = t.y, own = true}
+    end
+  end
+  return out
+end
+
+-- Nearest on your continent; else the first known one (other continent).
+function TR:Nearest(kind)
+  local best, bestD, other
+  for _, t in ipairs(self:List(kind)) do
+    local d, far = PSS.Nav and PSS.Nav:DistanceTo(t.mapID, t.x, t.y)
+    if d and (not bestD or d < bestD) then best, bestD = t, d
+    elseif far and not other then other = t end
+  end
+  return best or other, bestD
+end
+
+function TR:Show(kind)
+  local L = function(k) return PSS:L(k) end
+  local label = L(kind == "pet" and "trPet" or "trHunter")
+  local t, d = self:Nearest(kind)
+  if not t then PSS:Print(string.format(L("trNone"), label)) return end
+  local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(t.mapID)
+  local zone = info and info.name or "?"
+  local dist = d and PSS.Nav:DistanceText(d) or L("routeOtherContinent")
+  PSS:Print(string.format(L("trAt"), label, t.name, zone, dist))
+  local target = {name = t.name, mapID = t.mapID, points = {{t.x, t.y}}, npcID = t.npc, zone = zone}
+  if PSS.Nav then PSS.Nav:SetTarget(target) end
+  if PSS.UI and PSS.UI.OpenQuestMap then PSS.UI:OpenQuestMap(nil, t.mapID, target) end
+end
+
+-- Remember every trainer you talk to (position, and hunter or pet trainer).
+local tf = CreateFrame("Frame")
+pcall(tf.RegisterEvent, tf, "TRAINER_SHOW")
+tf:SetScript("OnEvent", function()
+  if IsTradeskillTrainer and PSS.Plain(IsTradeskillTrainer()) then return end
+  local guid = PSS.Plain(UnitGUID and UnitGUID("npc"))
+  local npc = type(guid) == "string" and tonumber(guid:match("%-(%d+)%-%x+$"))
+  local mapID, x, y = PSS.Nav and PSS.Nav:PlayerPos()
+  if not (npc and mapID) then return end
+  local name = PSS.Plain(UnitName and UnitName("npc"))
+  local kind = "hunter"
+  local tip = C_TooltipInfo and C_TooltipInfo.GetUnit and C_TooltipInfo.GetUnit("npc")
+  local title = tip and tip.lines and tip.lines[2] and PSS.Plain(tip.lines[2].leftText)
+  if type(title) == "string" then
+    local t = title:lower()
+    if t:find("pet") or t:find("пет") or t:find("вихован") or t:find("питом") or t:find("tier") or t:find("famil") or t:find("mascot") or t:find("zwierz") then kind = "pet" end
+  end
+  local db = PetSkillScoutDB
+  if not db then return end
+  db.trainersSeen = db.trainersSeen or {}
+  db.trainersSeen[npc] = {name = name, kind = kind, m = mapID, x = math.floor(x * 1000 + 0.5) / 10, y = math.floor(y * 1000 + 0.5) / 10, title = title}
 end)

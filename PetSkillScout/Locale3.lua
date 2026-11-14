@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- 1.6.0 strings: realm network, pet cards, taming queue, collection, achievements.
 local PSS = PetSkillScout
 local NEW = {

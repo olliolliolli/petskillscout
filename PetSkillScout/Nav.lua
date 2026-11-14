@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Navigation helpers: player position, a TomTom-style direction arrow and
 -- minimap icons for nearby rares, tracked beasts and the arrow target.
 -- Nothing here moves the character; it only shows directions.
@@ -56,6 +57,10 @@ end
 -- Offset to a point (percent coordinates) in yards east/south. Without a size
 -- API, zone maps are 3:2, so percent units are scaled to keep the angle right.
 function Nav:Offset(mapID, px, py, tx, ty)
+  -- Exact: both points in world yards (world X points north, Y points west).
+  local c1, x1, y1 = self:World(mapID, px, py)
+  local c2, x2, y2 = self:World(mapID, tx / 100, ty / 100)
+  if c1 and c2 and c1 == c2 then return -(y2 - y1), -(x2 - x1), true end
   local w, h = self:MapSize(mapID)
   if w then return (tx / 100 - px) * w, (ty / 100 - py) * h, true end
   return (tx / 100 - px) * 150, (ty / 100 - py) * 100, false
@@ -72,8 +77,21 @@ function Nav:Nearest(target, mapID, px, py)
 end
 
 -- World position (continent ID, yards) of a zone-map point; x, y are 0..1.
+local worldMemo, worldMemoN = {}, 0
 function Nav:World(mapID, x, y)
   if not (mapID and C_Map and C_Map.GetWorldPosFromMapPos and CreateVector2D) then return nil end
+  local key = mapID .. ":" .. x .. ":" .. y
+  local m = worldMemo[key]
+  if m then return m[1], m[2], m[3] end
+  local c, wx, wy = self:WorldRaw(mapID, x, y)
+  if c then
+    worldMemoN = worldMemoN + 1
+    if worldMemoN > 2000 then worldMemo, worldMemoN = {}, 0 end
+    worldMemo[key] = {c, wx, wy}
+  end
+  return c, wx, wy
+end
+function Nav:WorldRaw(mapID, x, y)
   local cont, pos = safe(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(x, y))
   if not (cont and pos and pos.GetXY) then return nil end
   local wx, wy = safe(pos.GetXY, pos)
@@ -252,6 +270,7 @@ end
 PSS.Minimap = {}
 local MM = PSS.Minimap
 local pins = {}
+MM._pins = pins
 local OUTDOOR = {466 + 2/3, 400, 333 + 1/3, 266 + 2/3, 200, 133 + 1/3}
 local INDOOR = {300, 240, 180, 120, 80, 50}
 local indoors = false
@@ -263,14 +282,15 @@ local function Enabled()
   return not PetSkillScoutDB or PetSkillScoutDB.minimapPins ~= false
 end
 
+-- Never by changing the minimap zoom: that fires MINIMAP_UPDATE_ZOOM and kept
+-- the client busy in a loop (134 ms per second, see /pss cpu).
 local function DetectIndoors()
-  if not (Minimap and Minimap.GetZoom and GetCVar) then return end
-  local zoom = Minimap:GetZoom()
-  if GetCVar("minimapZoom") == GetCVar("minimapInsideZoom") then
-    Minimap:SetZoom(zoom < 2 and zoom + 1 or zoom - 1)
-  end
-  indoors = tonumber(GetCVar("minimapZoom")) ~= Minimap:GetZoom()
-  Minimap:SetZoom(zoom)
+  if IsIndoors then indoors = PSS.Plain(safe(IsIndoors)) and true or false end
+end
+
+function MM.Near(x1, y1, x2, y2)
+  local dx, dy = x1 - x2, y1 - y2
+  return dx * dx + dy * dy < 0.36 -- 0.6 % of the map
 end
 
 local function Pin(i)
@@ -289,15 +309,33 @@ local function Pin(i)
     p.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     p:SetScript("OnEnter", function(self)
       if not GameTooltip then return end
+      if self.group and PSS.QuestPins then PSS.QuestPins.Tooltip(self); return end
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
       GameTooltip:AddLine(PSS:Safe(self.label or "?"), 1, 0.82, 0.25)
       if self.sub then GameTooltip:AddLine(PSS:Safe(self.sub), 0.8, 0.8, 0.8) end
       if self.dist then GameTooltip:AddLine(PSS:Safe(string.format("%d yd", math.floor(self.dist + 0.5))), 1, 1, 1) end
       GameTooltip:AddLine(PSS:Safe(PSS:L("minimapHint")), 0.6, 0.6, 0.6)
+      if self.beastID then GameTooltip:AddLine(PSS:Safe(PSS:L("untrackHint")), 0.6, 0.6, 0.6) end
       GameTooltip:Show()
     end)
     p:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
-    p:SetScript("OnClick", function(self) if self.target then Nav:SetTarget(self.target) end end)
+    p:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    p:SetScript("OnClick", function(self, button)
+      if button == "RightButton" then
+        -- Quest giver: right click hides the pin ("giver not here").
+        if self.group and PSS.QuestPins then PSS.QuestPins:HideGiver(self.group); return end
+        -- Tracked beast: right click stops tracking it.
+        if self.beastID then
+          PSS:SetTracked(self.beastID, false)
+          if GameTooltip then GameTooltip:Hide() end
+          MM:Refresh()
+          if PSS.UI and PSS.UI.Refresh then pcall(PSS.UI.Refresh, PSS.UI) end
+          PSS:Print(string.format(PSS:L("untrackedPin"), self.label or "?"))
+        end
+        return
+      end
+      if self.target then Nav:SetTarget(self.target) end
+    end)
     pins[i] = p
   end
   return p
@@ -325,7 +363,7 @@ local function Candidates(mapID)
       local t = Nav:TargetFromBeast(b)
       if t then
         table.insert(list, {target = t, icon = "Interface\\Icons\\Ability_Hunter_BeastTaming",
-          color = {0.47, 0.79, 0.51}, label = b.name, sub = (PSS:NameAbility(b.ability) .. " " .. tostring(b.rank))})
+          color = {0.47, 0.79, 0.51}, beastID = b.id, label = b.name, sub = (PSS:NameAbility(b.ability) .. " " .. tostring(b.rank))})
       end
     end
   end
@@ -336,7 +374,7 @@ local function Candidates(mapID)
         local t = Nav:TargetFromAtlas(rec.npcID)
         if t then
           table.insert(list, {target = t, icon = "Interface\\Icons\\Ability_Hunter_BeastTaming",
-            color = {0.47, 0.79, 0.51}, label = rec.name, sub = PSS.Atlas:TeachesText(rec) or PSS:NameFamily(rec.family)})
+            color = {0.47, 0.79, 0.51}, beastID = rec.id, label = rec.name, sub = PSS.Atlas:TeachesText(rec) or PSS:NameFamily(rec.family)})
         end
       end
     end
@@ -353,6 +391,40 @@ local function Candidates(mapID)
       end
     end
   end
+  -- Quest givers with quests you can take now (same rating colours as the world map).
+  local QP = PSS.QuestPins
+  if QP and QP.MinimapEnabled and QP:MinimapEnabled() and PSS.QuestWorth then
+    local ok, groups = pcall(QP.Groups, QP, mapID, PSS.QuestWorth:PlayerLevel())
+    for _, g in ipairs(ok and groups or {}) do
+      if g.best ~= "skip" or QP:ShowSkip() then
+        table.insert(list, {quest = g, verdict = g.best, target = {name = PSS.QuestWorth:NPCName(g.npc)
+          or PSS.QuestWorth:Title(g.quests[1].id), mapID = mapID, points = {{g.x, g.y}}}})
+      end
+    end
+  end
+  -- Objectives of quests in your log (same marks as on the world map).
+  if QP and QP.MinimapEnabled and QP:MinimapEnabled() and QP.ObjectivesOn and QP:ObjectivesOn() then
+    local ok, quests = pcall(QP.LogQuests, QP)
+    for _, q in ipairs(ok and quests or {}) do
+      local r = PSS.QuestDB and PSS.QuestDB[q.id]
+      if r and r.om == mapID and r.ox and not q.done then
+        table.insert(list, {obj = true, icon = "Interface/TargetingFrame/UI-RaidTargetingIcon_8",
+          label = q.title or r.n, sub = PSS:L("qObjective"), target = {name = q.title or r.n, mapID = mapID, points = {{r.ox, r.oy}}}})
+      end
+    end
+  end
+  if QP and QP.MinimapEnabled and QP:MinimapEnabled() and QP.TurnIns then
+    local ok, list2 = pcall(QP.TurnIns, QP, mapID)
+    for _, q in ipairs(ok and list2 or {}) do
+      -- Our own "!" right at the turn-in spot only hides the "?": left out here.
+      for i = #list, 1, -1 do
+        local e = list[i]
+        if e.quest and MM.Near(e.quest.x, e.quest.y, q.x, q.y) then table.remove(list, i) end
+      end
+      table.insert(list, {obj = true, turnin = true, icon = QP.TURNIN_ICON, label = q.title, sub = PSS:L("qTurnIn"),
+        target = {name = q.title, mapID = mapID, points = {{q.x, q.y}}}})
+    end
+  end
   if Nav.target and Nav.target.mapID == mapID then
     table.insert(list, {target = Nav.target, icon = "Interface\\Icons\\Ability_Hunter_Pathfinding",
       color = {0.95, 0.77, 0.30}, label = Nav.target.name, sub = PSS:L("arrowTarget"), edge = true})
@@ -360,28 +432,156 @@ local function Candidates(mapID)
   return list
 end
 
+-- Spawn area of the rare selected on the world map (RareMap focus): the same
+-- purple dots and outline, drawn on the minimap and clipped to its circle.
+local areaDots, areaLines, areaHolder = {}, {}, nil
+local function HideArea()
+  for _, d in ipairs(areaDots) do d:Hide() end
+  for _, l in ipairs(areaLines) do l:Hide() end
+end
+local function FocusEntry(mapID)
+  local RM, R = PSS.RareMap, PSS.RarePets
+  if not (RM and RM.focus and R and R.entries) then return nil end
+  for _, e in ipairs(R.entries) do
+    if e.beast.npcID == RM.focus and e.beast.mapID == mapID and e.beast.spawnPoints then return e end
+  end
+end
+-- Part of segment a-b inside a circle of radius r around 0,0 (nil if none).
+local function ClipToCircle(ax, ay, bx, by, r)
+  local dx, dy = bx - ax, by - ay
+  local A = dx * dx + dy * dy
+  if A == 0 then return nil end
+  local B = 2 * (ax * dx + ay * dy)
+  local C = ax * ax + ay * ay - r * r
+  local disc = B * B - 4 * A * C
+  if disc <= 0 then return nil end
+  local sq = math.sqrt(disc)
+  local t1, t2 = math.max(0, (-B - sq) / (2 * A)), math.min(1, (-B + sq) / (2 * A))
+  if t1 >= t2 then return nil end
+  return ax + dx * t1, ay + dy * t1, ax + dx * t2, ay + dy * t2
+end
+local function Hull(points)
+  if #points < 3 then return points end
+  table.sort(points, function(a, b) return a[1] < b[1] or (a[1] == b[1] and a[2] < b[2]) end)
+  local function cross(o, a, b) return (a[1]-o[1])*(b[2]-o[2]) - (a[2]-o[2])*(b[1]-o[1]) end
+  local lower, upper = {}, {}
+  for _, p in ipairs(points) do
+    while #lower >= 2 and cross(lower[#lower-1], lower[#lower], p) <= 0 do table.remove(lower) end
+    lower[#lower + 1] = p
+  end
+  for i = #points, 1, -1 do
+    local p = points[i]
+    while #upper >= 2 and cross(upper[#upper-1], upper[#upper], p) <= 0 do table.remove(upper) end
+    upper[#upper + 1] = p
+  end
+  table.remove(lower); table.remove(upper)
+  for _, p in ipairs(upper) do lower[#lower + 1] = p end
+  return lower
+end
+local function DrawArea(mapID, px, py, scale, rotate, facing)
+  local e = FocusEntry(mapID)
+  if not e then HideArea() return end
+  if not areaHolder then
+    areaHolder = CreateFrame("Frame", nil, Minimap)
+    areaHolder:SetAllPoints(Minimap)
+    areaHolder:SetFrameLevel(Minimap:GetFrameLevel() + 15)
+    areaHolder:EnableMouse(false)
+  end
+  local half = Minimap:GetWidth() / 2
+  local limit = half * 0.97
+  local cs, sn = math.cos(-facing), math.sin(-facing)
+  local pts, nd = {}, 0
+  for _, p in ipairs(e.beast.spawnPoints) do
+    local dx, dy = Nav:Offset(mapID, px, py, p[1], p[2])
+    local ex, ny = dx, -dy
+    if rotate then ex, ny = ex * cs - ny * sn, ex * sn + ny * cs end
+    ex, ny = ex * scale, ny * scale
+    pts[#pts + 1] = {ex, ny}
+    if ex * ex + ny * ny <= limit * limit then
+      nd = nd + 1
+      local d = areaDots[nd]
+      if not d then
+        d = areaHolder:CreateTexture(nil, "OVERLAY")
+        d:SetTexture("Interface\\Buttons\\WHITE8X8")
+        d:SetSize(5, 5)
+        areaDots[nd] = d
+      end
+      d:SetVertexColor(0.71, 0.57, 0.96, 1)
+      d:ClearAllPoints()
+      d:SetPoint("CENTER", Minimap, "CENTER", ex, ny)
+      d:Show()
+    end
+  end
+  for i = nd + 1, #areaDots do areaDots[i]:Hide() end
+  local nl = 0
+  if type(areaHolder.CreateLine) == "function" then
+    local hull = Hull(pts)
+    if #hull >= 2 then
+      for i = 1, #hull do
+        local a, b = hull[i], hull[i % #hull + 1]
+        local x1, y1, x2, y2 = ClipToCircle(a[1], a[2], b[1], b[2], limit)
+        if x1 then
+          nl = nl + 1
+          local l = areaLines[nl]
+          if not l then
+            l = areaHolder:CreateLine(nil, "ARTWORK")
+            l:SetTexture("Interface\\Buttons\\WHITE8X8")
+            l:SetThickness(1.5)
+            areaLines[nl] = l
+          end
+          l:SetVertexColor(0.71, 0.57, 0.96, 0.85)
+          l:SetStartPoint("CENTER", Minimap, x1, y1)
+          l:SetEndPoint("CENTER", Minimap, x2, y2)
+          l:Show()
+        end
+      end
+    end
+  end
+  for i = nl + 1, #areaLines do areaLines[i]:Hide() end
+end
+
 local cached = {mapID = nil, list = {}}
 local function UpdateMinimap()
   if not Minimap or not Enabled() then
     for _, p in ipairs(pins) do p:Hide() end
+    HideArea()
     return
   end
   local mapID, px, py = Nav:PlayerPos()
-  if not mapID then for _, p in ipairs(pins) do p:Hide() end return end
+  if not mapID then for _, p in ipairs(pins) do p:Hide() end HideArea() return end
   if mmDirty or cached.mapID ~= mapID then
     cached.mapID, cached.list = mapID, Candidates(mapID)
     mmDirty = false
+    cached.fresh = true
   end
   local zoom = (Minimap:GetZoom() or 0) + 1
-  local radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2
+  -- The view radius changes between indoors and outdoors at the same zoom
+  -- step: part of the "nothing changed" check, else pins keep the old scale.
+  local radius = Minimap.GetViewRadius and tonumber(safe(Minimap.GetViewRadius, Minimap))
+  if not (radius and radius > 0) then radius = (indoors and INDOOR or OUTDOOR)[zoom] / 2 end
+  local facingNow = GetPlayerFacing and GetPlayerFacing() or 0
+  local rotNow = GetCVar and GetCVar("rotateMinimap") == "1"
+  -- Standing still with the same zoom: the icons are already right.
+  local st = cached.state
+  if st and not cached.fresh and st.px == px and st.py == py and st.zoom == zoom and st.mapID == mapID
+     and (not rotNow or st.facing == facingNow) and st.n == #cached.list and st.radius == radius
+     and st.focus == (PSS.RareMap and PSS.RareMap.focus) then return end
+  cached.state = {px = px, py = py, zoom = zoom, mapID = mapID, facing = facingNow, n = #cached.list, radius = radius,
+    focus = PSS.RareMap and PSS.RareMap.focus}
+  cached.fresh = false
   local scale = (Minimap:GetWidth() / 2) / radius
   local facing = GetPlayerFacing and GetPlayerFacing() or 0
   local rotate = GetCVar and GetCVar("rotateMinimap") == "1"
   local used = 0
+  -- Reference for the quick moves between full passes (see MoveFast).
+  local okU, wn, ww = pcall(UnitPosition, "player")
+  wn, ww = okU and PSS.Plain(wn), okU and PSS.Plain(ww)
+  cached.wn, cached.ww, cached.scale = wn, ww, scale
   for _, c in ipairs(cached.list) do
     local dx, dy, dist = Nav:Nearest(c.target, mapID, px, py)
     if dx then
       local ex, ny = dx, -dy
+      local rawE, rawN = ex, ny
       if rotate then
         local cs, sn = math.cos(-facing), math.sin(-facing)
         ex, ny = ex * cs - ny * sn, ex * sn + ny * cs
@@ -394,17 +594,68 @@ local function UpdateMinimap()
         end
         used = used + 1
         local p = Pin(used)
-        p.icon:SetTexture(c.icon)
-        p.ring:SetVertexColor(c.color[1], c.color[2], c.color[3], 1)
-        p:SetAlpha(onMap and 1 or 0.6)
-        p.label, p.sub, p.dist, p.target = c.label, c.sub, math.floor(dist), c.target
+        p.group = c.quest
+        -- Look of the pin: only when it shows another place than last pass.
+        if p.cand ~= c or p.cOn ~= onMap then
+        p.cand, p.cOn = c, onMap
+        if c.quest then
+          -- Quest giver: the "!" icon in its rating colour, no ring.
+          p.icon:SetTexture(PSS.QuestPins.ICON)
+          p.icon:SetTexCoord(0, 1, 0, 1)
+          p.ring:Hide()
+          PSS.QuestPins:Style(p, c.verdict)
+          p.disc:Show(); p.discEdge:Show()
+          if c.verdict == "ok" then p:SetSize(9, 9) else p:SetSize(10, 10) end
+          local sz = c.verdict == "ok" and 9 or 10
+          p.disc:SetSize(sz, sz); p.discEdge:SetSize(sz + 2, sz + 2)
+          if not onMap then p:SetAlpha(0.6) end
+        elseif c.obj then
+          -- Quest objective: small mark, no ring. Turn-in "?": a bit bigger.
+          local sz = c.turnin and 9 or 11
+          p:SetSize(sz, sz)
+          if p.disc then p.disc:Hide(); p.discEdge:Hide() end
+          if c.turnin then
+            -- Dark round backing with a gold rim: stands out on any map colour.
+            PSS.QuestPins.Backing(p)
+            p.disc:SetSize(10, 10); p.discEdge:SetSize(12, 12)
+            p.disc:SetVertexColor(0.05, 0.04, 0.02, 1)
+            p.discEdge:SetVertexColor(1, 0.82, 0.2, 1)
+            p.disc:Show(); p.discEdge:Show()
+          end
+          p.ring:Hide()
+          p.icon:SetDesaturated(false)
+          p.icon:SetVertexColor(1, 1, 1)
+          p.icon:SetTexCoord(0, 1, 0, 1)
+          p.icon:SetTexture(c.icon)
+          p:SetAlpha(onMap and 0.85 or 0.5)
+        else
+          p:SetSize(14, 14)
+          if p.disc then p.disc:Hide(); p.discEdge:Hide() end
+          p.icon:SetDesaturated(false)
+          p.icon:SetVertexColor(1, 1, 1)
+          p.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+          p.icon:SetTexture(c.icon)
+          p.ring:Show()
+          p.ring:SetVertexColor(c.color[1], c.color[2], c.color[3], 1)
+          p:SetAlpha(onMap and 1 or 0.6)
+        end
+        end
+        p.label, p.sub, p.dist, p.target, p.beastID = c.label, c.sub, math.floor(dist), c.target, c.beastID
         p:ClearAllPoints()
-        p:SetPoint("CENTER", Minimap, "CENTER", ex * scale, ny * scale)
+        local off = 0 -- right on the giver, like the game's own "!"
+        local sx, sy = 0, 0
+        if c.quest and PSS.QuestPins and PSS.QuestPins.SpreadOffset then sx, sy = PSS.QuestPins.SpreadOffset(c.quest.spread, 4) end
+        p:SetPoint("CENTER", Minimap, "CENTER", ex * scale + off + sx, ny * scale + off + sy)
+        p.baseLevel = p.baseLevel or p:GetFrameLevel()
+        p:SetFrameLevel(p.baseLevel + (c.turnin and 10 or 0))
         p:Show()
+        p.mmE, p.mmN, p.mmSX, p.mmSY = onMap and rawE or nil, rawN, sx, sy
       end
     end
   end
-  for i = used + 1, #pins do pins[i]:Hide() end
+  for i = used + 1, #pins do pins[i]:Hide(); pins[i].cand = nil end
+  cached.used = used
+  DrawArea(mapID, px, py, scale, rotate, facing)
 end
 
 local driver = CreateFrame("Frame")
@@ -413,14 +664,62 @@ driver:RegisterEvent("PLAYER_ENTERING_WORLD")
 driver:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 driver:RegisterEvent("ZONE_CHANGED_INDOORS")
 pcall(driver.RegisterEvent, driver, "MINIMAP_UPDATE_ZOOM")
-driver:SetScript("OnEvent", function()
+driver:SetScript("OnEvent", function(_, event)
+  -- A zoom change (also when you go in or out of a building) needs a full
+  -- pass right away: the quick shift between passes uses the old scale.
+  if event == "MINIMAP_UPDATE_ZOOM" then pcall(DetectIndoors); mmElapsed = MM.SLOW; cached.state = nil; return end
   pcall(DetectIndoors)
   mmDirty = true
 end)
+-- A full pass (which pins, how they look) runs 5 times a second. Between
+-- passes, while you run or the map turns, the pins already on the minimap only
+-- shift by how far you moved: no table work, no map lookups.
+MM.FAST, MM.SLOW = 0.05, 0.2
+function MM.Interval(speed, rotating)
+  if (type(speed) == "number" and speed > 0) or rotating then return MM.FAST end
+  return MM.SLOW
+end
+-- Pin offset (yards east, north) after you moved; rotated with the minimap.
+function MM.Shift(e, n, movedE, movedN, cs, sn)
+  e, n = e - movedE, n - movedN
+  if cs then return e * cs - n * sn, e * sn + n * cs end
+  return e, n
+end
+local function MoveFast()
+  local used, s = cached.used or 0, cached.scale
+  if used == 0 or not (s and cached.wn and UnitPosition) then return end
+  local ok, wn, ww = pcall(UnitPosition, "player")
+  wn, ww = ok and PSS.Plain(wn), ok and PSS.Plain(ww)
+  if type(wn) ~= "number" or type(ww) ~= "number" then return end
+  local movedN, movedE = wn - cached.wn, cached.ww - ww -- second value grows westwards
+  local cs, sn
+  if GetCVar and GetCVar("rotateMinimap") == "1" then
+    local f = -(GetPlayerFacing and GetPlayerFacing() or 0)
+    cs, sn = math.cos(f), math.sin(f)
+  end
+  for i = 1, used do
+    local p = pins[i]
+    if p and p.mmE then
+      local e, n = MM.Shift(p.mmE, p.mmN, movedE, movedN, cs, sn)
+      p:SetPoint("CENTER", Minimap, "CENTER", e * s + p.mmSX, n * s + p.mmSY)
+    end
+  end
+end
+-- While you move, the quick shift keeps the pins in place, so the full pass
+-- (new pins coming into view) runs once a second instead of 5 times.
+MM.FULL_MOVING = 1
 driver:SetScript("OnUpdate", function(_, elapsed)
   mmElapsed = mmElapsed + (elapsed or 0)
-  if mmElapsed < 0.1 then return end
+  local speed = GetUnitSpeed and PSS.Plain(safe(GetUnitSpeed, "player"))
+  local rotating = GetCVar and GetCVar("rotateMinimap") == "1"
+  local moving = MM.Interval(speed, rotating) == MM.FAST
+  if mmElapsed < (moving and not mmDirty and MM.FULL_MOVING or MM.SLOW) then
+    if moving then pcall(MoveFast) end
+    return
+  end
   mmElapsed = 0
   local ok, err = pcall(UpdateMinimap)
   if not ok then MM._lastError = tostring(err) end
 end)
+driver.pssKey = "Nav minimap"
+PSS:Every(driver, MM.FAST)

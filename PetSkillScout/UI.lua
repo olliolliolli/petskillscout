@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- PetSkillScout main window (1.4.0 layout).
 -- One layout for every theme; themes only change colours and textures:
 --   journal  - Hunter's Journal (dark green, gold)
@@ -453,7 +454,7 @@ local function NewModel(parent)
   -- opts = {unit=, display=, npc=}; the same subject is not reloaded.
   function m:ShowSubject(opts, force)
     opts = opts or {}
-    local guid = opts.unit and UnitGUID and UnitGUID(opts.unit)
+    local guid = opts.unit and UnitGUID and PSS.Plain(UnitGUID(opts.unit))
     local key = tostring(opts.unit) .. ":" .. tostring(guid) .. ":" .. tostring(opts.display) .. ":" .. tostring(opts.npc)
     if key == self.key and not force then return end
     self.key = key
@@ -573,6 +574,8 @@ function PSS:RankInfoText(ability, rank)
   local learn = self.Abilities[ability] and self.Abilities[ability].learn
   if learn == "family" then table.insert(parts, self:L("learnFamily"))
   elseif learn == "trainer" then table.insert(parts, self:L("learnTrainer")) end
+  local effect = self.Abilities[ability] and self.Abilities[ability].effect
+  if effect then table.insert(parts, self:L(effect)) end
   return table.concat(parts, "\n")
 end
 
@@ -732,7 +735,22 @@ function UI:Create()
   end)
   frame:SetScript("OnHide", function() UI.moving = false; UI:PlaceFeedOverlay() end)
   -- Models may be dropped while hidden: reload them on the next refresh.
-  frame:SetScript("OnShow", function() for _, m in ipairs(allModels) do m.key = nil end end)
+  -- Author line at the bottom right; put back each time the window opens.
+  local credit = frame:CreateFontString(nil, "OVERLAY")
+  credit:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+  credit:SetTextColor(0.55, 0.55, 0.5)
+  credit:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 6)
+  self.credit = credit
+  local function Credit()
+    credit:SetText(PSS:Credit())
+    credit:SetAlpha(1)
+    credit:Show()
+  end
+  Credit()
+  frame:SetScript("OnShow", function()
+    for _, m in ipairs(allModels) do m.key = nil end
+    Credit()
+  end)
   local pos = PetSkillScoutDB and PetSkillScoutDB.rememberPos ~= false and PetSkillScoutDB.framePos
   if type(pos) == "table" and pos[1] and tonumber(pos[3]) and tonumber(pos[4]) then
     frame:SetPoint(pos[1], UIParent, pos[2] or pos[1], pos[3], pos[4])
@@ -807,10 +825,47 @@ function UI:Create()
   end, {icon="Interface\\Icons\\INV_Misc_Gear_01", iconSize=22})
   self.gearButton:SetPoint("RIGHT", self.closeButton, "LEFT", -8, 0)
   SetTip(self.gearButton, function() return L("settings") end)
+  -- Network chip: hunters online, or a bright "Connect" when not connected.
+  -- Joining a channel needs a secure click, so the chip opens the existing
+  -- connect prompt right under itself (nothing protected lives in this window).
+  self.netChip = CreateFrame("Button", nil, header)
+  self.netChip:SetHeight(26)
+  local netBg = Solid(self.netChip, "BACKGROUND", C.deep)
+  netBg:SetAllPoints(self.netChip)
+  self.netChip.edges = Border(self.netChip, C.border)
+  self.netChip.dot = self.netChip:CreateTexture(nil, "ARTWORK")
+  self.netChip.dot:SetTexture(WHITE)
+  self.netChip.dot:SetSize(8, 8)
+  self.netChip.dot:SetPoint("LEFT", self.netChip, "LEFT", 9, 0)
+  self.netChip.text = Label(self.netChip, "", 11, C.cream, nil, "LEFT", true)
+  self.netChip.text:SetPoint("LEFT", self.netChip.dot, "RIGHT", 6, 0)
+  local netHl = Solid(self.netChip, "HIGHLIGHT", C.gold, 0.15)
+  netHl:SetAllPoints(self.netChip)
+  self.netChip:SetScript("OnClick", function(b)
+    local N = PSS.Net
+    if not N then return end
+    UI:ShowView("network")
+    if N:ChannelID() then return end
+    if InCombatLockdown and InCombatLockdown() then
+      PSS:Print(L("netChipCombat"))
+    else
+      N:ShowConnect(true, b)
+      if C_Timer and C_Timer.After then C_Timer.After(4, function() UI:RefreshNetChip(); UI:Refresh() end) end
+    end
+  end)
+  SetTip(self.netChip, function()
+    local N = PSS.Net
+    if not N then return "" end
+    if N:ChannelID() then
+      return string.format(L("netInfo"), N:OnlineCount(), L("netConnected")) .. "\n" .. L("netChipOnHint")
+    end
+    return L("netConnectTitle") .. "\n" .. L("netConnectSub")
+  end)
   -- Character chip (click: refresh position / zone).
   self.chip = CreateFrame("Button", nil, header)
   self.chip:SetHeight(26)
   self.chip:SetPoint("RIGHT", self.gearButton, "LEFT", -10, 0)
+  self.netChip:SetPoint("RIGHT", self.chip, "LEFT", -6, 0)
   local chipBg = Solid(self.chip, "BACKGROUND", C.deep)
   chipBg:SetAllPoints(self.chip)
   Border(self.chip, C.border)
@@ -831,6 +886,7 @@ function UI:Create()
   self:BuildCollection()
   self:BuildGear()
   self:BuildQuests()
+  self:BuildNetwork()
   self:BuildSettings()
   self:ApplyScale()
   self:ApplyTheme()
@@ -885,7 +941,11 @@ function UI:RefreshHeader()
   -- Tabs sized to their text; the character chip gets the room that is left.
   -- Seven tabs in long languages do not fit at 14 pt: step the font down
   -- until they leave room for the chip (its right edge is at x = 1000).
-  local TAB_RIGHT = 1000 - 10 - 150
+  -- The network chip sits between the tabs and the character chip: keep its
+  -- width out of the tabs' room too.
+  local netW = self:RefreshNetChip() or 0
+  local netRoom = netW > 0 and (netW + 6) or 0
+  local TAB_RIGHT = 1000 - 10 - 150 - netRoom
   local widths, x
   for size = 14, 10, -1 do
     widths, x = {}, 204
@@ -911,12 +971,41 @@ function UI:RefreshHeader()
   local p = PSS.player
   local where = p.zone or "?"
   if p.x and p.y then where = where .. string.format("  %.1f, %.1f", p.x * 100, p.y * 100) end
-  local room = math.max(120, 1000 - x - 10 - 24)
+  local room = math.max(120, 1000 - x - 10 - 24 - netRoom)
   self.chipText:SetWidth(0)
   self.chipText:SetText(string.format("%s %d  ·  %s", L("level"), math.floor(p.level or 1), where))
+  if (self.chipText:GetStringWidth() or 0) > room and p.zone then
+    self.chipText:SetText(string.format("%s %d  ·  %s", L("level"), math.floor(p.level or 1), p.zone))
+  end
   local width = math.min(room, math.floor(self.chipText:GetStringWidth() or 200))
   self.chipText:SetWidth(width)
   self.chip:SetWidth(width + 24)
+end
+
+-- Header network chip: green dot + online count, or a gold "Connect".
+function UI:RefreshNetChip()
+  local c = self.netChip
+  if not c then return 0 end
+  local N = PSS.Net
+  local on = N and N:ChannelID()
+  local enabled = not PetSkillScoutDB or PetSkillScoutDB.netEnabled ~= false
+  if not N or not enabled then c:Hide(); return 0 end
+  c:Show()
+  c.text:SetWidth(0)
+  if on then
+    c.text:SetText(string.format(L("netChipOnline"), N:OnlineCount()))
+    c.text:SetTextColor(C.cream[1], C.cream[2], C.cream[3])
+    c.dot:SetVertexColor(0.40, 0.87, 0.47, 1)
+    SetEdgeColor(c.edges, self.view == "network" and C.gold or C.border)
+  else
+    c.text:SetText(L("netChipConnect"))
+    c.text:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
+    c.dot:SetVertexColor(0.95, 0.40, 0.35, 1)
+    SetEdgeColor(c.edges, C.gold)
+  end
+  local w = math.floor((c.text:GetStringWidth() or 60) + 32)
+  c:SetWidth(w)
+  return w
 end
 
 function UI:RefreshView()
@@ -929,6 +1018,7 @@ function UI:RefreshView()
   elseif self.view == "collection" then self:UpdateCollection()
   elseif self.view == "gear" then self:UpdateGear()
   elseif self.view == "quests" then self:UpdateQuests()
+  elseif self.view == "network" then self:UpdateNetwork()
   elseif self.view == "settings" then self:RefreshSettings() end
 end
 
@@ -968,17 +1058,17 @@ function UI:BuildBeasts()
   local st = self.beastState
   self.dropdowns = self.dropdowns or {}
 
-  self.bSearch = SearchBox(p, 300, function() UI:UpdateBeastList(true) end)
+  self.bSearch = SearchBox(p, 280, function() UI:UpdateBeastList(true) end)
   self.bSearch:SetPoint("TOPLEFT", p, "TOPLEFT", 0, 0)
   self.bChips = {}
-  for i, def in ipairs({{"fast", "chipFast"}, {"rare", "chipRare"}, {"teach", "chipTeach"}, {"mypet", "chipMyPet"}}) do
+  for i, def in ipairs({{"fast", "chipFast"}, {"rare", "chipRare"}, {"teach", "chipTeach"}, {"mypet", "chipMyPet"}, {"unknown", "chipUnknown"}}) do
     local key = def[1]
-    local chip = MakeButton(p, "", 120, 32, function(b)
+    local chip = MakeButton(p, "", 110, 32, function(b)
       st[key] = not st[key]
       SetActive(b, st[key])
       UI:UpdateBeastList(true)
     end, {size=12})
-    chip:SetPoint("TOPLEFT", p, "TOPLEFT", 312 + (i - 1) * 126, 0)
+    chip:SetPoint("TOPLEFT", p, "TOPLEFT", 290 + (i - 1) * 114, 0)
     chip.state, chip.key = key, def[2]
     self.bChips[i] = chip
   end
@@ -1151,6 +1241,16 @@ local function BeastMatches(rec, st, query, petKnown, petCan)
   if st.fast and not rec.fast then return false end
   if st.rare and not rec.isRare then return false end
   if st.teach and not rec.teaches then return false end
+  -- Hide skills you already know: only beasts that teach a rank above the
+  -- one you know (learned ranks + your active pet's).
+  if st.unknown then
+    local R, new = PSS.Route, false
+    for _, t in ipairs(rec.teaches or {}) do
+      local known = R and R.KnownRank and R:KnownRank(t.ability) or 0
+      if (tonumber(t.rank) or 0) > known then new = true break end
+    end
+    if not new then return false end
+  end
   if st.skill ~= "Any" or st.mypet then
     local ok = false
     for _, t in ipairs(rec.teaches or {}) do
@@ -1388,7 +1488,7 @@ end
 local function SearchFor(ability, rank)
   local st = UI.beastState
   st.skill, st.rank, st.family = ability, rank or "All", "All"
-  st.mypet, st.fast, st.rare, st.teach = false, false, false, false
+  st.mypet, st.fast, st.rare, st.teach, st.unknown = false, false, false, false, false
   UI.bSearch.edit:SetText("")
   for _, dd in ipairs(UI.dropdowns) do dd:Sync() end
   UI.bSelected = nil
@@ -1478,6 +1578,9 @@ function UI:BuildRares()
       tile.meta:SetPoint("TOPLEFT", tile, "TOPLEFT", 10, -150)
       tile.badge = Badge(tile)
       tile.badge:SetPoint("TOPLEFT", tile, "TOPLEFT", 10, -170)
+      tile.speed = Label(tile, "", 11, C.muted, 110, "RIGHT", true)
+      tile.speed:SetPoint("RIGHT", tile, "RIGHT", -10, 0)
+      tile.speed:SetPoint("TOP", tile.badge, "TOP", 0, -3)
       tile.extra = Badge(tile)
       tile.extra:SetPoint("LEFT", tile.badge, "RIGHT", 6, 0)
       tile.seen = Label(tile, "", 10, C.muted, TILE_W - 20, "LEFT", true)
@@ -1608,6 +1711,7 @@ function UI:UpdateRares(rebuild)
       local tamed, want = R:IsCollected(e), R:IsWanted(e)
       tile.view:SetSubject({display=e.beast.displayID, npc=e.beast.npcID}, FamilyIcon(e.family))
       tile.name:SetText(e.name)
+      local spd = R.Speed and R:Speed(e)
       tile.level:SetText(L("level") .. " " .. LevelText(e))
       local meta = (e.family and PSS:NameFamily(e.family) or "?")
       if e.dist then
@@ -1616,6 +1720,9 @@ function UI:UpdateRares(rebuild)
         meta = meta .. "  ·  " .. (e.zone or "?")
       end
       tile.meta:SetText(meta)
+      -- Attack speed on the right of the badge row; faster than 2.0 s in green.
+      tile.speed:SetText(spd and string.format(L("rareAtk"), spd) or "")
+      if spd and spd < 2 then tile.speed:SetTextColor(0.56, 0.88, 0.63) else tile.speed:SetTextColor(C.muted[1], C.muted[2], C.muted[3]) end
       local kind, text = "none", L("badgeNotTamed")
       if tamed then kind, text = "tamed", L("rareTamed")
       elseif want then kind, text = "want", L("badgeWanted") end
@@ -1731,8 +1838,15 @@ function UI:BuildRoute()
     UI:UpdateRoute()
   end, {icon="Interface\\Minimap\\MinimapArrow", iconSize=18, iconLeft=true, size=12})
   self.rtGo:SetPoint("RIGHT", self.rtClear, "LEFT", -8, 0)
-  self.rtSummary = Label(p, "", 12, C.muted, BODY_W, "LEFT", true)
+  self.rtSummary = Label(p, "", 12, C.muted, BODY_W - 400, "LEFT", true)
   self.rtSummary:SetPoint("TOPLEFT", p, "TOPLEFT", 2, -46)
+  -- Nearest hunter / pet trainer: map and arrow.
+  self.rtPetTr = MakeButton(p, "", 190, 24, function() PSS.Trainers:Show("pet") end,
+    {icon="Interface\\Minimap\\MinimapArrow", iconSize=14, iconLeft=true, size=11})
+  self.rtPetTr:SetPoint("TOPRIGHT", p, "TOPRIGHT", 0, -40)
+  self.rtHuntTr = MakeButton(p, "", 190, 24, function() PSS.Trainers:Show("hunter") end,
+    {icon="Interface\\Minimap\\MinimapArrow", iconSize=14, iconLeft=true, size=11})
+  self.rtHuntTr:SetPoint("RIGHT", self.rtPetTr, "LEFT", -8, 0)
 
   self.rtScroll = CreateFrame("ScrollFrame", "PetSkillScoutRouteScroll", p, "FauxScrollFrameTemplate")
   self.rtScroll:SetPoint("TOPLEFT", p, "TOPLEFT", 0, -72)
@@ -1813,6 +1927,8 @@ function UI:UpdateRoute(scrollOnly)
   self.rtFill:SetText(L("routeFill"))
   self.rtClear:SetText(L("routeClear"))
   self.rtGo:SetText(L("routeGo"))
+  self.rtHuntTr:SetText(L("trHunter"))
+  self.rtPetTr:SetText(L("trPet"))
   self.rtSkillDD:Sync()
   self.rtRankDD:Sync()
   -- Summary: stops left, zones, the next stop.
@@ -2034,6 +2150,35 @@ function UI:BuildGear()
       UI:UpdateGear()
     end, function(b) return b.tip or L("gearOther") end)
     row.alt:SetPoint("RIGHT", row, "RIGHT", -6, 0)
+    -- Where the reward quest starts: arrow to the quest giver + world map on its zone.
+    row.where = IconButton(row, "Interface\\Icons\\INV_Misc_Map_01", 22, function(b)
+      local id, r = b.questID, b.quest
+      if not (id and r and r.m and r.x) then
+        if b.qname then PSS:Print(string.format(L("gearQuestUnknown"), b.qname)) end
+        return
+      end
+      local W = PSS.QuestWorth
+      local giver = (W and W:NPCName(r.g)) or r.gn
+      local t = {name = giver or r.n, mapID = r.m, points = {{r.x, r.y}}}
+      if PSS.Nav then PSS.Nav:SetTarget(t) end
+      UI:OpenQuestMap(nil, r.m, t)
+    end, function(b)
+      local r = b.quest
+      if not (r and r.m and r.x) then return string.format(L("gearQuestUnknown"), b.qname or "?") end
+      local W = PSS.QuestWorth
+      local zone = r.m and C_Map and C_Map.GetMapInfo and select(2, pcall(C_Map.GetMapInfo, r.m))
+      zone = type(zone) == "table" and zone.name or "?"
+      local lines = {string.format(L("gearQuestFrom"), (W and W:NPCName(r.g)) or r.gn or L("qwGiverUnknown"))}
+      lines[#lines + 1] = string.format("%s  %.1f, %.1f", zone, r.x or 0, r.y or 0)
+      if r.l then lines[#lines + 1] = string.format(L("qFrom"), r.l) end
+      if b.chain and b.chain > 1 then lines[#lines + 1] = string.format(L("gearQuestChain"), b.chain) end
+      if r.learned then
+        lines[#lines + 1] = r.confirmed and string.format(L("gearQuestLearned"), r.reporters or 1) or L("gearQuestUnverified")
+      end
+      lines[#lines + 1] = L("gearQuestWhereHint")
+      return table.concat(lines, "\n")
+    end)
+    row.where:SetPoint("RIGHT", row.alt, "LEFT", -4, 0)
     row:SetScript("OnEnter", GearTooltip)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)
     row:SetScript("OnClick", function(r)
@@ -2140,6 +2285,15 @@ function UI:UpdateGear()
         row.src:SetText(title or "")
         row.src2:SetText(detail or "")
       end
+      local qid, qr, qchain
+      if not keep then qid, qr, qchain = G:QuestFor(rec) end
+      row.where.questID, row.where.quest, row.where.chain = qid, qr, qchain
+      row.where.qname = (not keep) and G:QuestSourceName(rec) or nil
+      local known = qr and qr.m and qr.x and true or false
+      -- Every quest reward gets the button; grey when the giver is not in the database.
+      Show(row.where, known or row.where.qname ~= nil)
+      row.where.icon:SetDesaturated(not known)
+      row.where:SetAlpha((known and not (qr.learned and not qr.confirmed)) and 1 or (known and 0.8 or 0.55))
       -- Gain in attack power.
       local delta = math.floor(e.pick.score - eq + 0.5)
       if e.wearing then
@@ -2163,10 +2317,28 @@ function UI:UpdateGear()
       row.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
       row.icon:SetDesaturated(true)
       local text = e.twoHand and L("gearTwoHand") or (e.locked and string.format(L("gearDualAt"), e.locked) or L("gearNothing"))
-      row.name:SetText(text)
+      local up = e.upcoming and not e.twoHand and not e.locked and e.upcoming.rec
+      if up then
+        -- Empty slot, nothing at your level yet: the first item that comes later.
+        row.icon:SetTexture(G:Icon(up.id))
+        row.icon:SetDesaturated(true)
+        text = G:Name(up)
+      end
+      row.name:SetText(PSS:Safe(text))
       row.name:SetTextColor(C.muted[1], C.muted[2], C.muted[3])
-      row.sub:SetText(eqName and string.format(L("gearEquipped"), eqName) or "")
+      if up then
+        row.sub:SetText(string.format(L("gearFromLevel"), up.lvl))
+      else
+        row.sub:SetText(eqName and string.format(L("gearEquipped"), eqName) or "")
+      end
       row.src:SetText(""); row.src2:SetText(""); row.gain:SetText(""); row.diff:SetText("")
+      if up then
+        local l1, l2 = G:SourceShort(up)
+        row.src:SetText(PSS:Safe(l1 or "")); row.src2:SetText(PSS:Safe(l2 or ""))
+        G:Request(up.id)
+      end
+      row.where.questID, row.where.quest, row.where.qname = nil, nil, nil
+      Show(row.where, false)
       Show(row.bar, false)
       row:SetAlpha(0.7)
     end
@@ -2300,6 +2472,142 @@ local function QuestTooltip(row)
   GameTooltip:Show()
 end
 
+---------------------------------------------------------------------------
+-- Network tab: hunters online and the live feed of the hunter network.
+---------------------------------------------------------------------------
+local NET_ROWS, NET_ROW_H = 18, 28
+local ON_ROWS, ON_ROW_H = 17, 30
+function UI:BuildNetwork()
+  local p = CreateFrame("Frame", nil, self.body)
+  p:SetAllPoints(self.body)
+  self.views.network = p
+  self.netState = self.netState or {filter = "all", mine = true, offset = 0}
+  local st = self.netState
+
+  -- Left: hunters online.
+  local left = CreateFrame("Frame", nil, p)
+  left:SetPoint("TOPLEFT", p, "TOPLEFT", 0, 0)
+  left:SetSize(330, BODY_H - 30)
+  Panel(left, C.surface)
+  self.netOnHead = Label(left, "", 14, C.gold, 300, "LEFT", true)
+  self.netOnHead:SetPoint("TOPLEFT", left, "TOPLEFT", 12, -12)
+  self.netStatus = Label(left, "", 11, C.muted, 300, "LEFT", true)
+  self.netStatus:SetPoint("TOPLEFT", left, "TOPLEFT", 12, -34)
+  self.netOnRows = {}
+  for i = 1, ON_ROWS do
+    local row = CreateFrame("Frame", nil, left)
+    row:SetSize(306, ON_ROW_H - 2)
+    row:SetPoint("TOPLEFT", left, "TOPLEFT", 12, -56 - (i - 1) * ON_ROW_H)
+    row.name = Label(row, "", 13, C.cream, 150, "LEFT", true)
+    row.name:SetPoint("LEFT", row, "LEFT", 0, 0)
+    row.info = Label(row, "", 10, C.muted, 150, "RIGHT", true)
+    row.info:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    self.netOnRows[i] = row
+  end
+
+  -- Right: filters + feed.
+  local x0 = 346
+  self.netFilters = {}
+  for i, f in ipairs({"all", "quest", "rare", "hunter", "other"}) do
+    local b = MakeButton(p, "", 108, 30, function() st.filter = f; st.offset = 0; UI:UpdateNetwork() end, {size = 12})
+    b:SetPoint("TOPLEFT", p, "TOPLEFT", x0 + (i - 1) * 112, 0)
+    b.filter = f
+    self.netFilters[i] = b
+  end
+  self.netMine = MakeButton(p, "", 150, 30, function() st.mine = not st.mine; st.offset = 0; UI:UpdateNetwork() end, {size = 12})
+  self.netMine:SetPoint("TOPRIGHT", p, "TOPRIGHT", 0, 0)
+  local feed = CreateFrame("Frame", nil, p)
+  feed:SetPoint("TOPLEFT", p, "TOPLEFT", x0, -40)
+  feed:SetSize(BODY_W - x0, NET_ROWS * NET_ROW_H + 8)
+  Panel(feed, C.surface)
+  feed:EnableMouseWheel(true)
+  feed:SetScript("OnMouseWheel", function(_, delta)
+    st.offset = math.max(0, (st.offset or 0) - delta * 3)
+    UI:UpdateNetwork()
+  end)
+  self.netFeedRows = {}
+  for i = 1, NET_ROWS do
+    local row = CreateFrame("Frame", nil, feed)
+    row:SetSize(BODY_W - x0 - 24, NET_ROW_H - 2)
+    row:SetPoint("TOPLEFT", feed, "TOPLEFT", 12, -6 - (i - 1) * NET_ROW_H)
+    row.time = Label(row, "", 11, C.muted, 46, "LEFT", true)
+    row.time:SetPoint("LEFT", row, "LEFT", 0, 0)
+    row.text = Label(row, "", 12, C.cream, BODY_W - x0 - 90, "LEFT", true)
+    row.text:SetPoint("LEFT", row, "LEFT", 52, 0)
+    self.netFeedRows[i] = row
+  end
+  self.netEmpty = Label(feed, "", 12, C.muted, BODY_W - x0 - 40, "LEFT")
+  self.netEmpty:SetPoint("TOPLEFT", feed, "TOPLEFT", 14, -14)
+  self.netStats = Label(p, "", 11, C.muted, BODY_W - x0, "LEFT", true)
+  self.netStats:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", x0, 4)
+end
+
+local function Ago(t)
+  local s = math.max(0, (time and time() or 0) - (t or 0))
+  if s < 60 then return L("netNow") end
+  return string.format(L("netMin"), math.floor(s / 60))
+end
+
+function UI:NetEventText(e)
+  local who = "|cff" .. string.format("%02x%02x%02x", C.gold[1] * 255, C.gold[2] * 255, C.gold[3] * 255) .. PSS:Safe(e.who or "?") .. "|r"
+  local a, b = PSS:Safe(tostring(e.a or "?")), PSS:Safe(tostring(e.b or "?"))
+  return string.format(L("nf_" .. e.kind), who, a, b)
+end
+
+function UI:UpdateNetwork()
+  if not self.netOnRows then return end
+  local F, N = PSS.NetFeed, PSS.Net
+  local st = self.netState
+  local on = N and N:ChannelID()
+  -- Hunters online (you first).
+  local list = F and F:Online() or {}
+  local me = UnitName and UnitName("player") or "?"
+  table.insert(list, 1, {name = me, t = time and time() or 0, v = PSS.version, me = true})
+  self.netOnHead:SetText(string.format(L("netOnlineHead"), #list))
+  self.netStatus:SetText(on and L("netStatusOn") or L("netStatusOff"))
+  self.netStatus:SetTextColor(on and 0.45 or 0.95, on and 0.85 or 0.45, on and 0.5 or 0.4)
+  for i, row in ipairs(self.netOnRows) do
+    local h = list[i]
+    if i == ON_ROWS and #list > ON_ROWS then
+      row.name:SetText(string.format(L("netMore"), #list - ON_ROWS + 1)); row.info:SetText(""); row:Show()
+    elseif h then
+      row.name:SetText(PSS:Safe(h.name) .. (h.me and (" (" .. L("netYou") .. ")") or ""))
+      if h.guild then row.name:SetTextColor(C.green[1], C.green[2], C.green[3])
+      else row.name:SetTextColor(C.cream[1], C.cream[2], C.cream[3]) end
+      local old = N and N.Newer and h.v and N.Newer(PSS.version or "0", h.v)
+      local info = (h.v and ("v" .. PSS:Safe(h.v)) or ("|cff9a9a9a" .. L("netVerUnknown") .. "|r")) .. (old and (" |cffff7a7a" .. L("netVerOld") .. "|r") or "")
+      if not h.me then info = info .. "  ·  " .. Ago(h.t) end
+      row.info:SetText(info)
+      row:Show()
+    else
+      row:Hide()
+    end
+  end
+  -- Feed.
+  for _, b in ipairs(self.netFilters) do
+    b:SetText(L("nf_f_" .. b.filter)); SetActive(b, st.filter == b.filter)
+  end
+  self.netMine:SetText(L("nf_mine")); SetActive(self.netMine, st.mine)
+  local events = F and F:List(st.filter, st.mine) or {}
+  st.offset = math.min(st.offset or 0, math.max(0, #events - NET_ROWS))
+  for i, row in ipairs(self.netFeedRows) do
+    local e = events[i + st.offset]
+    if e then
+      row.time:SetText(date and date("%H:%M", e.t) or "")
+      row.text:SetText(self:NetEventText(e))
+      row:Show()
+    else
+      row:Hide()
+    end
+  end
+  Show(self.netEmpty, #events == 0)
+  self.netEmpty:SetText(on and L("netFeedEmpty") or L("netFeedOffline"))
+  local stats = F and F:Stats() or {sent = 0, recv = 0}
+  local n, ok, mine = 0, 0, 0
+  if F then n, ok, mine = F:QuestCounts() end
+  self.netStats:SetText(string.format(L("netStatsLine"), stats.sent or 0, stats.recv or 0, n, ok, mine))
+end
+
 function UI:BuildQuests()
   local p = CreateFrame("Frame", nil, self.body)
   p:SetAllPoints(self.body)
@@ -2386,7 +2694,8 @@ function UI:BuildQuests()
     row.map = IconButton(row, TEX .. "Rare_map", 28, function(b)
       local r = b:GetParent().data
       if not r then return end
-      if r.e then UI:OpenQuestMap(r.e) else UI:OpenQuestMap(nil, r.r and r.r.m) end
+      if r.e then UI:OpenQuestMap(r.e, nil, r.target)
+      else UI:OpenQuestMap(nil, r.r and r.r.m, r.target or (r.r and r.r.x and {name = r.r.n, mapID = r.r.m, points = {{r.r.x, r.r.y}}})) end
     end, function() return L("qMap") end)
     row.map:SetPoint("RIGHT", row.hide, "LEFT", -6, 0)
     row.arrow = IconButton(row, "Interface\\Minimap\\MinimapArrow", 28, function(b)
@@ -2412,18 +2721,20 @@ function UI:BuildQuests()
 end
 
 -- World map on a zone (not in combat: the map is a protected panel then).
-function UI:OpenQuestMap(e, mapID)
-  if e then mapID = PSS.Quests:ZoneMapID(e) end
+-- target (optional): {name, mapID, points} - pinged on the map for a few seconds.
+function UI:OpenQuestMap(e, mapID, target)
+  if e then
+    target = target or PSS.Quests:Target(e)
+    -- The chain start may be in another zone than the last quest.
+    mapID = (target and target.mapID) or PSS.Quests:ZoneMapID(e)
+  end
   if not mapID then PSS:Print(string.format(L("qNoMap"), e and PSS.Quests:Info(e).zone or "?")); return end
   if InCombatLockdown and InCombatLockdown() then PSS:Print(L("qMapCombat")); return end
-  if OpenWorldMap then pcall(OpenWorldMap, mapID)
-  elseif WorldMapFrame and WorldMapFrame.SetMapID then
-    if ShowUIPanel then pcall(ShowUIPanel, WorldMapFrame) end
-    pcall(WorldMapFrame.SetMapID, WorldMapFrame, mapID)
-  end
+  if not PSS:OpenWorldMap(mapID) and target and PSS.Nav and PSS.Nav.SetTarget then pcall(PSS.Nav.SetTarget, PSS.Nav, target) end
+  if target and target.mapID == mapID and PSS.Map and PSS.Map.Ping then pcall(PSS.Map.Ping, PSS.Map, target) end
 end
 
-local STATUS_COLOR = {done = "green", active = "gold", ready = "green", outgrown = "muted", soon = "cream", later = "muted"}
+local STATUS_COLOR = {done = "green", active = "gold", ready = "green", outgrown = "muted", soon = "cream", later = "muted", locked = "cream"}
 
 -- Quest IDs in your quest log.
 function UI:QuestLogIDs()
@@ -2533,6 +2844,15 @@ function UI:FillHunterRow(row, r, level)
   local tags = QuestTags(Q, e)
   local sub = Q:ZoneName(e)
   if info.npc then sub = info.npc .. "  ·  " .. sub end
+  -- Earlier quests still to do: the first NPC of the chain and its zone.
+  local first = e.quests and e.quests[1] and Q:FirstStep(e.quests[1])
+  local fr = first and PSS.QuestDB[first]
+  if fr then
+    local who = (fr.g and PSS.QuestNPC and PSS.QuestNPC[fr.g]) or "?"
+    local zi = C_Map and C_Map.GetMapInfo and select(2, pcall(C_Map.GetMapInfo, fr.m))
+    local zone = type(zi) == "table" and zi.name or Q:ZoneName(e)
+    sub = string.format(L("qStartAt"), who, zone, fr.n or "?")
+  end
   if #tags > 0 then sub = sub .. "  ·  " .. table.concat(tags, ", ") end
   row.name:SetText(Q:Title(e))
   row.name:SetTextColor(C.cream[1], C.cream[2], C.cream[3])
@@ -2561,6 +2881,9 @@ function UI:FillHunterRow(row, r, level)
   if s == "done" then s1 = L("qDone")
   elseif s == "active" then s1 = L("qActive")
   elseif s == "ready" then s1 = L("qReady")
+  elseif s == "locked" then
+    s1 = string.format(L(e.prereq or "qPrereq"), r.have or 0, r.need or 0)
+    if e.prereqNote or e.note then s2 = L(e.prereqNote or e.note) end
   elseif s == "outgrown" then s1 = L("qOutgrown")
   elseif s == "soon" then s1 = string.format(L("qSoon"), min - level)
   else s1 = string.format(L("qFrom"), min) end
@@ -3869,8 +4192,7 @@ function UI:PlaceFeedOverlay()
   if not b then
     b = CreateFrame("Button", "PetSkillScoutCardFeedButton", UIParent, "SecureActionButtonTemplate")
     b:SetFrameStrata("DIALOG")
-    b:RegisterForClicks("AnyUp")
-    b:SetAttribute("type", "macro")
+    b:RegisterForClicks("AnyUp", "AnyDown")
     b.bg = b:CreateTexture(nil, "BACKGROUND")
     b.bg:SetAllPoints(b)
     local hl = b:CreateTexture(nil, "HIGHLIGHT")
@@ -3882,7 +4204,7 @@ function UI:PlaceFeedOverlay()
     b:SetScript("OnEnter", function(self)
       if not (GameTooltip and UI.feedFood) then return end
       GameTooltip:SetOwner(self, "ANCHOR_TOP")
-      GameTooltip:SetText(PSS:Safe(string.format(L("feedButtonTip"), UnitName("pet") or "?", UI.feedFood.name)), 1, 1, 1, 1, true)
+      GameTooltip:SetText(PSS:Safe(string.format(L("feedButtonTip"), PSS.Plain(UnitName("pet")) or "?", UI.feedFood.name)), 1, 1, 1, 1, true)
       GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
@@ -3897,7 +4219,7 @@ function UI:PlaceFeedOverlay()
   b:SetFrameLevel(frame:GetFrameLevel() + 60)
   b.text:SetFont(FONT, math.max(9, math.floor(13 * ratio + 0.5)), "")
   b.text:SetText(L("feedNow"))
-  b:SetAttribute("macrotext", "/cast " .. FeedSpellName() .. "\n/use " .. food.bag .. " " .. food.slot)
+  PSS.SetFeedAttributes(b, food)
   self:StyleFeedOverlay()
   b:Show()
 end
@@ -3966,6 +4288,10 @@ local SETTINGS = {
   }},
   {id="hunter", title="setHunter", sub="setHunterSub", rows={
     {key="shotTimer", label="optShotTimer", hint="optShotTimerHint", kind="toggle", default=true},
+    {key="fastLoot", label="optFastLoot", hint="optFastLootHint", kind="toggle", default=false,
+      text=function() local o = PSS.FastLoot and PSS.FastLoot:Other(); if o then return string.format(PSS:L("optFastLootOther"), o) end end},
+    {key="spellBarAuto", label="optSpellBar", hint="optSpellBarHint", kind="toggle", default=true},
+    {key="petBarAuto", label="optPetBar", hint="optPetBarHint", kind="toggle", default=true},
     {key="gearTooltip", label="optGearTooltip", hint="optGearTooltipHint", kind="toggle", default=true},
     {key="gearQuest", label="optGearQuest", hint="optGearQuestHint", kind="toggle", default=true},
     {key="gearRolls", label="optGearRolls", hint="optGearRollsHint", kind="toggle", default=true},
@@ -3975,12 +4301,19 @@ local SETTINGS = {
   {id="quests", title="setQuests", sub="setQuestsSub", rows={
     {key="questAlert", label="optQuestAlert", hint="optQuestAlertHint", kind="toggle", default=true},
     {key="questWorth", label="optQuestWorth", hint="optQuestWorthHint", kind="toggle", default=true},
-    {key="questPins", label="optQuestPins", hint="optQuestPinsHint", kind="toggle", default=true,
+    {key="questPins", label="optQuestPins", hint="optQuestPinsHint", kind="toggle", default=false,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questPinsSkip", label="optQuestPinsSkip", hint="optQuestPinsSkipHint", kind="toggle", default=false,
       apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
+    {key="questLearn", label="optQuestLearn", hint="optQuestLearnHint", kind="toggle", default=true},
+    {key="questMinimap", label="optQuestMinimap", hint="optQuestMinimapHint", kind="toggle", default=true,
+      apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
+    {key="questObjPins", label="optQuestObj", hint="optQuestObjHint", kind="toggle", default=true,
+      apply=function() if PSS.QuestPins then PSS.QuestPins:Refresh() end end},
     {key="questAuto", label="optQuestAuto", hint="optQuestAutoHint", kind="choice", default="off",
       options={{"off","qAutoOff"},{"worth","qAutoWorth"},{"all","qAutoAll"}}},
+    {key="questTurnIn", label="optQuestTurnIn", hint="optQuestTurnInHint", kind="toggle", default=false},
+    {key="questDropGrey", label="optQuestDrop", hint="optQuestDropHint", kind="toggle", default=false},
   }},
   {id="map", title="setMap", sub="setMapSub", rows={
     {key="rareMapPins", label="rareMapPins", hint="optMapPinsHint", kind="toggle", default=true, apply=RefreshRareMap},
@@ -3992,10 +4325,10 @@ local SETTINGS = {
   {id="alerts", title="setAlerts", sub="setAlertsSub", rows={
     {key="rareRadarEnabled", label="optRadar", hint="optRadarHint", kind="toggle", default=true},
     {key="rareAlertPopup", label="rareAlertPopup", hint="optPopupHint", kind="toggle", default=true},
-    {key="rareSound", label="optSound", hint="optSoundHint", kind="toggle", default=false},
+    {key="rareSound", label="optSound", hint="optSoundHint", kind="toggle", default=true},
     {key="rareChat", label="optChat", hint="optChatHint", kind="toggle", default=true},
     {key="syncEnabled", label="optSync", hint="optSyncHint", kind="toggle", default=true},
-    {key="syncNotify", label="optSyncNotify", hint="optSyncNotifyHint", kind="choice", default="wanted",
+    {key="syncNotify", label="optSyncNotify", hint="optSyncNotifyHint", kind="choice", default="off",
       options={{"wanted","syncWanted"},{"all","syncAll"},{"off","syncOff"}}},
     {key="rareTimerAlert", label="optTimerAlert", hint="optTimerAlertHint", kind="toggle", default=true},
   }},
@@ -4003,8 +4336,10 @@ local SETTINGS = {
     {key="netEnabled", label="optNet", hint="optNetHint", kind="toggle", default=true,
       apply=function()
         if not PSS.Net then return end
-        if PetSkillScoutDB.netEnabled == false then PSS.Net:Leave() else PSS.Net:ShowConnect(true); PSS.Net:Hello(true) end
+        if PetSkillScoutDB.netEnabled == false then PSS.Net:Leave() else PSS.Net:ShowConnect(true); PSS.Net:Hello(true) end; PSS.Net:UpdateJoinButtons()
       end},
+    {key="netChatTab", label="optNetChat", hint="optNetChatHint", kind="toggle", default=false,
+      apply=function() PetSkillScoutDB.netChatMade = nil; if PSS.NetChat then PSS.NetChat.tried = nil; PSS.NetChat:Sync() end end},
     {key="netConnect", label="optNetConnect", hint="optNetConnectHint", kind="action", button="netConnectBtn",
       run=function() if PSS.Net and not PSS.Net:ShowConnect(true) then PSS:Print(PSS:L(PSS.Net:ChannelID() and "netJoined" or "netNoConnect")) end end},
     {key="netInfo", label="optNetInfo", hint="", kind="info",
@@ -4013,6 +4348,10 @@ local SETTINGS = {
         if not N then return "" end
         return PSS:Safe(string.format(L("netInfo"), N:OnlineCount(), N:ChannelID() and L("netConnected") or L("netOffline")))
       end},
+    {key="announceOn", label="optAnn", hint="optAnnHint", kind="toggle", default=true},
+    {key="announceRare", label="optAnnRare", hint="", kind="toggle", default=true},
+    {key="announceRank", label="optAnnRank", hint="", kind="toggle", default=true},
+    {key="announceMilestone", label="optAnnMile", hint="", kind="toggle", default=true},
     {key="showcaseShare", label="optShowcase", hint="optShowcaseHint", kind="toggle", default=true,
       apply=function() if PSS.Showcase and PetSkillScoutDB.showcaseShare ~= false then PSS.Showcase:Send() end end},
     {key="queueEnabled", label="optQueue", hint="optQueueHint", kind="toggle", default=true,
@@ -4047,9 +4386,8 @@ local SETTINGS = {
     {key="tooltipSeen", label="optTipSeen", hint="optTipSeenHint", kind="toggle", default=true},
   }},
   {id="dungeon", title="setDungeon", sub="setDungeonSub", rows={
-    {key="guardFall", label="optGuardFall", hint="optGuardFallHint", kind="toggle", default=true},
-    {key="guardAggro", label="optGuardAggro", hint="optGuardAggroHint", kind="toggle", default=true},
-    {key="guardAggressive", label="optGuardAggressive", hint="optGuardAggressiveHint", kind="toggle", default=true,
+    {key="guardAggro", label="optGuardAggro", hint="optGuardAggroHint", kind="toggle", default=false},
+    {key="guardAggressive", label="optGuardAggressive", hint="optGuardAggressiveHint", kind="toggle", default=false,
       apply=function() if PSS.PetGuard then PSS.PetGuard.CheckStance() end end},
     {key="guardQuiet", label="optGuardQuiet", hint="optGuardQuietHint", kind="toggle", default=false},
     {key="guardSound", label="optGuardSound", hint="optGuardSoundHint", kind="toggle", default=true},
@@ -4140,10 +4478,16 @@ function UI:BuildSettings()
   self.sSub = Label(p, "", 12, C.muted, cw, "LEFT", true)
   self.sSub:SetPoint("TOPLEFT", p, "TOPLEFT", 226, -32)
   self.sSections = {}
+  local viewH = BODY_H - 60
   for _, sec in ipairs(SETTINGS) do
-    local box = CreateFrame("Frame", nil, p)
-    box:SetPoint("TOPLEFT", p, "TOPLEFT", 226, -60)
-    box:SetSize(cw, BODY_H - 60)
+    -- Rows scroll inside the window (mouse wheel + slim bar in the gap before the preview).
+    local sf = CreateFrame("ScrollFrame", nil, p)
+    sf:SetPoint("TOPLEFT", p, "TOPLEFT", 226, -60)
+    sf:SetSize(cw, viewH)
+    local box = CreateFrame("Frame", nil, sf)
+    box:SetSize(cw, viewH)
+    sf:SetScrollChild(box)
+    box.sf = sf
     box.rows = {}
     local y = 0
     for i, def in ipairs(sec.rows) do
@@ -4170,7 +4514,7 @@ function UI:BuildSettings()
         for j, opt in ipairs(def.options) do
           local b = MakeButton(row, "", bw, 28, function() SetOption(def, opt[1]) end, {size=12})
           b:SetPoint("TOPRIGHT", row, "TOPRIGHT", -14 - (n - j) * (bw + 4), -8)
-          b.value, b.key = opt[1], opt[2]
+          b.value, b.key, b.minW = opt[1], opt[2], bw
           row.options[j] = b
         end
       elseif def.kind == "action" then
@@ -4188,6 +4532,25 @@ function UI:BuildSettings()
       end
       box.rows[i] = row
     end
+    box:SetHeight(math.max(viewH, y - 8))
+    local bar = Solid(p, "OVERLAY", C.gold, 0.55)
+    bar:SetWidth(4)
+    sf.bar = bar
+    function sf:Range() return math.max(0, (box:GetHeight() or 0) - viewH) end
+    function sf:ScrollTo(v)
+      local range = self:Range()
+      v = math.max(0, math.min(range, v or 0))
+      self:SetVerticalScroll(v)
+      if range <= 0 then bar:Hide(); return end
+      local h = math.max(24, viewH * viewH / (viewH + range))
+      bar:SetHeight(h)
+      bar:ClearAllPoints()
+      bar:SetPoint("TOPLEFT", self, "TOPRIGHT", 6, -(viewH - h) * v / range)
+      bar:Show()
+    end
+    sf:EnableMouseWheel(true)
+    sf:SetScript("OnMouseWheel", function(f, delta) f:ScrollTo((f:GetVerticalScroll() or 0) - delta * 66) end)
+    sf:ScrollTo(0)
     self.sSections[sec.id] = box
   end
 
@@ -4249,7 +4612,7 @@ local PREVIEW_NPC = 1132 -- Timber (Dun Morogh): a rare wolf
 function UI:RefreshSettings()
   if not self.sNav then return end
   self.sTitle:SetText(L("settings"))
-  self.sVersion:SetText("PetSkillScout " .. tostring(PSS.version) .. "  ·  /pss")
+  self.sVersion:SetText("PetSkillScout " .. tostring(PSS.version) .. "  ·  " .. PSS:Credit(true) .. "  ·  /pss")
   local current
   for _, b in ipairs(self.sNav) do
     b:SetText(L(b.section.title))
@@ -4259,8 +4622,12 @@ function UI:RefreshSettings()
   current = current or SETTINGS[1]
   self.sHeading:SetText(L(current.title))
   self.sSub:SetText(L(current.sub))
-  for id, box in pairs(self.sSections) do Show(box, id == current.id) end
+  for id, box in pairs(self.sSections) do Show(box.sf, id == current.id) end
   local box = self.sSections[current.id]
+  if self.sShownSection ~= current.id then
+    self.sShownSection = current.id
+    box.sf:ScrollTo(0)
+  end
   for _, row in ipairs(box.rows) do
     local def = row.def
     row.label:SetText(L(def.label))
@@ -4268,9 +4635,17 @@ function UI:RefreshSettings()
     if row.action then row.action:SetText(L(def.button)) end
     local value = OptionValue(def)
     if row.switch then row.switch:Set(value and true or false) end
-    for _, b in ipairs(row.options or {}) do
+    local x = -14
+    for j = #(row.options or {}), 1, -1 do
+      local b = row.options[j]
       b:SetText(L(b.key))
       SetActive(b, b.value == value)
+      local fs = b:GetFontString()
+      local w = math.max(b.minW or 74, math.ceil((fs and fs:GetStringWidth() or 0) + 18))
+      b:SetWidth(w)
+      b:ClearAllPoints()
+      b:SetPoint("TOPRIGHT", row, "TOPRIGHT", x, -8)
+      x = x - w - 4
     end
     if row.dd then row.dd:Sync() end
   end

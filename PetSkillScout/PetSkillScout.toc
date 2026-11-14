@@ -1,13 +1,16 @@
 ## Interface: 16001
 ## Title: PetSkillScout
 ## Notes: Find hunter pet skill teaching beasts, rare pets and your pet's abilities in WoW: Forever
-## Author: darthrev1
-## Version: 2.6.0
+## Author: DarthRev1
+## X-Website: https://www.curseforge.com/wow/addons/petskillscout
+## Version: 3.7.104
 ## SavedVariables: PetSkillScoutDB
 ## Category: Gameplay
 ## IconTexture: Interface\AddOns\PetSkillScout\Textures\PetSkillScoutLogo
+## X-License: All Rights Reserved (see LICENSE.txt)
 ## X-Donate: https://buymeacoffee.com/darthrev1
 Core.lua
+Credit.lua
 Data.lua
 Locale.lua
 Locale2.lua
@@ -16,7 +19,12 @@ Locale4.lua
 Locale5.lua
 Locale6.lua
 Locale7.lua
+LocalePT.lua
+LocaleRU.lua
+Locale8.lua
+Locale9.lua
 Database.lua
+PetDataATT.lua
 DisplayIDs.lua
 RareSpawns.lua
 AtlasData.lua
@@ -35,23 +43,39 @@ RareTimer.lua
 Route.lua
 Ammo.lua
 Collection.lua
+Announce.lua
 Achieve.lua
 Queue.lua
 PetLink.lua
 Showcase.lua
 Planner.lua
 GearData.lua
+CraftData.lua
+CraftPatterns.lua
+CraftReq.lua
 Gear.lua
 GearCompare.lua
 ShotTimer.lua
+FastLoot.lua
+PetBar.lua
+SpellBar.lua
+NetChat.lua
+Profiler.lua
 QuestDB.lua
 QuestData.lua
 Quests.lua
 QuestWorth.lua
+QuestCleanup.lua
+Holidays.lua
 QuestPins.lua
 QuestAuto.lua
+NetFeed.lua
+QuestLearn.lua
+LearnedData.lua
+Relay.lua
 UI.lua
 Skin.lua
+SkinText.lua
 Layout.lua
 Auras.lua
 Plates.lua
@@ -62,3 +86,6 @@ Tooltip.lua
 PetCare.lua
 PetGuard.lua
 Launcher.lua
+Gamepad.lua
+GamepadTheme.lua
+GamepadNav.lua

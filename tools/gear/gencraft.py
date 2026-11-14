@@ -1,0 +1,122 @@
+"""Build PetSkillScout/CraftData.lua: crafted gear a hunter can wear, from
+wow-classic-items (MIT, Nakroma / nexus-devs, data/json/data.json).
+
+Usage: python -I tools/gear/gencraft.py <data.json> <out CraftData.lua> <source commit>
+Only Classic (vanilla) professions and items: no rating / socket / spell power
+lines (those are later expansions), required level <= 60.
+"""
+import json
+import re
+import sys
+
+PROFS = {"Leatherworking", "Blacksmithing", "Tailoring", "Engineering", "Alchemy", "Enchanting"}
+QUALITY = {"Poor": 0, "Common": 1, "Uncommon": 2, "Rare": 3, "Epic": 4, "Legendary": 5}
+ARMOR_SLOT = {"Head": "head", "Neck": "neck", "Shoulder": "shoulder", "Back": "back", "Chest": "chest",
+              "Wrist": "wrist", "Hands": "hands", "Waist": "waist", "Legs": "legs", "Feet": "feet",
+              "Finger": "finger", "Trinket": "trinket"}
+WEAPON_SLOT = {"One-Hand": "onehand", "Main Hand": "mainhand", "Off Hand": "offhand", "Two-Hand": "twohand",
+               "Ranged": "ranged", "Thrown": "ranged"}
+WEAPON_KIND = {"Bow": "bow", "Gun": "gun", "Crossbow": "crossbow", "Axe": "axe", "Sword": "sword",
+               "Polearm": "polearm", "Staff": "staff", "Dagger": "dagger", "Fist Weapon": "fist", "Thrown": "thrown"}
+LATER = re.compile(r"rating|Socket|spell power|Requires (Jewelcrafting|Inscription)|resilience|expertise", re.I)
+STATS = [
+    (re.compile(r"^\+(\d+) Agility$"), "agi"), (re.compile(r"^\+(\d+) Stamina$"), "sta"),
+    (re.compile(r"^\+(\d+) Intellect$"), "int"), (re.compile(r"^\+(\d+) Strength$"), "str"),
+    (re.compile(r"^\+(\d+) Spirit$"), "spi"), (re.compile(r"^(\d+) Armor$"), "armor"),
+    (re.compile(r"^Equip: Increases ranged attack power by (\d+)\.$"), "rap"),
+    (re.compile(r"^Equip: \+(\d+) ranged Attack Power\.$"), "rap"),
+    (re.compile(r"^Equip: Increases attack power by (\d+)\.$"), "ap"),
+    (re.compile(r"^Equip: \+(\d+) Attack Power\.$"), "ap"),
+    (re.compile(r"^Equip: Improves your chance to get a critical strike by (\d+)%\.$"), "crit"),
+    (re.compile(r"^Equip: Improves your chance to hit by (\d+)%\.$"), "hit"),
+    (re.compile(r"^Equip: Restores (\d+) mana per 5 sec\.$"), "mp5"),
+]
+
+
+def kind_of(item):
+    cls, sub, slot = item.get("class"), item.get("subclass"), item.get("slot")
+    if cls == "Armor":
+        s = ARMOR_SLOT.get(slot)
+        if not s:
+            return None, None
+        if s == "back":
+            return s, "cloak"
+        if s in ("finger", "neck", "trinket"):
+            return s, {"finger": "ring", "neck": "neck", "trinket": "trinket"}[s]
+        if sub in ("Leather", "Mail"):
+            return s, sub.lower()
+        return None, None
+    if cls == "Weapon":
+        k = WEAPON_KIND.get(sub)
+        s = WEAPON_SLOT.get(slot)
+        if k and s:
+            return s, k
+    return None, None
+
+
+def stats_of(item):
+    st = {}
+    for t in item.get("tooltip", []):
+        label = t.get("label", "").strip()
+        for rx, key in STATS:
+            m = rx.match(label)
+            if m:
+                st[key] = st.get(key, 0) + int(m.group(1))
+        m = re.match(r"^Speed (\d+(\.\d+)?)$", label)
+        if m:
+            st["speed"] = float(m.group(1))
+        m = re.match(r"^\((\d+(\.\d+)?) damage per second\)$", label)
+        if m:
+            st["dps"] = float(m.group(1))
+    return st
+
+
+def lua_num(v):
+    return ("%g" % v) if isinstance(v, float) else str(v)
+
+
+def main():
+    src, out, commit = sys.argv[1], sys.argv[2], sys.argv[3]
+    data = json.load(open(src, encoding="utf-8"))
+    rows = []
+    for it in data:
+        cb = it.get("createdBy")
+        if not cb:
+            continue
+        recipe = next((c for c in cb if c.get("category") in PROFS), None)
+        if not recipe:
+            continue
+        req = it.get("requiredLevel") or 1
+        if req > 60:
+            continue
+        if any(LATER.search(t.get("label", "")) for t in it.get("tooltip", [])):
+            continue
+        slot, kind = kind_of(it)
+        if not slot:
+            continue
+        st = stats_of(it)
+        if not st:
+            continue
+        unique = any(t.get("label") in ("Unique", "Unique-Equipped") for t in it.get("tooltip", []))
+        reag = ",".join("{%d,%d}" % (r["itemId"], r.get("amount", 1)) for r in recipe.get("reagents", [])[:6])
+        stt = ",".join("%s=%s" % (k, lua_num(st[k])) for k in sorted(st))
+        rows.append((it["itemId"], '  {id=%d,n=%s,slot="%s",kind="%s",req=%d,lvl=%d,q=%d%s,st={%s},'
+                     'src={{t="c",p="%s",s=%d,r={%s}}}},' % (
+                         it["itemId"], json.dumps(it["name"], ensure_ascii=False), slot, kind, req, req,
+                         QUALITY.get(it.get("quality"), 1), ",u=true" if unique else "", stt,
+                         recipe["category"], recipe.get("requiredSkill") or 1, reag)))
+    rows.sort()
+    with open(out, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write("-- Crafted hunter gear for the Gear tab (generated by tools/gear/gencraft.py, do not edit).\n")
+        fh.write("-- Data: wow-classic-items by Nakroma / nexus-devs, MIT licence (see GearData-LICENSE.txt),\n")
+        fh.write("-- source commit %s. Classic professions only. src t=c: p profession, s skill needed,\n" % commit)
+        fh.write("-- r reagents {item, count}. Stats are read from the game when the item is cached.\n")
+        fh.write("local PSS = PetSkillScout\nPSS.CraftData = {\n")
+        for _, line in rows:
+            fh.write(line + "\n")
+        fh.write("}\n")
+    print("crafted items", len(rows))
+
+
+if __name__ == "__main__":
+    main()

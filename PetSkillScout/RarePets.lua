@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Rare Beast Radar + Rare Pet Collection. Nameplate detection plus target/mouseover fallback.
 local PSS = PetSkillScout
 PSS.RarePets = { entries = {}, byName = {}, byNpcID = {}, lastAlert = {} }
@@ -92,11 +93,17 @@ local catalogue = {
   {name="Coldrasp",family="Wolf",minLevel=12,maxLevel=12,zone="Tirisfal Glades",npcID=274300,new=true},
   {name="Mystmane",family="Bear",minLevel=13,maxLevel=13,zone="Zephras Isle",npcID=259388,new=true},
   {name="Slydris",family="Fox",zone="Zephras Isle",npcID=255887,new=true,elite=true},
+  -- Named Forever elites that can be tamed (AtlasData, quest targets in ATT).
+  {name="Vulgara the Insatiable",family="Bat",minLevel=8,maxLevel=8,zone="Zephras Isle",npcID=254589,new=true,elite=true},
+  {name="Ukorsbane",family="Spider",minLevel=8,maxLevel=8,zone="Durotar",npcID=266851,new=true,elite=true},
+  {name="Elmpaw",family="Bear",minLevel=12,maxLevel=12,zone="Elwynn Forest",npcID=248299,new=true,elite=true},
+  {name="Ghostmaw",family="Crocolisk",minLevel=42,maxLevel=42,zone="Riverglades",npcID=263380,new=true,elite=true},
 }
 -- Creature GUID: Creature-0-<server>-<instance>-<zoneUID>-<npcID>-<spawnUID>.
 -- The NPC ID is the 6th dash-separated field (Vehicle/Pet GUIDs use the same layout).
 local function NpcIDFromGUID(guid)
-  if type(guid) ~= "string" then return nil end
+  -- In instances and combat the client can hand out secret GUIDs: not readable.
+  if type(guid) ~= "string" or (PSS.IsSecret and PSS.IsSecret(guid)) then return nil end
   local unitType, _, _, _, _, npcID = strsplit("-", guid)
   if unitType ~= "Creature" and unitType ~= "Vehicle" then return nil end
   return tonumber(npcID)
@@ -172,15 +179,44 @@ function R:SetWanted(entry, value)
   PetSkillScoutDB.rareWanted = PetSkillScoutDB.rareWanted or {}
   PetSkillScoutDB.rareWanted[entry.id] = value and true or nil
 end
+-- A beast someone has already tamed (another hunter's pet, or yours) is not
+-- a rare in the world: its GUID is "Pet-..." and the unit is player controlled.
+local function Flag(fn, unit)
+  if type(fn) ~= "function" then return false end
+  local ok, v = pcall(fn, unit)
+  if not ok or (PSS.IsSecret and PSS.IsSecret(v)) then return false end
+  return v and true or false
+end
+function R:IsTamed(unit)
+  local okG, guid = pcall(UnitGUID, unit)
+  if okG and type(guid) == "string" and not (PSS.IsSecret and PSS.IsSecret(guid)) and guid:find("^Pet%-") then return true end
+  return Flag(UnitPlayerControlled, unit) or Flag(UnitIsOtherPlayersPet, unit)
+end
+-- Attack speed: what you saw in the game first, else the beast atlas (the
+-- same value the Beasts tab shows; 2.0 s when the atlas has no special speed).
+function R:Speed(e)
+  local t = PetSkillScoutDB and PetSkillScoutDB.rareSpeed
+  if t and e and t[e.name] then return t[e.name] end
+  local npc = e and e.beast and tonumber(e.beast.npcID)
+  local rec = npc and PSS.Atlas and PSS.Atlas.Get and PSS.Atlas:Get(npc)
+  return rec and rec.speed or nil
+end
+
 function R:Inspect(unit)
+  -- Instances have no tameable rares, only monsters: no scanning there.
+  if IsInInstance then
+    local ok, inside = pcall(IsInInstance)
+    if ok and PSS.Plain(inside) then return end
+  end
   if not UnitExists or not UnitExists(unit) then return end
-  local dead = UnitIsDead and UnitIsDead(unit)
+  if self:IsTamed(unit) then return end
+  local dead = UnitIsDead and PSS.Plain(UnitIsDead(unit))
   local npc = NpcIDFromGUID(UnitGUID and UnitGUID(unit))
   -- Prefer the language-independent NPC ID match.
   local entry = npc and self.byNpcID[npc]
   if not entry then
     local name = UnitName and UnitName(unit)
-    if not name then return end
+    if not name or (PSS.IsSecret and PSS.IsSecret(name)) then return end
     entry = self.byName[string.lower(name)]
     if not entry then return end
     -- Same name but a different known NPC: a name collision, not the rare.
@@ -190,6 +226,16 @@ function R:Inspect(unit)
   if dead then
     if PSS.RareTimer then PSS.RareTimer:MarkGone(entry, "corpse") end
     return
+  end
+  -- Attack speed, read from the game while you look at the live rare
+  -- (it stays with the pet once tamed). Kept per rare name.
+  if PetSkillScoutDB and UnitAttackSpeed then
+    local ok, main = pcall(UnitAttackSpeed, unit)
+    main = ok and PSS.Plain(main)
+    if type(main) == "number" and main > 0.3 and main < 5 then
+      PetSkillScoutDB.rareSpeed = PetSkillScoutDB.rareSpeed or {}
+      PetSkillScoutDB.rareSpeed[entry.name] = math.floor(main * 100 + 0.5) / 100
+    end
   end
   -- A live creature GUID is the strongest source for custom Forever NPC IDs.
   -- Save it for subsequent 3D previews, but never overwrite the curated catalogue.
@@ -283,6 +329,62 @@ function R:SeenText(entry)
   return when .. where .. count
 end
 
+-- Rare alert sound by beast family: file IDs of the creature's own voice in
+-- the game files (first that plays wins), raid warning sound if none does.
+-- Master channel: heard with effects muted.
+R.FAMILY_SOUNDS = {
+  Wolf = {564211, 929455},          -- howl
+  Cat = {562387, 545949},           -- tiger / cat roar
+  Bear = {544959},
+  Boar = {545134},
+  Spider = {560106, 549870},        -- shale spider / giant spider
+  ["Carrion Bird"] = {545937},
+  ["Bird of Prey"] = {557977, 1266218}, -- owl / eagle
+  Crocolisk = {545963},
+  Hyena = {552339},
+  Scorpid = {627020},
+  Raptor = {558877},
+  Tallstrider = {561390},
+  Turtle = {559878},
+  ["Wind Serpent"] = {564141, 1934563},
+  Bat = {3544351, 555491},
+  Gorilla = {550967},
+  Fox = {3593144, 555457},
+  Crab = {546423},
+  Owl = {557977},
+  Ravager = {995782},
+  ["Dragonhawk"] = {547519},
+  ["Warp Stalker"] = {563991},
+  ["Nether Ray"] = {601769},
+  Serpent = {559967},
+  Sporebat = {560792},
+}
+function R:PlayFamily(family)
+  if PlaySoundFile then
+    for _, id in ipairs(self.FAMILY_SOUNDS[family] or {}) do
+      local ok, willPlay = pcall(PlaySoundFile, id, "Master")
+      if ok and willPlay then return id end
+    end
+  end
+  if PlaySound then pcall(PlaySound, 8959, "Master") end
+  return nil
+end
+-- /pss raresound [family]: one family, or all of them one by one.
+function R:SoundTest(arg)
+  arg = tostring(arg or ""):lower()
+  local list = {}
+  for fam in pairs(self.FAMILY_SOUNDS) do
+    if arg == "" or fam:lower() == arg then list[#list + 1] = fam end
+  end
+  table.sort(list)
+  if #list == 0 then PSS:Print("raresound: unknown family " .. arg) return end
+  for i, fam in ipairs(list) do
+    C_Timer.After((i - 1) * 2.5, function()
+      PSS:Print("raresound: " .. fam .. " -> " .. tostring(R:PlayFamily(fam) or "NOT PLAYED"))
+    end)
+  end
+end
+
 -- unit (optional): the unit token the rare was seen on, used for the portrait.
 function R:AlertName(name, unit)
   if not name then return end
@@ -299,7 +401,7 @@ function R:AlertName(name, unit)
     local message=PSS:L('rareWarning')..entry.name
     pcall(RaidNotice_AddMessage,RaidWarningFrame,PSS:Safe(message),ChatTypeInfo and ChatTypeInfo.RAID_WARNING)
   end
-  if PetSkillScoutDB and PetSkillScoutDB.rareSound and PlaySound then pcall(PlaySound,8959) end
+  if not PetSkillScoutDB or PetSkillScoutDB.rareSound ~= false then R:PlayFamily(entry.family) end
   if PSS.RareAlert and (not PetSkillScoutDB or PetSkillScoutDB.rareAlertPopup ~= false) then
     PSS.RareAlert:Show(entry, unit)
   end

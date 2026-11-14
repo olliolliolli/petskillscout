@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet care: happiness, diet, best food in your bags, a Feed button and a
 -- reminder when the pet stops being happy. The Feed button is a secure macro
 -- button that YOU click ("/cast Feed Pet" + "/use bag slot"); nothing is automated.
@@ -14,7 +15,7 @@ local function safe(fn, ...)
 end
 
 local function HasPet()
-  return UnitExists and UnitExists("pet") and not (UnitIsDead and UnitIsDead("pet"))
+  return UnitExists and UnitExists("pet") and not (UnitIsDead and PSS.Plain(UnitIsDead("pet")))
 end
 
 -- 1 unhappy, 2 content, 3 happy (nil when not available), plus the exact
@@ -96,7 +97,7 @@ end
 function PC:BestFood()
   local diet = self:Diet()
   if not (diet and PSS.Foods) then return nil end
-  local petLevel = (UnitLevel and UnitLevel("pet")) or 1
+  local petLevel = (UnitLevel and PSS.Plain(UnitLevel("pet"))) or 1
   local full, partial, total = nil, nil, {}
   for bag = 0, 4 do
     for slot = 1, NumSlots(bag) do
@@ -129,6 +130,17 @@ function PC:BestFood()
 end
 
 -- Feed button --------------------------------------------------------------
+-- Feed Pet is cast straight on the food item (spell + target-bag/target-slot),
+-- not through "/cast" + "/use": with the macro, whenever the cast did not open
+-- the item cursor the "/use" line made the hunter eat the food himself.
+function PSS.SetFeedAttributes(b, food)
+  b:SetAttribute("type", "spell")
+  b:SetAttribute("spell", FEED_PET)
+  b:SetAttribute("unit", nil)
+  b:SetAttribute("target-bag", food.bag)
+  b:SetAttribute("target-slot", food.slot)
+  b:SetAttribute("macrotext", nil)
+end
 local button
 local function FeedSpellName()
   if C_Spell and C_Spell.GetSpellInfo then
@@ -145,7 +157,7 @@ local function CreateButton()
   button:SetFrameStrata("MEDIUM")
   button:SetClampedToScreen(true)
   button:SetMovable(true)
-  button:RegisterForClicks("AnyUp") -- one feed per click
+  button:RegisterForClicks("AnyUp", "AnyDown") -- the action runs once, on the phase the client uses
   button:RegisterForDrag("LeftButton")
   local pos = PetSkillScoutDB and PetSkillScoutDB.feedPos
   if pos and pos.x then button:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -161,7 +173,6 @@ local function CreateButton()
   button.count:SetPoint("BOTTOMRIGHT", -2, 2)
   button.mood = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   button.mood:SetPoint("TOP", button, "BOTTOM", 0, -2)
-  button:SetAttribute("type", "macro")
   button:SetScript("OnDragStart", function(self)
     if not (InCombatLockdown and InCombatLockdown()) and IsShiftKeyDown and IsShiftKeyDown() then self:StartMoving() end
   end)
@@ -175,7 +186,7 @@ local function CreateButton()
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
     GameTooltip:AddLine(PSS:Safe("PetSkillScout"), 0.44, 0.84, 1)
     if self.food then
-      GameTooltip:AddLine(PSS:Safe(string.format(PSS:L("feedButtonTip"), UnitName("pet") or "?", self.food.name)), 1, 1, 1, true)
+      GameTooltip:AddLine(PSS:Safe(string.format(PSS:L("feedButtonTip"), PSS.Plain(UnitName("pet")) or "?", self.food.name)), 1, 1, 1, true)
     end
     GameTooltip:AddLine(PSS:Safe(PSS:L("feedButtonDrag")), 0.6, 0.6, 0.6)
     GameTooltip:Show()
@@ -193,6 +204,29 @@ local function ButtonWanted(h)
 end
 
 -- Secure attributes and visibility can only change out of combat.
+-- /pss feedcheck: why the button is or is not shown.
+function PC:FeedCheck()
+  local h = self:Happiness()
+  local parts = {}
+  local diet = self:Diet()
+  for code in pairs(diet or {}) do parts[#parts + 1] = tostring(code) end
+  PSS:Print(string.format("feed: pet %s level %s family %s happiness %s wanted %s diet {%s} option %s",
+    tostring(HasPet()), tostring(UnitLevel and PSS.Plain(UnitLevel("pet"))),
+    tostring(PSS.MyPet and PSS.MyPet.family), tostring(h), tostring(ButtonWanted(h)),
+    table.concat(parts, ","), tostring(PetSkillScoutDB and PetSkillScoutDB.feedButton)))
+  for bag = 0, 4 do
+    for slot = 1, NumSlots(bag) do
+      local id, count = ItemAt(bag, slot)
+      local food = id and PSS.Foods and PSS.Foods[id]
+      if food then
+        PSS:Print(string.format("feed: bag item %d x%s type %s level %s eats %s", id, tostring(count), tostring(food[1]), tostring(food[2]), tostring(diet and diet[food[1]])))
+      end
+    end
+  end
+  local best = self:BestFood()
+  PSS:Print("feed: best " .. tostring(best and best.id))
+end
+
 function PC:UpdateButton()
   if InCombatLockdown and InCombatLockdown() then self.pending = true return end
   self.pending = false
@@ -204,7 +238,7 @@ function PC:UpdateButton()
   end
   CreateButton()
   button.food = food
-  button:SetAttribute("macrotext", "/cast " .. FeedSpellName() .. "\n/use " .. food.bag .. " " .. food.slot)
+  PSS.SetFeedAttributes(button, food)
   button.icon:SetTexture(food.icon or "Interface\\Icons\\INV_Misc_Food_14")
   button.count:SetText(food.count and food.count > 1 and food.count or "")
   button.mood:SetText(h and PSS:L("happy" .. h) or "")
@@ -216,14 +250,19 @@ end
 
 -- Reminder -----------------------------------------------------------------
 local lastHappiness, lastReminder = nil, -1e9
+-- Hungry now, and either it just got worse or this pet was only now seen
+-- (newly tamed or called): a new pet can already be hungry.
+function PC.ShouldRemind(h, last)
+  return h ~= nil and h < 3 and (last == nil or h < last)
+end
 function PC:CheckReminder()
   local h = self:Happiness()
-  if h and lastHappiness and h < lastHappiness and h < 3
+  if PC.ShouldRemind(h, lastHappiness)
      and (not PetSkillScoutDB or PetSkillScoutDB.petCareReminder ~= false) then
     local now = GetTime and GetTime() or 0
     if now - lastReminder > 60 then
       lastReminder = now
-      local msg = string.format(PSS:L("feedReminder"), UnitName("pet") or "?", PSS:L("happy" .. h))
+      local msg = string.format(PSS:L("feedReminder"), PSS.Plain(UnitName("pet")) or "?", PSS:L("happy" .. h))
       PSS:Print(msg)
       if RaidNotice_AddMessage and RaidWarningFrame then
         pcall(RaidNotice_AddMessage, RaidWarningFrame, PSS:Safe(msg), ChatTypeInfo and ChatTypeInfo.RAID_WARNING)
@@ -281,3 +320,5 @@ events:SetScript("OnUpdate", function(_, elapsed)
   PC:CheckReminder()
   if PC.pending or (button and button:IsShown()) or HasPet() then PC:UpdateButton() end
 end)
+events.pssKey = "PetCare"
+PSS:Every(events, 1)
