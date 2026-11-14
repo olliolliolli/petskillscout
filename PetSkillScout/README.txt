@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.102
+- Data update 2026-11-14: AllTheThings d8dedab (4759 quests: +2 new - Uncanny Crystal, Unstable Magic; 7 updated),
+  learned data +2 quests +2 rare spots. Pet data and gear source unchanged.
+
 3.7.101
 - Pet guard: no jump / fall alert any more; one alert when your pet is very far from you in a dungeon
   (over 70 yards for a few seconds, fighting or not, not on Stay).
