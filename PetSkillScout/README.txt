@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.105
+- Data update 2026-11-14 (2): AllTheThings 53e56b7 (4760 quests: +1 new, 14 updated), learned data +1 ammo vendor
+  +6 rare spots. Pet data and gear source unchanged.
+
 3.7.104
 - Beasts tab: "Not known yet" filter - hides beasts that only teach skill ranks you already know (ranks
   learned at Beast Training plus your active pet's).
