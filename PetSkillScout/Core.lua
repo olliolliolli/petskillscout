@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.115"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.116"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -496,6 +496,44 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if PSS.UI and PSS.UI.ShowPassport then PSS.UI:Create(); PSS.UI:ShowPassport() end
     elseif msg == "share" then
         if PSS.PetLink then PSS.PetLink:Share() end
+    elseif msg == "menu" then
+        -- First buttons of the game menu and their pictures (theme debugging).
+        local gm = _G.GameMenuFrame
+        if not (gm and gm:IsShown()) then PSS:Print("open the game menu (Esc) first, then type it") else
+            local nb = 0
+            local function walk(fr, depth)
+                if depth > 4 or nb >= 2 then return end
+                for _, c in ipairs({fr:GetChildren()}) do
+                    if nb >= 2 then return end
+                    if c.GetObjectType and c:GetObjectType() == "Button" and c.GetFontString and c:GetFontString() then
+                        nb = nb + 1
+                        PSS:Print(string.format("button %d: %s %s", nb, tostring(c:GetName() or "-"), tostring(c:GetText())))
+                        local k = 0
+                        for _, r in ipairs({c:GetRegions()}) do
+                            if r.GetObjectType and r:GetObjectType() == "Texture" and k < 10 then
+                                k = k + 1
+                                local okA, atlas = pcall(r.GetAtlas, r)
+                                local okT, tex = pcall(r.GetTexture, r)
+                                PSS:Print(string.format("  tex %d: %s %s a=%.2f shown=%s %dx%d %s %s", k,
+                                    tostring(r:GetName() or (r.GetParentKey and r:GetParentKey()) or "-"), tostring(r:GetDrawLayer()),
+                                    r:GetAlpha() or 0, tostring(r:IsShown()), r:GetWidth() or 0, r:GetHeight() or 0,
+                                    tostring(okA and atlas or ""), tostring(okT and tex or "")))
+                            end
+                        end
+                        for _, g in ipairs({"GetNormalTexture", "GetPushedTexture", "GetHighlightTexture"}) do
+                            local ok, t = pcall(c[g], c)
+                            if ok and t then
+                                local okA, atlas = pcall(t.GetAtlas, t)
+                                PSS:Print(string.format("  %s: a=%.2f %s", g, t:GetAlpha() or 0, tostring(okA and atlas or "")))
+                            end
+                        end
+                    end
+                    walk(c, depth + 1)
+                end
+            end
+            walk(gm, 0)
+            if nb == 0 then PSS:Print("no text buttons found in the game menu") end
+        end
     elseif msg == "book" then
         -- Pictures of the open book window (theme debugging).
         local f = _G.ItemTextFrame
