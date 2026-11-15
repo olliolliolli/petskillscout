@@ -295,7 +295,7 @@ local tickF = CreateFrame("Frame")
 tickF.pssKey = "HawkTimer"
 tickF:SetScript("OnUpdate", function()
   local inCombat = UnitAffectingCombat and Plain(Call(UnitAffectingCombat, "player"))
-  if #H.hawks > 0 or H.glowing or (inCombat and DB().hawkSpell) or (frame and frame:IsShown()) then pcall(H.Update, H) end
+  if #H.hawks > 0 or H.glowing or (inCombat and DB().hawkSpell) then pcall(H.Update, H) end
 end)
 PSS:Every(tickF, 0.2)
 
