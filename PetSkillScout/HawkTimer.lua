@@ -231,7 +231,9 @@ function H:Update()
   end
   self.hawks = src and self.hawks or live
   local inCombat = UnitAffectingCombat and Plain(Call(UnitAffectingCombat, "player"))
-  local show = #live > 0 or (inCombat and DB().hawkSpell)
+  -- Always shown once Summon Hawk is known (empty squares dimmed), so the
+  -- row looks the same in and out of combat.
+  local show = #live > 0 or DB().hawkSpell
   frame:SetShown(show and true or false)
   if show and not DB().hawkPos then Place() end
   local a = Accent()
