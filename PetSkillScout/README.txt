@@ -209,6 +209,15 @@ CHANGELOG
 3.7.114
 - Theme: game menu and other newer buttons lose the red button art and the red glow on hover.
 
+3.7.137
+- Data update 2026-11-15 (2): learned data +8 quests +22 ammo vendors +13 rare spots (AllTheThings unchanged).
+- Cooldown Manager: groups stacked and centred over the bars as one block with the hawk squares; held in place
+  while the game re-lays them out (no jumping on casts, also after loading screens).
+- Hawk squares always shown once Summon Hawk is known (same look in and out of combat).
+- Quest tracker marks: gold "?" ready to turn in, dot in progress, a slim accent bar for the quest you follow.
+- No tracker update from addon code any more (it made the game block its right-side frames in combat).
+- CPU: hawk timer and Cooldown Manager styling run less often.
+
 3.7.124
 - Summon Hawk timer: two squares in the look of the Cooldown Manager icons (spell icon, seconds left, a
   shade running down with the hawk), next to the Cooldown Manager; the edge glows when to recast.
