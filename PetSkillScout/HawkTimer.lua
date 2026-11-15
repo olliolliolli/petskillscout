@@ -68,7 +68,7 @@ local function Accent()
   local c = S and S.Colour and S:Colour("accent")
   return c or {0.86, 0.7, 0.35}
 end
-local SIZE, GAP = 38, 4
+local SIZE, GAP = 40, 3
 
 local function Edge(f, r, g, b, a, w)
   for _, e in ipairs(f.edges) do e:SetVertexColor(r, g, b, a) end

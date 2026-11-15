@@ -668,14 +668,47 @@ end
 -- Cooldown Manager (Essential, Utility, buff icons) stacked above the bars.
 -- Off in the options: Edit Mode places them. Not in combat.
 local cdmBusy = false
+-- Icons of a group in ONE centred row of equal squares (the game wraps them
+-- by its own column count, and a 2-row group next to 1-row groups looked
+-- untidy). Order: the game's layout order, else top-to-bottom, left-to-right.
+local CDM_SIZE = {EssentialCooldownViewer = 40, UtilityCooldownViewer = 32, BuffIconCooldownViewer = 32}
+local CDM_GAP = 3
+local function RowOf(v, size)
+  local items = {}
+  for _, c in ipairs({v:GetChildren()}) do
+    local okS, shown = pcall(c.IsShown, c)
+    local okW, w = pcall(c.GetWidth, c)
+    if okS and shown and okW and type(w) == "number" and w > 4 then items[#items + 1] = c end
+  end
+  if #items == 0 then return end
+  table.sort(items, function(a, b)
+    local la, lb = rawget(a, "layoutIndex"), rawget(b, "layoutIndex")
+    if type(la) == "number" and type(lb) == "number" and la ~= lb then return la < lb end
+    local ta, tb = a:GetTop() or 0, b:GetTop() or 0
+    if math.abs(ta - tb) > 2 then return ta > tb end
+    return (a:GetLeft() or 0) < (b:GetLeft() or 0)
+  end)
+  local width = #items * size + (#items - 1) * CDM_GAP
+  pcall(v.SetSize, v, width, size)
+  for i, c in ipairs(items) do
+    pcall(c.SetSize, c, size, size)
+    pcall(c.ClearAllPoints, c)
+    pcall(c.SetPoint, c, "LEFT", v, "LEFT", (i - 1) * (size + CDM_GAP), 0)
+  end
+end
+
 function LY.PlaceCooldowns()
   if not barHolder or cdmBusy or (PetSkillScoutDB and PetSkillScoutDB.cdmAbove == false) then return end
-  if InCombatLockdown and InCombatLockdown() then return end
+  -- The viewers are not protected frames, so this also runs in combat (the
+  -- game re-lays them out when a cooldown starts or a buff appears).
+  local v0 = G("EssentialCooldownViewer")
+  if v0 and v0.IsProtected and v0:IsProtected() and InCombatLockdown and InCombatLockdown() then return end
   cdmBusy = true
   local prev
   for _, n in ipairs({"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer"}) do
     local v = G(n)
     if v then
+      pcall(RowOf, v, CDM_SIZE[n] or 36)
       pcall(v.ClearAllPoints, v)
       if prev then pcall(v.SetPoint, v, "BOTTOM", prev, "TOP", 0, 4)
       else pcall(v.SetPoint, v, "BOTTOM", barHolder, "BOTTOM", 0, LY.cdmY or 120) end
@@ -689,6 +722,12 @@ function LY.PlaceCooldowns()
         v.pssCdmHooked = true
         pcall(PSS.HookSecure, v, "SetPoint", function() if not cdmBusy then PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end end)
         pcall(PSS.HookScript, v, "OnShow", function() PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end)
+        -- The game lays the icons out again (cooldown added, layout change).
+        for _, m in ipairs({"RefreshLayout", "Layout"}) do
+          if type(v[m]) == "function" then
+            pcall(PSS.HookSecure, v, m, function() if not cdmBusy then PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.05) end end)
+          end
+        end
       end
     end
   end
