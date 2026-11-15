@@ -675,11 +675,14 @@ function LY.PlaceCooldowns()
   local prev
   for _, n in ipairs({"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer"}) do
     local v = G(n)
-    if v and v.IsShown and v:IsShown() then
+    if v then
       pcall(v.ClearAllPoints, v)
       if prev then pcall(v.SetPoint, v, "BOTTOM", prev, "TOP", 0, 4)
       else pcall(v.SetPoint, v, "BOTTOM", barHolder, "BOTTOM", 0, LY.cdmY or 120) end
       prev = v
+      -- Above the bars' own panel (it covered them on the same layer).
+      pcall(v.SetFrameStrata, v, "MEDIUM")
+      pcall(v.SetFrameLevel, v, (barHolder:GetFrameLevel() or 1) + 20)
       if not v.pssCdmHooked and hooksecurefunc then
         v.pssCdmHooked = true
         pcall(PSS.HookSecure, v, "SetPoint", function() if not cdmBusy then PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end end)

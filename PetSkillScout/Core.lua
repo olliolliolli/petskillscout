@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.120"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.121"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -496,6 +496,19 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if PSS.UI and PSS.UI.ShowPassport then PSS.UI:Create(); PSS.UI:ShowPassport() end
     elseif msg == "share" then
         if PSS.PetLink then PSS.PetLink:Share() end
+    elseif msg == "cdm" then
+        -- Cooldown Manager state (theme debugging).
+        PSS:Print("cooldownViewerEnabled = " .. tostring(GetCVar and GetCVar("cooldownViewerEnabled")))
+        for _, n in ipairs({"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer"}) do
+            local v = _G[n]
+            if not v then PSS:Print(n .. ": missing") else
+                local x, y = v:GetCenter()
+                PSS:Print(string.format("%s: shown %s visible %s alpha %.2f %dx%d at %s,%s strata %s level %s items %d", n,
+                    tostring(v:IsShown()), tostring(v:IsVisible()), v:GetEffectiveAlpha() or 0, v:GetWidth() or 0, v:GetHeight() or 0,
+                    tostring(x and math.floor(x)), tostring(y and math.floor(y)), tostring(v:GetFrameStrata()), tostring(v:GetFrameLevel()),
+                    select("#", v:GetChildren())))
+            end
+        end
     elseif msg == "hawk" then
         if PSS.HawkTimer and PSS.HawkTimer.Diag then PSS.HawkTimer:Diag() end
     elseif msg == "menu" then
