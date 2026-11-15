@@ -848,6 +848,11 @@ local function StylePOI(b, title)
     m.fill = m:CreateTexture(nil, "ARTWORK")
     m.fill:SetAllPoints()
     m.fill:SetTexture(FLAT)
+    -- The mark itself: a gold "?" = ready to turn in, a small "!" in a dim
+    -- circle = still in progress (the plain squares said neither).
+    m.glyph = m:CreateFontString(nil, "OVERLAY")
+    m.glyph:SetFont(TRACK_FONT, 13, "OUTLINE")
+    m.glyph:SetPoint("CENTER", m, "CENTER", 0, 0)
     m.ring = {}
     for i = 1, 4 do
       local t = m:CreateTexture(nil, "OVERLAY")
@@ -863,7 +868,7 @@ local function StylePOI(b, title)
   end
   m:ClearAllPoints()
   if type(title) == "table" then
-    m:SetPoint("TOPRIGHT", title, "TOPLEFT", -7, -5)
+    m:SetPoint("TOPRIGHT", title, "TOPLEFT", -5, -2)
   else
     m:SetPoint("CENTER", b, "CENTER", 0, 0)
   end
@@ -875,10 +880,17 @@ local function StylePOI(b, title)
     tracked = ok and t == q
   end
   local acc = col.accent or {1, 1, 1, 1}
+  m:SetSize(12, 12)
   if done then
-    m.fill:SetVertexColor(1, 0.80, 0.20, 1)
+    m.fill:SetVertexColor(0, 0, 0, 0)
+    m.glyph:SetText("?")
+    m.glyph:SetFont(TRACK_FONT, 15, "OUTLINE")
+    m.glyph:SetTextColor(1, 0.82, 0.15)
   else
-    m.fill:SetVertexColor(acc[1] * 0.75, acc[2] * 0.75, acc[3] * 0.75, 0.9)
+    m.fill:SetVertexColor(0, 0, 0, 0)
+    m.glyph:SetText("•")
+    m.glyph:SetFont(TRACK_FONT, 13, "OUTLINE")
+    m.glyph:SetTextColor(acc[1] * 0.8, acc[2] * 0.8, acc[3] * 0.8)
   end
   for _, t in ipairs(m.ring) do
     t:SetVertexColor(1, 1, 1, 0.85)
