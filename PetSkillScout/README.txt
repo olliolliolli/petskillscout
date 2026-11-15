@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.106
+- Data update 2026-11-15: AllTheThings 95bb427 (5064 quests: +305 - Mount Hyjal, Felwood, Winterspring,
+  Azshara and many Forever zones; quest givers for 4473), learned data +5 quests +2 vendors +2 rare spots.
+  Pet data and gear source unchanged.
+
 3.7.105
 - Data update 2026-11-14 (2): AllTheThings 53e56b7 (4760 quests: +1 new, 14 updated), learned data +1 ammo vendor
   +6 rare spots. Pet data and gear source unchanged.
