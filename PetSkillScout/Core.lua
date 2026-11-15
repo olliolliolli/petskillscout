@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.121"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.122"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -503,6 +503,9 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
             local v = _G[n]
             if not v then PSS:Print(n .. ": missing") else
                 local x, y = v:GetCenter()
+                local par = v:GetParent()
+                PSS:Print(string.format("  own alpha %.2f, parent %s alpha %.2f", v:GetAlpha() or 0,
+                    tostring(par and (par:GetName() or par:GetObjectType())), par and par:GetEffectiveAlpha() or -1))
                 PSS:Print(string.format("%s: shown %s visible %s alpha %.2f %dx%d at %s,%s strata %s level %s items %d", n,
                     tostring(v:IsShown()), tostring(v:IsVisible()), v:GetEffectiveAlpha() or 0, v:GetWidth() or 0, v:GetHeight() or 0,
                     tostring(x and math.floor(x)), tostring(y and math.floor(y)), tostring(v:GetFrameStrata()), tostring(v:GetFrameLevel()),

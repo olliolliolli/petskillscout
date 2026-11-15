@@ -680,6 +680,16 @@ function LY.PlaceCooldowns()
       if prev then pcall(v.SetPoint, v, "BOTTOM", prev, "TOP", 0, 4)
       else pcall(v.SetPoint, v, "BOTTOM", barHolder, "BOTTOM", 0, LY.cdmY or 120) end
       prev = v
+      -- Fully transparent while the game's own visibility is "always": an
+      -- invisible parent. Put back on UIParent, own alpha back to 1.
+      local okP, par = pcall(v.GetParent, v)
+      local okE, eff = pcall(v.GetEffectiveAlpha, v)
+      if okE and type(eff) == "number" and eff < 0.05 then
+        if okP and par and par ~= UIParent and par.GetEffectiveAlpha and (par:GetEffectiveAlpha() or 1) < 0.05 then
+          pcall(v.SetParent, v, UIParent)
+        end
+        pcall(v.SetAlpha, v, 1)
+      end
       -- Above the bars' own panel (it covered them on the same layer).
       pcall(v.SetFrameStrata, v, "MEDIUM")
       pcall(v.SetFrameLevel, v, (barHolder:GetFrameLevel() or 1) + 20)
