@@ -477,7 +477,13 @@ local function SkinWindows()
   for i = 1, 13 do list[#list + 1] = G("ContainerFrame" .. i) end
   for i = 1, 4 do list[#list + 1] = G("StaticPopup" .. i) end
   for _, f in pairs(list) do
-    if f then WindowNow(f); HookShow(f, WindowNow) end
+    -- One window failing must not stop the others (it did: windows after it,
+    -- the book window among them, were never themed).
+    if f then
+      local ok, err = pcall(WindowNow, f)
+      if not ok then S.lastError = tostring(f.GetName and f:GetName()) .. ": " .. tostring(err) end
+      HookShow(f, WindowNow)
+    end
   end
   -- Book window: its own watcher (the window's OnShow can be hooked by other
   -- parts first, which kept the page art from being faded). Every page.

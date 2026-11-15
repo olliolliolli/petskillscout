@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.110"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.111"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -499,6 +499,12 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
     elseif msg == "book" then
         -- Pictures of the open book window (theme debugging).
         local f = _G.ItemTextFrame
+        local SK = PSS.Skin
+        PSS:Print("theme active " .. tostring(SK and SK.active) .. ", last window error: " .. tostring(SK and SK.lastError))
+        if SK and SK.ItemTextPage and f and f:IsShown() then
+            local ok, err = pcall(SK.ItemTextPage)
+            PSS:Print("book theme pass: " .. (ok and "ok" or tostring(err)))
+        end
         if not (f and f:IsShown()) then PSS:Print("open a book first") else
             local n = 0
             local function walk(fr, path, depth)
