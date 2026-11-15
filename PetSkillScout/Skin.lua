@@ -599,7 +599,20 @@ local UNITS = {
 local CD_VIEWERS = {"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer"}
 local cdDone = setmetatable({}, {__mode = "k"})
 local TRACK_FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
+local function CooldownEdge(item)
+  -- Thin edge in the theme colour, drawn above the icon art (the icon fills
+  -- the square, a border under it was hidden). Every pass: the theme hides
+  -- all its backdrops when it is re-applied (loading screens, zone change).
+  local bd = S:Backdrop(item, "inset", {0, 0, 0, 0}, "OVERLAY")
+  if bd then
+    local e = col.accent or col.edge or {0.86, 0.7, 0.35, 1}
+    for _, k in ipairs({"t", "b", "l", "r"}) do bd[k]:SetVertexColor(e[1], e[2], e[3], 0.85) end
+  end
+  local bar = rawget(item, "Bar")
+  if type(bar) == "table" and bar.SetStatusBarTexture then S:Backdrop(bar, "inset", {-1, 1, 1, -1}) end
+end
 local function SkinCooldownItem(item)
+  pcall(CooldownEdge, item)
   if cdDone[item] then return end
   cdDone[item] = true
   local icon = rawget(item, "Icon")
@@ -622,13 +635,6 @@ local function SkinCooldownItem(item)
       local okA, atlas = pcall(r.GetAtlas, r)
       if okA and type(atlas) == "string" and (atlas:lower():find("border") or atlas:lower():find("overlay")) then Fade(r) end
     end
-  end
-  -- Thin edge in the theme colour, drawn above the icon art (the icon fills
-  -- the square, a border under it was hidden).
-  local bd = S:Backdrop(item, "inset", {0, 0, 0, 0}, "OVERLAY")
-  if bd then
-    local e = col.accent or col.edge or {0.86, 0.7, 0.35, 1}
-    for _, k in ipairs({"t", "b", "l", "r"}) do bd[k]:SetVertexColor(e[1], e[2], e[3], 0.85) end
   end
   -- Icon 1 px inside the edge; theme font for the timer, charges and stacks;
   -- a plain dark swipe; buff bars flat in the accent colour.
@@ -683,6 +689,19 @@ local function SkinCooldownViewers()
   end
 end
 S.SkinCooldownViewers = SkinCooldownViewers
+-- After every loading screen (zone change, ship, instance): once the game has
+-- laid the icons out again.
+local cdmLoad = CreateFrame("Frame")
+cdmLoad:RegisterEvent("PLAYER_ENTERING_WORLD")
+cdmLoad:SetScript("OnEvent", function()
+  if not C_Timer then return end
+  for _, t in ipairs({0.5, 2}) do
+    C_Timer.After(t, function()
+      if S.active then pcall(SkinCooldownViewers) end
+      if PSS.Layout and PSS.Layout.PlaceCooldowns then pcall(PSS.Layout.PlaceCooldowns) end
+    end)
+  end
+end)
 
 local function SkinUnitFrames()
   for _, u in ipairs(UNITS) do
