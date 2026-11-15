@@ -419,7 +419,7 @@ local function ItemTextPage()
   local f = G("ItemTextFrame")
   if not f then return end
   WalkParchment(f, 0)
-  for _, n in ipairs({"ItemTextScrollFrame", "ItemTextMaterialTopLeft", "ItemTextMaterialTopRight",
+  for _, n in ipairs({"ItemTextFrameBg", "ItemTextScrollFrame", "ItemTextMaterialTopLeft", "ItemTextMaterialTopRight",
       "ItemTextMaterialBotLeft", "ItemTextMaterialBotRight", "ItemTextFramePageBg"}) do
     local t = G(n)
     if t then
@@ -479,11 +479,16 @@ local function SkinWindows()
   for _, f in pairs(list) do
     if f then WindowNow(f); HookShow(f, WindowNow) end
   end
-  -- Every new page of a book: the game recolours the text again.
-  local it = G("ItemTextFrame")
-  if it and not it.pssPages then
-    it.pssPages = true
-    pcall(PSS.HookScript, it, "OnEvent", function() if S.active and C_Timer then C_Timer.After(0, function() pcall(ItemTextPage) end) end end)
+  -- Book window: its own watcher (the window's OnShow can be hooked by other
+  -- parts first, which kept the page art from being faded). Every page.
+  if not S.bookWatch then
+    local w = CreateFrame("Frame")
+    S.bookWatch = w
+    for _, e in ipairs({"ITEM_TEXT_BEGIN", "ITEM_TEXT_READY"}) do pcall(w.RegisterEvent, w, e) end
+    w:SetScript("OnEvent", function()
+      if not (S.active and C_Timer) then return end
+      for _, t in ipairs({0, 0.05, 0.3}) do C_Timer.After(t, function() pcall(ItemTextPage) end) end
+    end)
   end
   -- Quest pages switch inside the window (details, progress, reward).
   for _, n in ipairs(QUEST_PAGES) do HookShow(G(n), function() pcall(QuestPagesAll) end) end
