@@ -428,6 +428,25 @@ local function ItemTextPage()
       end
     end
   end
+  -- The page art has other names on this client: every large picture in the
+  -- window (not in buttons) is page art. Icons and the portrait are small.
+  local function bigArt(fr, depth)
+    if depth > 6 then return end
+    for _, r in ipairs(Regions(fr)) do
+      if IsTexture(r) then
+        local okW, w = pcall(r.GetWidth, r)
+        local okH, h = pcall(r.GetHeight, r)
+        w = okW and type(w) == "number" and not PSS.IsSecret(w) and w or 0
+        h = okH and type(h) == "number" and not PSS.IsSecret(h) and h or 0
+        if w >= 120 and h >= 120 then Fade(r) end
+      end
+    end
+    for _, c in ipairs(Children(fr)) do
+      local okT, t = pcall(c.GetObjectType, c)
+      if not (okT and (t == "Button" or t == "CheckButton")) then bigArt(c, depth + 1) end
+    end
+  end
+  bigArt(f, 0)
   local txt = G("ItemTextPageText")
   if txt and txt.SetTextColor then
     for _, tag in ipairs({"P", "H1", "H2", "H3"}) do
