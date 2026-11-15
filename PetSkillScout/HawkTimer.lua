@@ -115,6 +115,8 @@ local function Place()
   end
 end
 H.Place = Place
+-- Width of the two squares plus the gap to the Cooldown Manager row.
+function H:Width() return 2 * SIZE + GAP + 8 end
 
 local function Build()
   if frame then return end

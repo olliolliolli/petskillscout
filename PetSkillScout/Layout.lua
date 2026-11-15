@@ -743,7 +743,22 @@ function LY.PlaceCooldowns()
     local v = G(n)
     if v then
       pcall(RowOf, v, CDM_SIZE[n] or 36)
-      v.pssAnchor = prev and {"BOTTOM", prev, "TOP", 0, 4} or {"BOTTOM", barHolder, "BOTTOM", 0, LY.cdmY or 120}
+      -- All rows centred on the bars. The hawk squares sit left of the main
+      -- row: that row moves right by half their width, so the whole stack
+      -- (hawks + main icons, utility, buffs) is centred as one block.
+      local hx = 0
+      local hawk = PSS.HawkTimer
+      if not prev and hawk and hawk.Width and not (PetSkillScoutDB and PetSkillScoutDB.hawkPos)
+          and hawk:Enabled() and PetSkillScoutDB and PetSkillScoutDB.hawkSpell then
+        hx = math.floor(hawk:Width() / 2)
+      end
+      v.pssAnchor = prev and {"BOTTOM", barHolder, "BOTTOM", 0, 0} or {"BOTTOM", barHolder, "BOTTOM", hx, LY.cdmY or 120}
+      if prev then
+        -- Directly above the previous row, centred on the bars (not on the
+        -- previous row, which may be shifted for the hawks).
+        local py = (prev.pssAnchor and prev.pssAnchor[5] or 0) + (prev.pssRowH or prev:GetHeight() or 32) + 6
+        v.pssAnchor = {"BOTTOM", barHolder, "BOTTOM", 0, py}
+      end
       pcall(v.ClearAllPoints, v)
       pcall(v.SetPoint, v, unpack(v.pssAnchor))
       prev = v
