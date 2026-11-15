@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.112
+- Theme: the book / letter window is themed (it was skipped when another window failed to theme).
+
 3.7.107
 - Theme: books, letters and plaques (item text window) without the parchment, light text like quest pages.
 
