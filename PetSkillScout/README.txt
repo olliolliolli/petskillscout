@@ -209,6 +209,12 @@ CHANGELOG
 3.7.114
 - Theme: game menu and other newer buttons lose the red button art and the red glow on hover.
 
+3.7.119
+- Summon Hawk timer: bars with the time left for each hawk (18 s, up to two), and a glow on the bars
+  and the Summon Hawk button when it is time to recast. Shift-drag to move. Option in Hunter settings.
+- Theme: the game's Cooldown Manager icons in the theme, placed right above the action bars
+  (option; off: Edit Mode places them).
+
 3.7.118
 - Theme: game menu buttons and other three-piece red buttons fully themed (centre piece too).
 - The "PetSkillScout" button under the game menu is gone: the addon is on the gamepad Main Menu wheel.

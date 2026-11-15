@@ -4267,6 +4267,8 @@ local SETTINGS = {
       options={{"s","sizeS"},{"m","sizeM"},{"l","sizeL"},{"xl","sizeXL"}},
       apply=function() if PSS.Layout and PSS.Layout.applied.chat then PSS.Layout:PlaceChat() end end},
     {key="skinMinimap", label="optSkinMinimap", hint="optSkinMinimapHint", kind="toggle", default=true, apply=SkinApply},
+    {key="cdmAbove", label="optCdmAbove", hint="optCdmAboveHint", kind="toggle", default=true,
+      set=function(v) PetSkillScoutDB.cdmAbove = v; if v and PSS.Layout and PSS.Layout.PlaceCooldowns then PSS.Layout.PlaceCooldowns() end end},
     {key="skinMinimapBar", label="optMinimapBar", hint="optMinimapBarHint", kind="toggle", default=true,
       apply=function() if PSS.Layout and PSS.Layout.applied.minimap then PSS.Layout:SquareMinimapButtons() end end},
     {key="skinMinimapSize", label="optMinimapSize", hint="optMinimapSizeHint", kind="choice", default=176,
@@ -4288,6 +4290,8 @@ local SETTINGS = {
   }},
   {id="hunter", title="setHunter", sub="setHunterSub", rows={
     {key="shotTimer", label="optShotTimer", hint="optShotTimerHint", kind="toggle", default=true},
+    {key="hawkTimer", label="optHawkTimer", hint="optHawkTimerHint", kind="toggle", default=true,
+      set=function(v) PetSkillScoutDB.hawkTimer = v; if PSS.HawkTimer then PSS.HawkTimer:Update() end end},
     {key="fastLoot", label="optFastLoot", hint="optFastLootHint", kind="toggle", default=false,
       text=function() local o = PSS.FastLoot and PSS.FastLoot:Other(); if o then return string.format(PSS:L("optFastLootOther"), o) end end},
     {key="spellBarAuto", label="optSpellBar", hint="optSpellBarHint", kind="toggle", default=true},

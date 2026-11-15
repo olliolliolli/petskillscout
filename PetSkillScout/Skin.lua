@@ -593,6 +593,55 @@ local UNITS = {
   {"FocusFrame", {"FocusFrameTextureFrameTexture", "FocusFrameBackground"}, "FocusFrameHealthBar", "FocusFrameManaBar"},
 }
 
+-- The game's Cooldown Manager (12.x CooldownViewer): flat square icons with a
+-- thin edge, no round masks or gold borders. Placement: Layout.lua puts the
+-- bars above the action bars (option), or Edit Mode.
+local CD_VIEWERS = {"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer"}
+local cdDone = setmetatable({}, {__mode = "k"})
+local function SkinCooldownItem(item)
+  if cdDone[item] then return end
+  cdDone[item] = true
+  local icon = rawget(item, "Icon")
+  if type(icon) == "table" and not IsTexture(icon) then icon = rawget(icon, "Icon") or icon end
+  if IsTexture(icon) then
+    pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+    if icon.GetMaskTexture then
+      for i = 1, 4 do
+        local ok, m = pcall(icon.GetMaskTexture, icon, i)
+        if ok and m then pcall(icon.RemoveMaskTexture, icon, m) end
+      end
+    end
+  end
+  for _, k in ipairs({"Border", "IconBorder", "DebuffBorder", "IconOverlay", "OutOfRange", "CooldownFlash"}) do
+    local r = rawget(item, k)
+    if IsTexture(r) then Fade(r) end
+  end
+  for _, r in ipairs(Regions(item)) do
+    if IsTexture(r) and r ~= icon then
+      local okA, atlas = pcall(r.GetAtlas, r)
+      if okA and type(atlas) == "string" and (atlas:lower():find("border") or atlas:lower():find("overlay")) then Fade(r) end
+    end
+  end
+  S:Backdrop(item, "inset", {-1, 1, 1, -1})
+end
+local function SkinCooldownViewers()
+  for _, n in ipairs(CD_VIEWERS) do
+    local v = G(n)
+    if v then
+      for _, c in ipairs(Children(v)) do pcall(SkinCooldownItem, c) end
+      if not v.pssCdHooked then
+        v.pssCdHooked = true
+        local again = function() if S.active then PSS:Soon("cdm-skin", function() pcall(SkinCooldownViewers) end, 0.1) end end
+        for _, m in ipairs({"RefreshLayout", "Layout", "OnAcquireItemFrame"}) do
+          if type(v[m]) == "function" then pcall(PSS.HookSecure, v, m, again) end
+        end
+        pcall(PSS.HookScript, v, "OnShow", again)
+      end
+    end
+  end
+end
+S.SkinCooldownViewers = SkinCooldownViewers
+
 local function SkinUnitFrames()
   for _, u in ipairs(UNITS) do
     local f = G(u[1])
@@ -1046,6 +1095,7 @@ function S:Refresh()
   pcall(SkinChat)
   pcall(SkinMinimap)
   pcall(SkinUnitFrames)
+  pcall(SkinCooldownViewers)
   pcall(SkinTracker)
   pcall(SkinTrackerBlocks)
   pcall(HookTracker)

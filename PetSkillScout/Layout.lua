@@ -642,6 +642,9 @@ function LY:LayoutBars()
   if LY.PlaceDurability then LY.PlaceDurability() end
   local top = row * (BTN + GAP) + 4
   local small = 30
+  -- The game's Cooldown Manager right above the bars (pet bar included).
+  LY.cdmY = top + small + 12
+  if LY.PlaceCooldowns then pcall(LY.PlaceCooldowns) end
   -- Stance buttons on the left; the pet bar centred (right aligned when a
   -- stance bar is also there).
   local stance = G("StanceButton1") or G("ShapeshiftButton1")
@@ -660,6 +663,31 @@ end
 function LY.PageText(page)
   if type(page) ~= "number" or page <= 1 then return nil end
   return string.format(L("barPage"), page)
+end
+
+-- Cooldown Manager (Essential, Utility, buff icons) stacked above the bars.
+-- Off in the options: Edit Mode places them. Not in combat.
+local cdmBusy = false
+function LY.PlaceCooldowns()
+  if not barHolder or cdmBusy or (PetSkillScoutDB and PetSkillScoutDB.cdmAbove == false) then return end
+  if InCombatLockdown and InCombatLockdown() then return end
+  cdmBusy = true
+  local prev
+  for _, n in ipairs({"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer"}) do
+    local v = G(n)
+    if v and v.IsShown and v:IsShown() then
+      pcall(v.ClearAllPoints, v)
+      if prev then pcall(v.SetPoint, v, "BOTTOM", prev, "TOP", 0, 4)
+      else pcall(v.SetPoint, v, "BOTTOM", barHolder, "BOTTOM", 0, LY.cdmY or 120) end
+      prev = v
+      if not v.pssCdmHooked and hooksecurefunc then
+        v.pssCdmHooked = true
+        pcall(PSS.HookSecure, v, "SetPoint", function() if not cdmBusy then PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end end)
+        pcall(PSS.HookScript, v, "OnShow", function() PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end)
+      end
+    end
+  end
+  cdmBusy = false
 end
 
 local durBusy = false
