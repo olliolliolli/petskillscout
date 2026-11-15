@@ -278,7 +278,27 @@ local function SkinTextButton(b)
     local r = F(b, k) or (name and _G[name .. k])
     if r then Fade(r); found = true end
   end
+  -- Newer buttons (game menu, 12.x panels): one atlas per state, no
+  -- Left/Middle/Right pieces ("128-RedButton-..."): a text button too.
+  if not found and type(b.GetNormalTexture) == "function" and (b.GetFontString and b:GetFontString()) then
+    local ok, t = pcall(b.GetNormalTexture, b)
+    if ok and IsTexture(t) then
+      local okA, atlas = pcall(t.GetAtlas, t)
+      local okF, file = pcall(t.GetTexture, t)
+      local nm = ((okA and type(atlas) == "string") and atlas or "") .. " " .. ((okF and type(file) == "string") and file or "")
+      if nm:lower():find("button", 1, true) then found = true end
+    end
+  end
   if not found then return end
+  -- The red glow on hover: a flat light square instead.
+  if type(b.GetHighlightTexture) == "function" then
+    local ok, hl = pcall(b.GetHighlightTexture, b)
+    if ok and IsTexture(hl) then
+      pcall(hl.SetTexture, hl, FLAT)
+      pcall(hl.SetVertexColor, hl, 1, 1, 1, 0.12)
+      pcall(hl.ClearAllPoints, hl); pcall(hl.SetAllPoints, hl, b)
+    end
+  end
   for _, get in ipairs({"GetNormalTexture", "GetPushedTexture", "GetDisabledTexture"}) do
     if type(b[get]) == "function" then
       local ok, t = pcall(b[get], b)

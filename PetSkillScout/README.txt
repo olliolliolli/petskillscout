@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.114
+- Theme: game menu and other newer buttons lose the red button art and the red glow on hover.
+
 3.7.113
 - Theme: the flight map keeps its own look (its map picture was hidden).
 
