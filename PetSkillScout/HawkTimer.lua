@@ -151,13 +151,57 @@ local function SetButtonGlow(on)
   end
 end
 
+-- What the game itself says about the hawks: summons kept in the totem
+-- slots (GetTotemInfo) and auras on you. Each found hawk: its real expiry.
+-- Only when the game gives nothing is the 18 s from your cast used.
+local function HawkName(name)
+  if type(name) ~= "string" or Secret(name) then return false end
+  local n = name:lower()
+  return n:find("hawk", 1, true) ~= nil or n:find("яструб", 1, true) ~= nil
+end
+
+function H:ReadGame()
+  local out, src = {}, nil
+  if GetTotemInfo then
+    for i = 1, (MAX_TOTEMS or 4) + 1 do
+      local have, name, start, dur = Call(GetTotemInfo, i)
+      have, name, start, dur = Plain(have), Plain(name), Plain(start), Plain(dur)
+      if have and HawkName(name) and type(start) == "number" and type(dur) == "number" and dur > 0 then
+        out[#out + 1] = start + dur
+        src = "totem"
+      end
+    end
+  end
+  if #out == 0 and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+    for i = 1, 40 do
+      local ok, a = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
+      if not ok or type(a) ~= "table" then break end
+      local name, exp, n = Plain(a.name), Plain(a.expirationTime), Plain(a.applications)
+      if HawkName(name) and type(exp) == "number" and exp > 0 then
+        -- One aura per hawk, or one aura with a stack count.
+        local count = (type(n) == "number" and n > 1) and math.min(n, H.MAX) or 1
+        for _ = 1, count do out[#out + 1] = exp end
+        src = "aura"
+      end
+    end
+  end
+  table.sort(out)
+  return out, src
+end
+
 function H:Update()
   if not self:Enabled() then if frame then frame:Hide() end SetButtonGlow(false) return end
   Build()
   local now = Now()
   local live = {}
-  for _, t in ipairs(self.hawks) do if t > now then live[#live + 1] = t end end
-  self.hawks = live
+  local game, src = self:ReadGame()
+  self.source = src
+  if src then
+    live = game
+  else
+    for _, t in ipairs(self.hawks) do if t > now then live[#live + 1] = t end end
+  end
+  self.hawks = src and self.hawks or live
   local inCombat = UnitAffectingCombat and Plain(Call(UnitAffectingCombat, "player"))
   local show = #live > 0 or (inCombat and DB().hawkSpell)
   frame:SetShown(show and true or false)
@@ -168,7 +212,8 @@ function H:Update()
     if t then
       local left = t - now
       b:SetValue(left)
-      b.text:SetText(string.format("%d: %.0f s", i, left))
+      -- "~" when the time is an estimate (the game did not report the hawk).
+      b.text:SetText(string.format(self.source and "%d: %.0f s" or "%d: ~%.0f s", i, left))
       if left <= self:Refresh() then b:SetStatusBarColor(1, 0.45, 0.3) else b:SetStatusBarColor(a[1], a[2], a[3]) end
     else
       b:SetValue(0)
@@ -186,7 +231,8 @@ function H:Update()
 end
 
 local ev = CreateFrame("Frame")
-for _, e in ipairs({"UNIT_SPELLCAST_SUCCEEDED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD"}) do
+for _, e in ipairs({"UNIT_SPELLCAST_SUCCEEDED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD",
+    "PLAYER_TOTEM_UPDATE"}) do
   pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event, unit, _, spellID)
@@ -196,6 +242,7 @@ ev:SetScript("OnEvent", function(_, event, unit, _, spellID)
     return
   end
   if event == "PLAYER_ENTERING_WORLD" then H.hawks = {} end
+  if event == "PLAYER_TOTEM_UPDATE" then H.source = H.source or "totem" end
   pcall(H.Update, H)
 end)
 ev.pssKey = "HawkTimer"
@@ -204,5 +251,25 @@ ev:SetScript("OnUpdate", function(_, e)
   tick = tick + (e or 0)
   if tick < 0.2 then return end
   tick = 0
-  if #H.hawks > 0 or H.glowing or (frame and frame:IsShown()) then pcall(H.Update, H) end
+  if #H.hawks > 0 or H.glowing or H.source or (frame and frame:IsShown()) then pcall(H.Update, H) end
 end)
+
+-- /pss hawk: what the game reports right now (summon slots and your buffs).
+function H:Diag()
+  PSS:Print("Summon Hawk spell: " .. tostring(DB().hawkSpell) .. ", data from: " .. tostring(self.source or "your casts (estimate)"))
+  if GetTotemInfo then
+    for i = 1, (MAX_TOTEMS or 4) + 1 do
+      local have, name, start, dur = Call(GetTotemInfo, i)
+      if Plain(have) then PSS:Print(string.format("  slot %d: %s, %s s", i, tostring(Plain(name)), tostring(Plain(dur)))) end
+    end
+  end
+  if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+    for i = 1, 40 do
+      local ok, a = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
+      if not ok or type(a) ~= "table" then break end
+      local exp = Plain(a.expirationTime)
+      PSS:Print(string.format("  buff: %s x%s, %s s left", tostring(Plain(a.name)), tostring(Plain(a.applications)),
+        type(exp) == "number" and exp > 0 and string.format("%.0f", exp - Now()) or "-"))
+    end
+  end
+end
