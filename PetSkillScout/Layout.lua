@@ -743,9 +743,9 @@ function LY.PlaceCooldowns()
     local v = G(n)
     if v then
       pcall(RowOf, v, CDM_SIZE[n] or 36)
+      v.pssAnchor = prev and {"BOTTOM", prev, "TOP", 0, 4} or {"BOTTOM", barHolder, "BOTTOM", 0, LY.cdmY or 120}
       pcall(v.ClearAllPoints, v)
-      if prev then pcall(v.SetPoint, v, "BOTTOM", prev, "TOP", 0, 4)
-      else pcall(v.SetPoint, v, "BOTTOM", barHolder, "BOTTOM", 0, LY.cdmY or 120) end
+      pcall(v.SetPoint, v, unpack(v.pssAnchor))
       prev = v
       -- (Their alpha is left alone: Glowing Bars hides the icons on purpose
       -- with SetAlpha(0) when set to, and fighting it made them blink.)
@@ -754,7 +754,17 @@ function LY.PlaceCooldowns()
       pcall(v.SetFrameLevel, v, (barHolder:GetFrameLevel() or 1) + 20)
       if not v.pssCdmHooked and hooksecurefunc then
         v.pssCdmHooked = true
-        pcall(PSS.HookSecure, v, "SetPoint", function() if not cdmBusy then PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end end)
+        -- The game puts the group back where Edit Mode had it (combat start,
+        -- layout updates): back on our place in the same moment, no delay
+        -- (a 0.1 s delay showed the whole stack jumping).
+        local vbusy = false
+        pcall(PSS.HookSecure, v, "SetPoint", function(self)
+          if vbusy or cdmBusy or not self.pssAnchor or (PetSkillScoutDB and PetSkillScoutDB.cdmAbove == false) then return end
+          vbusy = true
+          pcall(self.ClearAllPoints, self)
+          pcall(self.SetPoint, self, unpack(self.pssAnchor))
+          vbusy = false
+        end)
         pcall(PSS.HookScript, v, "OnShow", function() PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end)
         -- The game lays the icons out again (cooldown added, layout change).
         -- Right away, in the same frame (a delay showed the game's own layout
