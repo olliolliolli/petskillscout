@@ -209,6 +209,11 @@ CHANGELOG
 3.7.114
 - Theme: game menu and other newer buttons lose the red button art and the red glow on hover.
 
+3.7.118
+- Theme: game menu buttons and other three-piece red buttons fully themed (centre piece too).
+- The "PetSkillScout" button under the game menu is gone: the addon is on the gamepad Main Menu wheel.
+- /pss book, /pss menu and a longer /pss under for theme diagnostics.
+
 3.7.113
 - Theme: the flight map keeps its own look (its map picture was hidden).
 

@@ -235,9 +235,9 @@ GN.MenuButton = MenuButton
 -- (A stick combo was tried in 3.6.1; only the menu button is kept.)
 function GN:ComboAvailable() return false end
 
-local ev2 = CreateFrame("Frame")
-ev2:RegisterEvent("PLAYER_ENTERING_WORLD")
-ev2:SetScript("OnEvent", function() pcall(MenuButton) end)
+-- The button under the game menu is no longer created (3.7.118): the
+-- addon is on the gamepad Main Menu wheel below, and /pss or the minimap
+-- button open it with a mouse.
 
 -- 2) An entry on the gamepad Main Menu wheel (Start button). The wheel is the
 -- game's own code, and writing into its tables would taint it and could break
