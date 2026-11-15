@@ -273,7 +273,7 @@ local function SkinTextButton(b)
   if type(b) ~= "table" then return end
   local name = b.GetName and b:GetName()
   local found = false
-  for _, k in ipairs({"Left", "Middle", "Right", "LeftDisabled", "MiddleDisabled", "RightDisabled",
+  for _, k in ipairs({"Left", "Middle", "Right", "Center", "LeftDisabled", "MiddleDisabled", "RightDisabled",
     "LeftActive", "MiddleActive", "RightActive", "LeftHighlight", "MiddleHighlight", "RightHighlight"}) do
     local r = F(b, k) or (name and _G[name .. k])
     if r then Fade(r); found = true end
