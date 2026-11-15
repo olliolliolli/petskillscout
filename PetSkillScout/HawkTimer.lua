@@ -68,7 +68,7 @@ local function Accent()
   local c = S and S.Colour and S:Colour("accent")
   return c or {0.86, 0.7, 0.35}
 end
-local SIZE, GAP = 40, 3
+local SIZE, GAP = 40, 4
 
 local function Edge(f, r, g, b, a, w)
   for _, e in ipairs(f.edges) do e:SetVertexColor(r, g, b, a) end
@@ -260,7 +260,11 @@ function H:Update()
     end
     -- Edge: the theme's thin dark line; 2 px accent glow when to recast.
     if want and (not t or (t - now) <= self:Refresh()) then Edge(b, a[1], a[2], a[3], 1, 2)
-    else Edge(b, 0, 0, 0, 1, 1) end
+    else
+      local S = PSS.Skin
+      local e = (S and S.Colour and (S:Colour("accent") or S:Colour("edge"))) or {0.86, 0.7, 0.35}
+      Edge(b, e[1], e[2], e[3], 0.85, 1)
+    end
   end
   if want ~= self.glowing then
     self.glowing = want

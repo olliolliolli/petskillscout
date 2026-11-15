@@ -623,7 +623,13 @@ local function SkinCooldownItem(item)
       if okA and type(atlas) == "string" and (atlas:lower():find("border") or atlas:lower():find("overlay")) then Fade(r) end
     end
   end
-  S:Backdrop(item, "inset", {-1, 1, 1, -1})
+  -- Thin edge in the theme colour, drawn above the icon art (the icon fills
+  -- the square, a border under it was hidden).
+  local bd = S:Backdrop(item, "inset", {0, 0, 0, 0}, "OVERLAY")
+  if bd then
+    local e = col.accent or col.edge or {0.86, 0.7, 0.35, 1}
+    for _, k in ipairs({"t", "b", "l", "r"}) do bd[k]:SetVertexColor(e[1], e[2], e[3], 0.85) end
+  end
   -- Icon 1 px inside the edge; theme font for the timer, charges and stacks;
   -- a plain dark swipe; buff bars flat in the accent colour.
   if IsTexture(icon) and icon.GetParent and icon:GetParent() == item then

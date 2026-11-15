@@ -672,7 +672,7 @@ local cdmBusy = false
 -- by its own column count, and a 2-row group next to 1-row groups looked
 -- untidy). Order: the game's layout order, else top-to-bottom, left-to-right.
 local CDM_SIZE = {EssentialCooldownViewer = 40, UtilityCooldownViewer = 32, BuffIconCooldownViewer = 32}
-local CDM_GAP = 3
+local CDM_GAP = 4
 local function RowOf(v, size)
   local items = {}
   for _, c in ipairs({v:GetChildren()}) do
