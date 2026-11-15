@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.114"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.115"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -540,6 +540,21 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
             n = n + 1
         end
         if n == 0 then PSS:Print("nothing under the mouse") end
+        -- Pictures of the frame under the mouse (theme debugging).
+        local top = list[1]
+        if top and top.GetRegions then
+            local k = 0
+            for _, r in ipairs({top:GetRegions()}) do
+                if r.GetObjectType and r:GetObjectType() == "Texture" and k < 12 then
+                    k = k + 1
+                    local okA, atlas = pcall(r.GetAtlas, r)
+                    local okT, tex = pcall(r.GetTexture, r)
+                    PSS:Print(string.format("  tex %d: %s %s a=%.2f shown=%s %s %s", k, tostring(r:GetName() or (r.GetParentKey and r:GetParentKey()) or "-"),
+                        tostring(r:GetDrawLayer()), r:GetAlpha() or 0, tostring(r:IsShown()),
+                        tostring(okA and atlas or ""), tostring(okT and tex or "")))
+                end
+            end
+        end
     elseif msg == "tracker" then
         -- Quest tracker blocks: position, size and visibility (gaps hunt).
         local root = _G.ObjectiveTrackerFrame
