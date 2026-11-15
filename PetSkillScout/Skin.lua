@@ -341,7 +341,7 @@ local WINDOWS = {
   "CharacterFrame", "SpellBookFrame", "PlayerSpellsFrame", "PlayerTalentFrame", "TalentFrame",
   "ContainerFrameCombinedBags", "BankFrame", "MerchantFrame", "MailFrame", "OpenMailFrame",
   "QuestFrame", "QuestLogFrame", "QuestLogDetailFrame", "GossipFrame", "FriendsFrame",
-  "WorldMapFrame", "PVEFrame", "LFGParentFrame", "TradeFrame", "PetStableFrame", "TaxiFrame",
+  "WorldMapFrame", "PVEFrame", "LFGParentFrame", "TradeFrame", "PetStableFrame",
   "ClassTrainerFrame", "CraftFrame", "TradeSkillFrame", "ProfessionsFrame", "AuctionHouseFrame", "AuctionFrame",
   "GuildFrame", "CommunitiesFrame", "InspectFrame", "DressUpFrame", "GameMenuFrame", "LootFrame",
   "CollectionsJournal", "EncounterJournal", "AchievementFrame", "MacroFrame", "HelpFrame", "BattlefieldFrame",
