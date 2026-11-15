@@ -675,10 +675,13 @@ local CDM_SIZE = {EssentialCooldownViewer = 40, UtilityCooldownViewer = 32, Buff
 local CDM_GAP = 4
 local function RowOf(v, size)
   local items = {}
+  -- Every icon of the group, shown or not: a fixed place per icon, so the
+  -- row does not shift each time an icon shows or hides (it jumped on every
+  -- cast). Icons get their place by the game's layout order.
   for _, c in ipairs({v:GetChildren()}) do
-    local okS, shown = pcall(c.IsShown, c)
     local okW, w = pcall(c.GetWidth, c)
-    if okS and shown and okW and type(w) == "number" and w > 4 then items[#items + 1] = c end
+    local li = rawget(c, "layoutIndex")
+    if okW and type(w) == "number" and w > 4 and (type(li) == "number" or c:IsShown()) then items[#items + 1] = c end
   end
   if #items == 0 then return end
   table.sort(items, function(a, b)
@@ -723,9 +726,11 @@ function LY.PlaceCooldowns()
         pcall(PSS.HookSecure, v, "SetPoint", function() if not cdmBusy then PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end end)
         pcall(PSS.HookScript, v, "OnShow", function() PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end)
         -- The game lays the icons out again (cooldown added, layout change).
+        -- Right away, in the same frame (a delay showed the game's own layout
+        -- for a moment: the icons jumped back and forth).
         for _, m in ipairs({"RefreshLayout", "Layout"}) do
           if type(v[m]) == "function" then
-            pcall(PSS.HookSecure, v, m, function() if not cdmBusy then PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.05) end end)
+            pcall(PSS.HookSecure, v, m, function(self) if not cdmBusy then cdmBusy = true; pcall(RowOf, self, CDM_SIZE[self:GetName() or ""] or 36); cdmBusy = false end end)
           end
         end
       end
