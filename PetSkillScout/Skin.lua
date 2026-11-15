@@ -892,9 +892,22 @@ local function StylePOI(b, title)
     m.glyph:SetFont(TRACK_FONT, 13, "OUTLINE")
     m.glyph:SetTextColor(acc[1] * 0.8, acc[2] * 0.8, acc[3] * 0.8)
   end
-  for _, t in ipairs(m.ring) do
-    t:SetVertexColor(1, 1, 1, 0.85)
-    t:SetShown(tracked and true or false)
+  -- The quest you follow: no white box any more, a slim bar in the theme's
+  -- accent colour left of the mark, and the mark itself a little larger.
+  for _, t in ipairs(m.ring) do t:Hide() end
+  if not m.sel then
+    m.sel = m:CreateTexture(nil, "OVERLAY")
+    m.sel:SetTexture(FLAT)
+    m.sel:SetWidth(2)
+    m.sel:SetPoint("TOPRIGHT", m, "TOPLEFT", -3, 2)
+    m.sel:SetPoint("BOTTOMRIGHT", m, "BOTTOMLEFT", -3, -2)
+  end
+  m.sel:SetVertexColor(acc[1], acc[2], acc[3], 1)
+  m.sel:SetShown(tracked and true or false)
+  if tracked then
+    local _, size = m.glyph:GetFont()
+    m.glyph:SetFont(TRACK_FONT, (size or 13) + 2, "OUTLINE")
+    if not done then m.glyph:SetTextColor(acc[1], acc[2], acc[3]) end
   end
   m:Show()
 end
