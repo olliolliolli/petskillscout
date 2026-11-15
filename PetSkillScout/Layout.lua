@@ -692,11 +692,42 @@ local function RowOf(v, size)
     return (a:GetLeft() or 0) < (b:GetLeft() or 0)
   end)
   local width = #items * size + (#items - 1) * CDM_GAP
+  v.pssRowW, v.pssRowH = width, size
   pcall(v.SetSize, v, width, size)
   for i, c in ipairs(items) do
+    c.pssSlotX, c.pssSlotSize, c.pssViewer = (i - 1) * (size + CDM_GAP), size, v
     pcall(c.SetSize, c, size, size)
     pcall(c.ClearAllPoints, c)
-    pcall(c.SetPoint, c, "LEFT", v, "LEFT", (i - 1) * (size + CDM_GAP), 0)
+    pcall(c.SetPoint, c, "LEFT", v, "LEFT", c.pssSlotX, 0)
+    -- Whatever path the game uses to place an icon (there are several, and
+    -- some ran after our pass: the icons jumped), it is put back at once.
+    if not c.pssSlotHooked and hooksecurefunc then
+      c.pssSlotHooked = true
+      local busy = false
+      pcall(PSS.HookSecure, c, "SetPoint", function(self)
+        if busy or not self.pssSlotX or (PetSkillScoutDB and PetSkillScoutDB.cdmAbove == false) then return end
+        busy = true
+        pcall(self.ClearAllPoints, self)
+        pcall(self.SetPoint, self, "LEFT", self.pssViewer, "LEFT", self.pssSlotX, 0)
+        busy = false
+      end)
+      pcall(PSS.HookSecure, c, "SetSize", function(self, w, h)
+        if busy or not self.pssSlotSize or (w == self.pssSlotSize and h == self.pssSlotSize) then return end
+        busy = true
+        pcall(self.SetSize, self, self.pssSlotSize, self.pssSlotSize)
+        busy = false
+      end)
+    end
+  end
+  if not v.pssSizeHooked and hooksecurefunc then
+    v.pssSizeHooked = true
+    local vbusy = false
+    pcall(PSS.HookSecure, v, "SetSize", function(self, w, h)
+      if vbusy or not self.pssRowW or (w == self.pssRowW and h == self.pssRowH) then return end
+      vbusy = true
+      pcall(self.SetSize, self, self.pssRowW, self.pssRowH)
+      vbusy = false
+    end)
   end
 end
 
