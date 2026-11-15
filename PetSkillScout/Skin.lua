@@ -599,7 +599,10 @@ local UNITS = {
 local CD_VIEWERS = {"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer"}
 local cdDone = setmetatable({}, {__mode = "k"})
 local TRACK_FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
+S.gen = S.gen or 0
 local function CooldownEdge(item)
+  if item.pssEdgeGen == S.gen then return end
+  item.pssEdgeGen = S.gen
   -- Thin edge in the theme colour, drawn above the icon art (the icon fills
   -- the square, a border under it was hidden). Every pass: the theme hides
   -- all its backdrops when it is re-applied (loading screens, zone change).
@@ -977,7 +980,7 @@ local function HookTracker()
   -- restyling it marks the tracker for another layout: one pass per burst.
   local function again()
     if not S.active then return end
-    PSS:Soon("tracker", function() if S.active then pcall(SkinTracker); pcall(SkinTrackerBlocks) end end, 0.2)
+    PSS:Soon("tracker", function() if S.active then pcall(SkinTracker); pcall(SkinTrackerBlocks) end end, 0.5)
   end
   local otf = G("ObjectiveTrackerFrame")
   if otf then
@@ -1154,6 +1157,7 @@ end
 local pendingCombat = false
 
 local function Clear()
+  S.gen = (S.gen or 0) + 1
   HideTrackerLines()
   HidePOIMarks()
   Unfade()

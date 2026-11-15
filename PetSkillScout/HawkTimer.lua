@@ -287,14 +287,15 @@ ev:SetScript("OnEvent", function(_, event, unit, _, spellID)
   if event == "PLAYER_TOTEM_UPDATE" then H.source = H.source or "totem" end
   pcall(H.Update, H)
 end)
-ev.pssKey = "HawkTimer"
-local tick = 0
-ev:SetScript("OnUpdate", function(_, e)
-  tick = tick + (e or 0)
-  if tick < 0.2 then return end
-  tick = 0
-  if #H.hawks > 0 or H.glowing or H.source or (frame and frame:IsShown()) then pcall(H.Update, H) end
+-- Redraw 5 times a second, and only while there is something to show (a
+-- hawk, the glow, or combat with Summon Hawk known): was every frame.
+local tickF = CreateFrame("Frame")
+tickF.pssKey = "HawkTimer"
+tickF:SetScript("OnUpdate", function()
+  local inCombat = UnitAffectingCombat and Plain(Call(UnitAffectingCombat, "player"))
+  if #H.hawks > 0 or H.glowing or (inCombat and DB().hawkSpell) or (frame and frame:IsShown()) then pcall(H.Update, H) end
 end)
+PSS:Every(tickF, 0.2)
 
 -- /pss hawk: what the game reports right now (summon slots and your buffs).
 function H:Diag()
