@@ -848,8 +848,8 @@ local function StylePOI(b, title)
     m.fill = m:CreateTexture(nil, "ARTWORK")
     m.fill:SetAllPoints()
     m.fill:SetTexture(FLAT)
-    -- The mark itself: a gold "?" = ready to turn in, a small "!" in a dim
-    -- circle = still in progress (the plain squares said neither).
+    -- The mark itself: a gold "?" = ready to turn in, a dim dot "•" =
+    -- still in progress (the plain squares said neither).
     m.glyph = m:CreateFontString(nil, "OVERLAY")
     m.glyph:SetFont(TRACK_FONT, 13, "OUTLINE")
     m.glyph:SetPoint("CENTER", m, "CENTER", 0, 0)
