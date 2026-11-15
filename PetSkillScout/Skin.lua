@@ -598,6 +598,7 @@ local UNITS = {
 -- bars above the action bars (option), or Edit Mode.
 local CD_VIEWERS = {"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer"}
 local cdDone = setmetatable({}, {__mode = "k"})
+local TRACK_FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
 local function SkinCooldownItem(item)
   if cdDone[item] then return end
   cdDone[item] = true
@@ -623,6 +624,41 @@ local function SkinCooldownItem(item)
     end
   end
   S:Backdrop(item, "inset", {-1, 1, 1, -1})
+  -- Icon 1 px inside the edge; theme font for the timer, charges and stacks;
+  -- a plain dark swipe; buff bars flat in the accent colour.
+  if IsTexture(icon) and icon.GetParent and icon:GetParent() == item then
+    pcall(icon.ClearAllPoints, icon)
+    pcall(icon.SetPoint, icon, "TOPLEFT", item, "TOPLEFT", 1, -1)
+    pcall(icon.SetPoint, icon, "BOTTOMRIGHT", item, "BOTTOMRIGHT", -1, 1)
+  end
+  local function fonts(fr, depth)
+    if depth > 3 then return end
+    for _, r in ipairs(Regions(fr)) do
+      local okT, t = pcall(r.GetObjectType, r)
+      if okT and t == "FontString" then
+        local okF, _, size = pcall(r.GetFont, r)
+        pcall(r.SetFont, r, TRACK_FONT, (okF and type(size) == "number" and size > 6) and size or 12, "OUTLINE")
+      end
+    end
+    for _, c in ipairs(Children(fr)) do fonts(c, depth + 1) end
+  end
+  fonts(item, 0)
+  local cd = rawget(item, "Cooldown")
+  if type(cd) == "table" then
+    if cd.SetSwipeColor then pcall(cd.SetSwipeColor, cd, 0, 0, 0, 0.7) end
+    if cd.SetDrawEdge then pcall(cd.SetDrawEdge, cd, false) end
+  end
+  local bar = rawget(item, "Bar")
+  if type(bar) == "table" and bar.SetStatusBarTexture then
+    pcall(bar.SetStatusBarTexture, bar, FLAT)
+    local acc = col.accent or {0.86, 0.7, 0.35, 1}
+    pcall(bar.SetStatusBarColor, bar, acc[1], acc[2], acc[3], 1)
+    for _, k in ipairs({"BarBG", "Pip", "Background"}) do
+      local r = rawget(bar, k)
+      if IsTexture(r) then Fade(r) end
+    end
+    S:Backdrop(bar, "inset", {-1, 1, 1, -1})
+  end
 end
 local function SkinCooldownViewers()
   for _, n in ipairs(CD_VIEWERS) do
@@ -722,7 +758,7 @@ end
 -- Quest blocks: theme fonts for titles and objective lines, accent dashes,
 -- and the round yellow POI badges replaced by square theme markers
 -- ("?" ready to turn in, "…" in progress; brighter for the tracked quest).
-local TRACK_FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
+TRACK_FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
 local poiMarks = setmetatable({}, {__mode = "k"})
 
 -- The tracker measures each line with its font object before laying the
@@ -1111,6 +1147,7 @@ function S:Count()
 end
 function S:IsFaded(region) return hidden[region] ~= nil end
 function S:BackdropOf(frame) return backdrops[frame] end
+function S:Colour(k) return col[k] end
 
 S.frame = CreateFrame("Frame")
 for _, e in ipairs({"PLAYER_ENTERING_WORLD", "ADDON_LOADED", "PLAYER_REGEN_ENABLED"}) do

@@ -58,30 +58,72 @@ function H:Cast()
   self:Update()
 end
 
--- Bars --------------------------------------------------------------------
+-- Two hawk squares in the look of the Cooldown Manager icons ---------------
+-- Summon Hawk's icon, the seconds left in the middle, a dark swipe that runs
+-- down with the hawk, a thin theme edge; the edge glows in the accent colour
+-- when it is time to recast. Next to the Cooldown Manager when it is shown.
 local frame, bars, glows = nil, {}, {}
 local function Accent()
-  local c = PSS.Skin and PSS.Skin.Accent and PSS.Skin:Accent()
+  local S = PSS.Skin
+  local c = S and S.Colour and S:Colour("accent")
   return c or {0.86, 0.7, 0.35}
 end
+local SIZE, GAP = 38, 4
+
+local function Edge(f, r, g, b, a, w)
+  for _, e in ipairs(f.edges) do e:SetVertexColor(r, g, b, a) end
+  f.edges[1]:SetHeight(w); f.edges[2]:SetHeight(w); f.edges[3]:SetWidth(w); f.edges[4]:SetWidth(w)
+end
+
+local function Square(parent)
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetSize(SIZE, SIZE)
+  local bg = f:CreateTexture(nil, "BACKGROUND")
+  bg:SetTexture(FLAT); bg:SetAllPoints(); bg:SetVertexColor(0.05, 0.06, 0.05, 0.9)
+  f.icon = f:CreateTexture(nil, "ARTWORK")
+  f.icon:SetPoint("TOPLEFT", 1, -1); f.icon:SetPoint("BOTTOMRIGHT", -1, 1)
+  f.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  f.shade = f:CreateTexture(nil, "ARTWORK", nil, 2)
+  f.shade:SetTexture(FLAT); f.shade:SetVertexColor(0, 0, 0, 0.65)
+  f.shade:SetPoint("BOTTOMLEFT", f.icon, "BOTTOMLEFT"); f.shade:SetPoint("BOTTOMRIGHT", f.icon, "BOTTOMRIGHT")
+  f.edges = {}
+  for i = 1, 4 do f.edges[i] = f:CreateTexture(nil, "OVERLAY"); f.edges[i]:SetTexture(FLAT) end
+  f.edges[1]:SetPoint("TOPLEFT"); f.edges[1]:SetPoint("TOPRIGHT")
+  f.edges[2]:SetPoint("BOTTOMLEFT"); f.edges[2]:SetPoint("BOTTOMRIGHT")
+  f.edges[3]:SetPoint("TOPLEFT"); f.edges[3]:SetPoint("BOTTOMLEFT")
+  f.edges[4]:SetPoint("TOPRIGHT"); f.edges[4]:SetPoint("BOTTOMRIGHT")
+  f.text = f:CreateFontString(nil, "OVERLAY", nil, 3)
+  f.text:SetFont(FONT, 15, "OUTLINE"); f.text:SetPoint("CENTER", 0, 0)
+  f.num = f:CreateFontString(nil, "OVERLAY", nil, 3)
+  f.num:SetFont(FONT, 9, "OUTLINE"); f.num:SetPoint("BOTTOMRIGHT", -2, 2); f.num:SetTextColor(0.8, 0.8, 0.75)
+  return f
+end
+
+local function Place()
+  if not frame then return end
+  local pos = DB().hawkPos
+  frame:ClearAllPoints()
+  local cdm = _G.EssentialCooldownViewer
+  if pos and pos.x then
+    frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+  elseif cdm and cdm:IsShown() and (cdm:GetEffectiveAlpha() or 0) > 0.05 then
+    frame:SetPoint("RIGHT", cdm, "LEFT", -8, 0)
+  else
+    local holder = PSS.Layout and PSS.Layout.barHolderFrame
+    if holder then frame:SetPoint("BOTTOMLEFT", holder, "TOPRIGHT", 12, 8)
+    else frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 230) end
+  end
+end
+H.Place = Place
 
 local function Build()
   if frame then return end
   frame = CreateFrame("Frame", "PetSkillScoutHawkTimer", UIParent)
-  frame:SetSize(160, 2 * 14 + 4)
+  frame:SetSize(2 * SIZE + GAP, SIZE)
   frame:SetFrameStrata("MEDIUM")
   frame:SetClampedToScreen(true)
   frame:SetMovable(true)
   frame:EnableMouse(true)
-  local pos = DB().hawkPos
-  local holder = PSS.Layout and PSS.Layout.barHolderFrame
-  if pos and pos.x then
-    frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-  elseif holder then
-    frame:SetPoint("BOTTOMLEFT", holder, "TOPRIGHT", 12, 8)
-  else
-    frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 230)
-  end
   frame:RegisterForDrag("LeftButton")
   frame:SetScript("OnDragStart", function(self) if IsShiftKeyDown() then self:StartMoving() end end)
   frame:SetScript("OnDragStop", function(self)
@@ -90,25 +132,11 @@ local function Build()
     if PetSkillScoutDB and x then PetSkillScoutDB.hawkPos = {x = x, y = y} end
   end)
   for i = 1, H.MAX do
-    local b = CreateFrame("StatusBar", nil, frame)
-    b:SetSize(160, 14)
-    b:SetPoint("TOP", frame, "TOP", 0, -(i - 1) * 18)
-    b:SetStatusBarTexture(FLAT)
-    b:SetMinMaxValues(0, H.LIFE)
-    local bg = b:CreateTexture(nil, "BACKGROUND")
-    bg:SetTexture(FLAT); bg:SetAllPoints(); bg:SetVertexColor(0.05, 0.06, 0.05, 0.85)
-    local edge = b:CreateTexture(nil, "BACKGROUND", nil, -1)
-    edge:SetTexture(FLAT); edge:SetPoint("TOPLEFT", -1, 1); edge:SetPoint("BOTTOMRIGHT", 1, -1)
-    edge:SetVertexColor(0, 0, 0, 1)
-    b.text = b:CreateFontString(nil, "OVERLAY")
-    b.text:SetFont(FONT, 10, "OUTLINE")
-    b.text:SetPoint("CENTER")
+    local b = Square(frame)
+    b:SetPoint("LEFT", frame, "LEFT", (i - 1) * (SIZE + GAP), 0)
     bars[i] = b
   end
-  -- Glow around the bars when it is time to recast.
-  local g = frame:CreateTexture(nil, "BACKGROUND", nil, -2)
-  g:SetTexture(FLAT); g:SetPoint("TOPLEFT", -3, 3); g:SetPoint("BOTTOMRIGHT", 3, -3)
-  frame.glow = g
+  Place()
 end
 
 -- A glow frame on every action button that holds Summon Hawk (own texture,
@@ -205,25 +233,35 @@ function H:Update()
   local inCombat = UnitAffectingCombat and Plain(Call(UnitAffectingCombat, "player"))
   local show = #live > 0 or (inCombat and DB().hawkSpell)
   frame:SetShown(show and true or false)
+  if show and not DB().hawkPos then Place() end
   local a = Accent()
+  local soon = #live < self.MAX or (live[1] and live[1] - now <= self:Refresh())
+  local want = show and soon and inCombat
+  local tex = DB().hawkSpell and ((C_Spell and C_Spell.GetSpellTexture and Plain(Call(C_Spell.GetSpellTexture, DB().hawkSpell)))
+    or (GetSpellTexture and Plain(Call(GetSpellTexture, DB().hawkSpell))))
   for i = 1, self.MAX do
     local b = bars[i]
     local t = live[i]
+    b.icon:SetTexture(tex or 132172)
+    b.num:SetText(tostring(i))
     if t then
-      local left = t - now
-      b:SetValue(left)
-      -- "~" when the time is an estimate (the game did not report the hawk).
-      b.text:SetText(string.format(self.source and "%d: %.0f s" or "%d: ~%.0f s", i, left))
-      if left <= self:Refresh() then b:SetStatusBarColor(1, 0.45, 0.3) else b:SetStatusBarColor(a[1], a[2], a[3]) end
+      local left = math.max(0, t - now)
+      b.icon:SetDesaturated(false); b.icon:SetAlpha(1)
+      -- "~": an estimate (the game did not report this hawk).
+      b.text:SetText(string.format(self.source and "%.0f" or "~%.0f", left))
+      local low = left <= self:Refresh()
+      b.text:SetTextColor(low and 1 or 1, low and 0.45 or 0.95, low and 0.3 or 0.85)
+      b.shade:SetHeight(math.max(0.01, (SIZE - 2) * (1 - left / self.LIFE)))
+      b.shade:Show()
     else
-      b:SetValue(0)
-      b.text:SetText(string.format("%d: -", i))
+      b.icon:SetDesaturated(true); b.icon:SetAlpha(0.45)
+      b.text:SetText("")
+      b.shade:Hide()
     end
+    -- Edge: the theme's thin dark line; 2 px accent glow when to recast.
+    if want and (not t or (t - now) <= self:Refresh()) then Edge(b, a[1], a[2], a[3], 1, 2)
+    else Edge(b, 0, 0, 0, 1, 1) end
   end
-  -- Time to recast: a free hawk slot, or one runs out within the window.
-  local soon = #live < self.MAX or (live[1] and live[1] - now <= self:Refresh())
-  local want = show and soon and inCombat
-  frame.glow:SetVertexColor(a[1], a[2], a[3], want and 0.6 or 0)
   if want ~= self.glowing then
     self.glowing = want
     SetButtonGlow(want)

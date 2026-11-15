@@ -209,6 +209,13 @@ CHANGELOG
 3.7.114
 - Theme: game menu and other newer buttons lose the red button art and the red glow on hover.
 
+3.7.124
+- Summon Hawk timer: two squares in the look of the Cooldown Manager icons (spell icon, seconds left, a
+  shade running down with the hawk), next to the Cooldown Manager; the edge glows when to recast.
+  Reads the hawks from the game (summon slots / buffs) when it can, else counts 18 s ("~").
+- Cooldown Manager in the theme: icon inside a thin edge, theme font for timers and charges, flat buff bars.
+- /pss hawk and /pss cdm diagnostics.
+
 3.7.119
 - Summon Hawk timer: bars with the time left for each hawk (18 s, up to two), and a glow on the bars
   and the Summon Hawk button when it is time to recast. Shift-drag to move. Option in Hunter settings.
