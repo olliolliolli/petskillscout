@@ -438,7 +438,11 @@ local function ItemTextPage()
         local okH, h = pcall(r.GetHeight, r)
         w = okW and type(w) == "number" and not PSS.IsSecret(w) and w or 0
         h = okH and type(h) == "number" and not PSS.IsSecret(h) and h or 0
-        if w >= 120 and h >= 120 then Fade(r) end
+        -- Size can still be 0 right after the window opens: by layer too.
+        local okN, rn = pcall(r.GetName, r)
+        local portrait = okN and type(rn) == "string" and rn:find("Portrait")
+        local lay = Layer(r)
+        if not portrait and ((w >= 120 and h >= 120) or ((w == 0 or h == 0) and (lay == "BACKGROUND" or lay == "BORDER"))) then Fade(r) end
       end
     end
     for _, c in ipairs(Children(fr)) do
@@ -460,7 +464,11 @@ local function WindowNow(f)
   S:Window(f)
   local n = f.GetName and f:GetName()
   if n == "QuestFrame" or n == "GossipFrame" or n == "QuestLogFrame" or n == "QuestLogDetailFrame" then pcall(QuestPagesAll) end
-  if n == "ItemTextFrame" then pcall(ItemTextPage) end
+  if n == "ItemTextFrame" then
+    pcall(ItemTextPage)
+    -- Again once the window is laid out (sizes are known then).
+    if C_Timer then C_Timer.After(0.05, function() pcall(ItemTextPage) end); C_Timer.After(0.3, function() pcall(ItemTextPage) end) end
+  end
 end
 
 local function SkinWindows()

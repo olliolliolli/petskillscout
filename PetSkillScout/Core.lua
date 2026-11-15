@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.108"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.109"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -496,6 +496,27 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
         if PSS.UI and PSS.UI.ShowPassport then PSS.UI:Create(); PSS.UI:ShowPassport() end
     elseif msg == "share" then
         if PSS.PetLink then PSS.PetLink:Share() end
+    elseif msg == "book" then
+        -- Pictures of the open book window (theme debugging).
+        local f = _G.ItemTextFrame
+        if not (f and f:IsShown()) then PSS:Print("open a book first") else
+            local n = 0
+            local function walk(fr, path, depth)
+                if depth > 6 or n >= 30 then return end
+                for _, r in ipairs({fr:GetRegions()}) do
+                    if r.GetObjectType and r:GetObjectType() == "Texture" and n < 30 then
+                        n = n + 1
+                        local okA, atlas = pcall(r.GetAtlas, r)
+                        local okT, tex = pcall(r.GetTexture, r)
+                        PSS:Print(string.format("%d. %s %s %dx%d a=%.2f %s %s", n, path, tostring(r:GetName() or "-"),
+                            r:GetWidth() or 0, r:GetHeight() or 0, r:GetAlpha() or 0, tostring(r:GetDrawLayer()),
+                            tostring(okA and atlas or "") .. " " .. tostring(okT and tex or "")))
+                    end
+                end
+                for _, c in ipairs({fr:GetChildren()}) do walk(c, path .. ">" .. tostring(c:GetName() or c:GetObjectType()), depth + 1) end
+            end
+            walk(f, "ItemTextFrame", 0)
+        end
     elseif msg == "under" then
         -- Frames under the mouse (hover the problem spot, type it in chat).
         -- GetMouseFoci returns one table of frames on this client.
