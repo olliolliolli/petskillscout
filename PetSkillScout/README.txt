@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.107
+- Theme: books, letters and plaques (item text window) without the parchment, light text like quest pages.
+
 3.7.106
 - Data update 2026-11-15: AllTheThings 95bb427 (5064 quests: +305 - Mount Hyjal, Felwood, Winterspring,
   Azshara and many Forever zones; quest givers for 4473), learned data +5 quests +2 vendors +2 rare spots.

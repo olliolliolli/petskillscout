@@ -412,10 +412,36 @@ local function QuestPagesAll()
 end
 S.QuestPages = QuestPagesAll
 
+-- Books, letters and plaques (ItemTextFrame): the parchment and the stone /
+-- marble page art go, the text turns light like the quest pages. The game
+-- sets the text colour again for every page (by material), so after each.
+local function ItemTextPage()
+  local f = G("ItemTextFrame")
+  if not f then return end
+  WalkParchment(f, 0)
+  for _, n in ipairs({"ItemTextScrollFrame", "ItemTextMaterialTopLeft", "ItemTextMaterialTopRight",
+      "ItemTextMaterialBotLeft", "ItemTextMaterialBotRight", "ItemTextFramePageBg"}) do
+    local t = G(n)
+    if t then
+      if IsTexture(t) then Fade(t) else
+        for _, r in ipairs(Regions(t)) do if IsTexture(r) then Fade(r) end end
+      end
+    end
+  end
+  local txt = G("ItemTextPageText")
+  if txt and txt.SetTextColor then
+    for _, tag in ipairs({"P", "H1", "H2", "H3"}) do
+      pcall(txt.SetTextColor, txt, tag, tag == "P" and 0.92 or 1, tag == "P" and 0.9 or 0.82, tag == "P" and 0.85 or 0.4)
+    end
+  end
+end
+S.ItemTextPage = ItemTextPage
+
 local function WindowNow(f)
   S:Window(f)
   local n = f.GetName and f:GetName()
   if n == "QuestFrame" or n == "GossipFrame" or n == "QuestLogFrame" or n == "QuestLogDetailFrame" then pcall(QuestPagesAll) end
+  if n == "ItemTextFrame" then pcall(ItemTextPage) end
 end
 
 local function SkinWindows()
@@ -425,6 +451,12 @@ local function SkinWindows()
   for i = 1, 4 do list[#list + 1] = G("StaticPopup" .. i) end
   for _, f in pairs(list) do
     if f then WindowNow(f); HookShow(f, WindowNow) end
+  end
+  -- Every new page of a book: the game recolours the text again.
+  local it = G("ItemTextFrame")
+  if it and not it.pssPages then
+    it.pssPages = true
+    pcall(PSS.HookScript, it, "OnEvent", function() if S.active and C_Timer then C_Timer.After(0, function() pcall(ItemTextPage) end) end end)
   end
   -- Quest pages switch inside the window (details, progress, reward).
   for _, n in ipairs(QUEST_PAGES) do HookShow(G(n), function() pcall(QuestPagesAll) end) end
