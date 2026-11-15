@@ -805,8 +805,9 @@ local function TrackFontObject(fs, size)
   PSS:Soon("tracker-relayout", function()
     if InCombatLockdown and InCombatLockdown() then return end
     local mgr = G("ObjectiveTrackerManager")
-    if mgr and type(mgr.UpdateAll) == "function" then pcall(mgr.UpdateAll, mgr)
-    elseif type(_G.ObjectiveTracker_Update) == "function" then pcall(_G.ObjectiveTracker_Update) end
+    -- (No tracker update from addon code any more: it tainted the tracker,
+    -- and the game then blocked its right-side frame container in combat.)
+    local _ = mgr
   end, 0.1)
 end
 
@@ -936,8 +937,9 @@ relayEvents:SetScript("OnEvent", function()
   local function relayout()
     if InCombatLockdown and InCombatLockdown() then return end
     local mgr = G("ObjectiveTrackerManager")
-    if mgr and type(mgr.UpdateAll) == "function" then pcall(mgr.UpdateAll, mgr)
-    elseif type(_G.ObjectiveTracker_Update) == "function" then pcall(_G.ObjectiveTracker_Update) end
+    -- (No tracker update from addon code any more: it tainted the tracker,
+    -- and the game then blocked its right-side frame container in combat.)
+    local _ = mgr
   end
   if C_Timer then C_Timer.After(0.5, relayout); C_Timer.After(2, relayout) end
 end)

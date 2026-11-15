@@ -746,7 +746,11 @@ function LY.PlaceDurability()
   if not d.pssHooked and hooksecurefunc then
     d.pssHooked = true
     -- The game puts it back beside the minimap on its own layout passes.
-    pcall(PSS.HookSecure, d, "SetPoint", function() if not durBusy then LY.PlaceDurability() end end)
+    -- Deferred, never inside the game's own layout pass of the right-side
+    -- container (doing it there tainted it: blocked SetPoint in combat).
+    pcall(PSS.HookSecure, d, "SetPoint", function()
+      if not durBusy and C_Timer then C_Timer.After(0, function() if not (InCombatLockdown and InCombatLockdown()) then LY.PlaceDurability() end end) end
+    end)
   end
 end
 
