@@ -135,7 +135,17 @@ function P:SquareStyle(uf, unit)
   -- client, "Can't measure restricted regions".)
   -- Our level coloured like the game's: by how hard the mob is for you.
   f.lvlColoured = false
-  local okC = pcall(function()
+  -- The game already colours its own (hidden) level badge by difficulty: the
+  -- same colour is taken over as it is (works when the level is secret).
+  local diff = uf.PlayerLevelDiffFrame and uf.PlayerLevelDiffFrame.playerLevelDiffText
+  if diff and diff.GetTextColor then
+    local okD = pcall(function()
+      local r, g, b = diff:GetTextColor()
+      f.lvl:SetTextColor(r, g, b)
+    end)
+    if okD then f.lvlColoured = true end
+  end
+  local okC = f.lvlColoured or pcall(function()
     if lv == -1 then f.lvl:SetTextColor(1, 0.1, 0.1); f.lvlColoured = true; return end
     local dc = GetCreatureDifficultyColor and GetCreatureDifficultyColor(lv) or (GetQuestDifficultyColor and GetQuestDifficultyColor(lv))
     if dc and dc.r then f.lvl:SetTextColor(dc.r, dc.g, dc.b); f.lvlColoured = true end
