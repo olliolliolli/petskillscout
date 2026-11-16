@@ -9,7 +9,7 @@ local PSS = PetSkillScout
 local P = PSS.Plates
 local FLAT = "Interface\\Buttons\\WHITE8X8"
 local FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
-local W, H = 120, 10
+local W, H = 128, 14
 
 local function Call(fn, ...)
   if type(fn) ~= "function" then return nil end
@@ -48,11 +48,19 @@ local function Build(uf)
   f.bg = f:CreateTexture(nil, "BACKGROUND", nil, -1); f.bg:SetTexture(FLAT); f.bg:SetAllPoints()
   f.bg:SetVertexColor(0.06, 0.07, 0.06, 0.9)
   f.bar = CreateFrame("StatusBar", nil, f); f.bar:SetAllPoints(); f.bar:SetStatusBarTexture(FLAT)
-  f.pct = f.bar:CreateFontString(nil, "OVERLAY"); f.pct:SetFont(FONT, 9, "OUTLINE"); f.pct:SetPoint("RIGHT", -2, 0)
-  f.name = f:CreateFontString(nil, "OVERLAY"); f.name:SetFont(FONT, 10, "OUTLINE")
-  f.name:SetPoint("BOTTOM", f, "TOP", 0, 3)
-  f.lvl = f:CreateFontString(nil, "OVERLAY"); f.lvl:SetFont(FONT, 9, "OUTLINE")
-  f.lvl:SetPoint("LEFT", f, "RIGHT", 4, 0)
+  -- Same layout as the theme's unit frames: name inside on the left, health
+  -- on the right, the level in its own small square box on the left.
+  f.pct = f.bar:CreateFontString(nil, "OVERLAY"); f.pct:SetFont(FONT, 9, "OUTLINE"); f.pct:SetPoint("RIGHT", -3, 0)
+  f.name = f.bar:CreateFontString(nil, "OVERLAY"); f.name:SetFont(FONT, 9, "OUTLINE")
+  f.name:SetPoint("LEFT", 3, 0); f.name:SetPoint("RIGHT", f.pct, "LEFT", -4, 0)
+  f.name:SetJustifyH("LEFT"); f.name:SetWordWrap(false)
+  f.box = CreateFrame("Frame", nil, f); f.box:SetSize(H + 4, H)
+  f.box:SetPoint("RIGHT", f, "LEFT", -3, 0)
+  f.box.edge = f.box:CreateTexture(nil, "BACKGROUND", nil, -2); f.box.edge:SetTexture(FLAT)
+  f.box.edge:SetPoint("TOPLEFT", -1, 1); f.box.edge:SetPoint("BOTTOMRIGHT", 1, -1)
+  f.box.bg = f.box:CreateTexture(nil, "BACKGROUND", nil, -1); f.box.bg:SetTexture(FLAT); f.box.bg:SetAllPoints()
+  f.box.bg:SetVertexColor(0.06, 0.07, 0.06, 0.9)
+  f.lvl = f.box:CreateFontString(nil, "OVERLAY"); f.lvl:SetFont(FONT, 9, "OUTLINE"); f.lvl:SetPoint("CENTER", 0, 0)
   ours[uf] = f
   return f
 end
@@ -93,10 +101,19 @@ function P:SquareStyle(uf, unit)
   if gn and gn.GetText then pcall(f.name.SetText, f.name, gn:GetText()) end
   local lt = (uf.LevelFrame or uf.levelFrame) and ((uf.LevelFrame or uf.levelFrame).levelText or (uf.LevelFrame or uf.levelFrame).LevelText)
   if lt and lt.GetText then pcall(f.lvl.SetText, f.lvl, lt:GetText()) end
+  -- Edges in the theme's edge colour (as every theme frame); your target in
+  -- the accent colour and a little thicker.
   local sel = unit and Call(UnitIsUnit, unit, "target")
-  local c = sel and Col("accent") or Col("edge")
-  local ok = pcall(function() if sel then f.edge:SetVertexColor(c[1], c[2], c[3], 1) else f.edge:SetVertexColor(0, 0, 0, 1) end end)
-  if not ok then f.edge:SetVertexColor(0, 0, 0, 1) end
+  local isSel = false
+  pcall(function() isSel = sel and true or false end)
+  local c = isSel and Col("accent") or Col("edge")
+  local w = isSel and 2 or 1
+  f.edge:ClearAllPoints(); f.edge:SetPoint("TOPLEFT", -w, w); f.edge:SetPoint("BOTTOMRIGHT", w, -w)
+  f.edge:SetVertexColor(c[1], c[2], c[3], 1)
+  f.box.edge:SetVertexColor(c[1], c[2], c[3], 1)
+  local bgc = Col("slot")
+  f.bg:SetVertexColor(bgc[1], bgc[2], bgc[3], 0.85); f.box.bg:SetVertexColor(bgc[1], bgc[2], bgc[3], 0.85)
+  f.lvl:SetTextColor(c[1], c[2], c[3])
   f:Show()
   self:SquareHealth(uf, unit)
 end
