@@ -126,6 +126,10 @@ function GC:Verdict(res)
   if d > 0 then text = string.format("|cff7ee0a3" .. L("gcUpgrade") .. "|r", d, spec)
   elseif d < 0 then text = string.format("|cffff7a7a" .. L("gcDowngrade") .. "|r", d, spec)
   else text = "|cffbbbbbb" .. L("gcSame") .. "|r" end
+  -- Like Pawn: the change in percent of the equipped item's value.
+  if d ~= 0 and (res.old or 0) > 1 then
+    text = text .. string.format("  |cffbbbbbb%+d%%|r", math.floor(res.delta / res.old * 100 + (res.delta > 0 and 0.5 or -0.5)))
+  end
   if res.tooLow then text = text .. "  |cffffcc55" .. string.format(L("gcFromLevel"), res.reqLevel) .. "|r" end
   return text
 end

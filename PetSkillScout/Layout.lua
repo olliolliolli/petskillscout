@@ -1303,7 +1303,13 @@ local function HookChat()
   if chatHooked or not hooksecurefunc then return end
   chatHooked = true
   for _, fn in ipairs({"FCFDock_UpdateTabs", "FCF_DockUpdate"}) do
-    if type(_G[fn]) == "function" then PSS.HookSecure(fn, function() pcall(PlaceCombatTab) end) end
+    -- Placing the tab makes the game re-dock, which called us again in a
+    -- loop (5 ms/s): only act when the tab is really out of place, once.
+    if type(_G[fn]) == "function" then PSS.HookSecure(fn, function()
+      local tab = G("ChatFrame2Tab")
+      local ok, point = pcall(tab and tab.GetPoint or function() end, tab, 1)
+      if ok and point ~= "BOTTOMRIGHT" then PSS:Soon("combat-tab", function() pcall(PlaceCombatTab) end, 0.1) end
+    end) end
   end
   for _, fn in ipairs({"FCF_StopDragging", "FCF_UnDockFrame", "FCF_OpenNewWindow"}) do
     if type(_G[fn]) == "function" then

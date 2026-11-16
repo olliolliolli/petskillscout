@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.158"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.174"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -619,6 +619,39 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
             end
             walk(gm, 0)
             if nb == 0 then PSS:Print("no text buttons found in the game menu") end
+        end
+    elseif msg == "char" then
+        -- Character window pictures still visible, saved for the developer.
+        local f = _G.CharacterFrame
+        if not (f and f:IsShown()) then PSS:Print("open the character window first") else
+            local SK = PSS.Skin
+            if SK and SK.CharacterPanel then
+                local ok, err = pcall(SK.CharacterPanel)
+                PSS:Print("character theme pass: " .. (ok and "ok" or tostring(err)))
+            end
+            local out = {}
+            local function walk(fr, path, depth)
+                if depth > 8 or #out >= 400 then return end
+                for _, r in ipairs({fr:GetRegions()}) do
+                    if r.GetObjectType and r:GetObjectType() == "Texture" and r:IsVisible() and (r:GetAlpha() or 0) > 0.05 then
+                        local okA, atlas = pcall(r.GetAtlas, r)
+                        local okT, tex = pcall(r.GetTexture, r)
+                        out[#out + 1] = string.format("%s | %s | %dx%d | %s | %s %s", path, tostring(r:GetName() or "-"),
+                            r:GetWidth() or 0, r:GetHeight() or 0, tostring(r:GetDrawLayer()),
+                            tostring(okA and atlas or ""), tostring(okT and tex or ""))
+                    end
+                end
+                for _, c in ipairs({fr:GetChildren()}) do
+                    if c:IsVisible() then
+                        local key
+                        for kk, vv in pairs(fr) do if vv == c and type(kk) == "string" then key = kk break end end
+                        walk(c, path .. ">" .. tostring(c:GetName() or key or c:GetObjectType()), depth + 1)
+                    end
+                end
+            end
+            walk(f, "CharacterFrame", 0)
+            PetSkillScoutDB.diagChar = out
+            PSS:Print(#out .. " pictures saved. Do /reload so the developer can read them.")
         end
     elseif msg == "book" then
         -- Pictures of the open book window (theme debugging).

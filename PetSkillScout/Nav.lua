@@ -692,11 +692,16 @@ local function MoveFast()
   wn, ww = ok and PSS.Plain(wn), ok and PSS.Plain(ww)
   if type(wn) ~= "number" or type(ww) ~= "number" then return end
   local movedN, movedE = wn - cached.wn, cached.ww - ww -- second value grows westwards
-  local cs, sn
+  local cs, sn, f
   if GetCVar and GetCVar("rotateMinimap") == "1" then
-    local f = -(GetPlayerFacing and GetPlayerFacing() or 0)
+    f = -(GetPlayerFacing and GetPlayerFacing() or 0)
     cs, sn = math.cos(f), math.sin(f)
   end
+  -- Skip the pass when we barely moved (under half a yard, no turn).
+  local last = MM.lastFast
+  if last and math.abs(movedN - last[1]) + math.abs(movedE - last[2]) < 0.5
+    and math.abs((f or 0) - (last[3] or 0)) < 0.02 then return end
+  MM.lastFast = {movedN, movedE, f or 0}
   for i = 1, used do
     local p = pins[i]
     if p and p.mmE then
@@ -718,6 +723,7 @@ driver:SetScript("OnUpdate", function(_, elapsed)
     return
   end
   mmElapsed = 0
+  MM.lastFast = nil
   local ok, err = pcall(UpdateMinimap)
   if not ok then MM._lastError = tostring(err) end
 end)

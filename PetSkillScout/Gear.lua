@@ -25,9 +25,9 @@ local function L(k) return PSS:L(k) end
 -- Specs and weights (attack-power equivalents) -----------------------------
 G.SPECS = {"BM", "MM", "SV"}
 G.WEIGHTS = {
-  MM = {agi = 2.4, ap = 1.0, rap = 1.0, map = 0.1, crit = 28, hit = 22, int = 0.25, sta = 0.2, str = 0.1, armor = 0.01, mp5 = 1.5},
-  BM = {agi = 2.2, ap = 1.05, rap = 1.0, map = 0.1, crit = 24, hit = 22, int = 0.4, sta = 0.3, str = 0.1, armor = 0.01, mp5 = 2.0},
-  SV = {agi = 2.7, ap = 1.0, rap = 1.0, map = 0.25, crit = 26, hit = 22, int = 0.25, sta = 0.3, str = 0.15, armor = 0.01, mp5 = 1.5},
+  MM = {agi = 2.6, ap = 1.0, rap = 1.0, map = 0.1, crit = 28, hit = 22, int = 0.15, sta = 0.4, str = 0.1, armor = 0.01, mp5 = 1.5},
+  BM = {agi = 2.5, ap = 1.05, rap = 1.0, map = 0.1, crit = 24, hit = 22, int = 0.2, sta = 0.4, str = 0.1, armor = 0.01, mp5 = 2.0},
+  SV = {agi = 2.8, ap = 1.0, rap = 1.0, map = 0.25, crit = 26, hit = 22, int = 0.15, sta = 0.4, str = 0.15, armor = 0.01, mp5 = 1.5},
 }
 -- Hunters fight at range: melee weapon damage counts for little.
 G.RANGED_DPS, G.MELEE_DPS = 14, {MM = 1.2, BM = 1.2, SV = 2.0}

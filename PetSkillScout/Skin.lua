@@ -471,6 +471,372 @@ local function WindowNow(f)
   end
 end
 
+
+-- Character window: square item slots, flat stat headers, plain model backdrop.
+local CHAR_SLOTS = {"Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist",
+  "Hands", "Waist", "Legs", "Feet", "Finger0", "Finger1", "Trinket0", "Trinket1",
+  "MainHand", "SecondaryHand", "Ranged", "Ammo"}
+local function CharacterPanel()
+  for _, n in ipairs(CHAR_SLOTS) do
+    local b = G("Character" .. n .. "Slot")
+    if b then
+      Fade(G("Character" .. n .. "SlotFrame"))
+      if b.GetNormalTexture then Fade(b:GetNormalTexture()) end
+      for _, r in ipairs(Regions(b)) do
+        if IsTexture(r) and Layer(r) == "BACKGROUND" then Fade(r) end
+      end
+      local icon = rawget(b, "icon") or rawget(b, "Icon") or G("Character" .. n .. "SlotIconTexture")
+      if IsTexture(icon) then
+        pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+        pcall(icon.ClearAllPoints, icon)
+        pcall(icon.SetPoint, icon, "TOPLEFT", b, "TOPLEFT", 1, -1)
+        pcall(icon.SetPoint, icon, "BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+      end
+      S:Backdrop(b, "slot")
+    end
+  end
+  -- Art of the Forever character window (Blizzard UI source, branch
+  -- "forever", Camelot/PaperDollFrame.xml and CharacterFrame.xml): every
+  -- UI-Character-Info-* atlas (gear slot rings, stat titles, stone and line
+  -- backgrounds), inside-frame borders, the rock strip and race backdrop.
+  local KEEP = {["ui-character-info-gearslot-arrow"] = true, ["ui-character-info-icon-tick"] = true,
+    ["ui-character-info-icon-add"] = true}
+  local function art(r)
+    local okA, atlas = pcall(r.GetAtlas, r)
+    atlas = okA and type(atlas) == "string" and atlas:lower() or ""
+    if KEEP[atlas] then return false end
+    if atlas:find("^ui%-character%-info%-") or atlas == "common-insideframe" or atlas == "common-framedivider"
+      or atlas:find("innertoptile") then return true end
+    local okT, tex = pcall(r.GetTexture, r)
+    tex = okT and type(tex) == "string" and tex:lower() or ""
+    return tex:find("ui%-background%-rock") ~= nil
+  end
+  local acc = col.accent or {0.86, 0.7, 0.35, 1}
+  local function line(f, key, layer)
+    local t = rawget(f, key)
+    if not t then t = f:CreateTexture(nil, layer or "ARTWORK"); f[key] = t end
+    t:SetColorTexture(1, 1, 1, 1)
+    return t
+  end
+  -- Stat section titles: accent text between two accent rules, a faint band.
+  local function Category(f)
+    local title, bg = rawget(f, "Title"), rawget(f, "Background")
+    if not (IsTexture(bg) and type(title) == "table" and title.SetTextColor) then return end
+    local okA, atlas = pcall(bg.GetAtlas, bg)
+    if not (okA and atlas == "UI-Character-Info-Title") then return end
+    pcall(title.SetTextColor, title, acc[1], acc[2], acc[3])
+    local band = line(f, "pssBand", "BACKGROUND")
+    band:SetVertexColor(acc[1], acc[2], acc[3], 0.08)
+    band:ClearAllPoints(); band:SetPoint("TOPLEFT", f, "TOPLEFT", 4, -8); band:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -4, 8)
+    local l, r = line(f, "pssRuleL"), line(f, "pssRuleR")
+    for _, t in ipairs({l, r}) do t:SetVertexColor(acc[1], acc[2], acc[3], 0.7); t:SetHeight(1) end
+    l:ClearAllPoints(); l:SetPoint("LEFT", f, "LEFT", 8, 0); l:SetPoint("RIGHT", title, "LEFT", -8, 0)
+    r:ClearAllPoints(); r:SetPoint("LEFT", title, "RIGHT", 8, 0); r:SetPoint("RIGHT", f, "RIGHT", -8, 0)
+  end
+  -- Stat rows: a faint hairline under each.
+  local function Row(f)
+    local bg = rawget(f, "Background")
+    if not (IsTexture(bg) and rawget(f, "Value")) then return end
+    local okA, atlas = pcall(bg.GetAtlas, bg)
+    if not (okA and type(atlas) == "string" and atlas:find("^UI%-Character%-Info%-Line")) then return end
+    local h = line(f, "pssHair", "BACKGROUND")
+    h:SetVertexColor(1, 1, 1, 0.06); h:SetHeight(1)
+    h:ClearAllPoints(); h:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 6, 0); h:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 0)
+  end
+  local function walk(f, depth)
+    if type(f) ~= "table" or depth > 10 then return end
+    pcall(Category, f); pcall(Row, f)
+    for _, r in ipairs(Regions(f)) do
+      if IsTexture(r) and art(r) then Fade(r) end
+    end
+    for _, c in ipairs(Children(f)) do walk(c, depth + 1) end
+  end
+  walk(G("CharacterFrame"), 0)
+  for _, n in ipairs({"CharacterModelFrameBackgroundTopLeft", "CharacterModelFrameBackgroundTopRight",
+    "CharacterModelFrameBackgroundBotLeft", "CharacterModelFrameBackgroundBotRight"}) do Fade(G(n)) end
+  local ms = G("CharacterModelScene")
+  if ms and rawget(ms, "BackgroundOverlay") then Fade(ms.BackgroundOverlay) end
+  for _, n in ipairs({"CharacterFrameInset", "CharacterFrameInsetRight"}) do
+    if G(n) then SkinInset(G(n)) end
+  end
+  for _, n in ipairs({"CharacterFrameInset", "CharacterFrameInsetRight"}) do
+    if G(n) then S:Backdrop(G(n), "inset") end
+  end
+  -- Model backdrop corners.
+  for _, n in ipairs({"PaperDollInnerBorderTopLeft", "PaperDollInnerBorderTopRight", "PaperDollInnerBorderBottomLeft",
+    "PaperDollInnerBorderBottomRight", "PaperDollInnerBorderLeft", "PaperDollInnerBorderRight", "PaperDollInnerBorderTop",
+    "PaperDollInnerBorderBottom", "PaperDollInnerBorderBottom2", "PaperDollFrameBg"}) do Fade(G(n)) end
+  for i = 1, 4 do
+    local t = G("PaperDollSidebarTab" .. i)
+    if t then
+      for _, r in ipairs(Regions(t)) do
+        if IsTexture(r) and r ~= rawget(t, "Icon") and Layer(r) ~= "HIGHLIGHT" then Fade(r) end
+      end
+      S:Backdrop(t, "button")
+    end
+  end
+end
+
+S.CharacterPanel = function() return CharacterPanel() end
+
+-- Forever progress bars (ColoredProgressBarTemplate, Blizzard_SharedXML/
+-- Camelot/ProgressBars): reputation, skills, pet experience. Rounded by the
+-- "common-stat-bar-Mask" mask and the "common-stat-bar-BG" track; made square:
+-- mask off, track hidden, a theme edge around the fill area.
+local squared = setmetatable({}, {__mode = "k"})
+local function SquareColoredBar(bar)
+  if type(bar) ~= "table" or not S.active then return end
+  local fill, mask, area = rawget(bar, "Fill"), rawget(bar, "Mask"), rawget(bar, "FillArea")
+  if not (IsTexture(fill) and area) then return end
+  if mask and not squared[bar] then pcall(fill.RemoveMaskTexture, fill, mask) end
+  squared[bar] = true
+  for _, r in ipairs(Regions(bar)) do
+    if IsTexture(r) and r ~= fill then
+      local okA, atlas = pcall(r.GetAtlas, r)
+      if okA and atlas == "common-stat-bar-BG" then Fade(r) end
+    end
+  end
+  local okH, fh = pcall(fill.GetHeight, fill)
+  local okB, bh = pcall(bar.GetHeight, bar)
+  local pad = (okH and okB and type(fh) == "number" and type(bh) == "number" and bh > fh) and math.floor((bh - fh) / 2) or 7
+  S:Backdrop(bar, "slot", {5, -(pad - 1), -5, pad - 1})
+end
+S.SquareColoredBar = SquareColoredBar
+local function SquareAllColoredBars(root, depth)
+  if type(root) ~= "table" or depth > 12 then return end
+  if rawget(root, "Fill") and rawget(root, "FillArea") then pcall(SquareColoredBar, root) end
+  -- Rounded list headers ("common-button-list-collapseExpand": reputation groups).
+  for _, r in ipairs(Regions(root)) do
+    if IsTexture(r) then
+      local okA, atlas = pcall(r.GetAtlas, r)
+      if okA and atlas == "common-button-list-collapseExpand" then
+        Fade(r)
+        S:Backdrop(root, "button")
+      end
+    end
+  end
+  for _, c in ipairs(Children(root)) do SquareAllColoredBars(c, depth + 1) end
+end
+local function HookColoredBars()
+  if S.coloredHooked then return end
+  local m = _G.ColoredProgressBarMixin
+  if type(m) == "table" and m.SetFillPercent then
+    S.coloredHooked = true
+    pcall(PSS.HookSecure, m, "SetFillPercent", function(bar) if not squared[bar] then pcall(SquareColoredBar, bar) end end)
+  end
+  local h = _G.ReputationHeaderMixin
+  if type(h) == "table" and h.Initialize and not S.repHeadHooked then
+    S.repHeadHooked = true
+    pcall(PSS.HookSecure, h, "Initialize", function(btn) pcall(SquareAllColoredBars, btn, 10) end)
+  end
+end
+
+-- Spellbook (Blizzard_PlayerSpells, Forever: Camelot/SpellBook + SpellBook/):
+-- parchment pages, divider, round icon frames -> theme. Names from the
+-- Forever UI source: BookBGLeft/Right/Halved, TopBar, Bookmark,
+-- BookCornerFlipbook; header Border ("spellbook-divider") and Backplate;
+-- item Backplate, Button.Border / BorderShadow / IconMask.
+-- Spellbook art is driven by alpha animations (page turns), which bypass
+-- the SetAlpha hook: also zero the vertex alpha, animations do not touch it.
+local tinted = setmetatable({}, {__mode = "k"})   -- textures whose vertex colour we changed
+S.tinted = tinted
+local function Gone(t)
+  if not IsTexture(t) then return end
+  Fade(t)
+  tinted[t] = true
+  pcall(t.SetVertexColor, t, 1, 1, 1, 0)
+end
+local function SpellBookItem(item)
+  if not (S.active and type(item) == "table") then return end
+  local b = rawget(item, "Button")
+  if type(b) ~= "table" then return end
+  for _, k in ipairs({"Border", "BorderShadow", "TrainableShadow", "BorderSheen"}) do
+    local t = rawget(b, k)
+    if IsTexture(t) then Gone(t) end
+  end
+  if IsTexture(rawget(item, "Backplate")) then Gone(item.Backplate) end
+  local icon, mask = rawget(b, "Icon"), rawget(b, "IconMask")
+  if IsTexture(icon) then
+    if mask then pcall(icon.RemoveMaskTexture, icon, mask) end
+    pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+  end
+  S:Backdrop(b, "slot", {-1, 1, 1, -1}, "OVERLAY")
+  local name = rawget(rawget(item, "TextContainer") or {}, "Name")
+  if name and name.SetTextColor then pcall(name.SetTextColor, name, 0.95, 0.93, 0.88) end
+  -- Divider under each spell for readability.
+  local hl = rawget(item, "pssHair")
+  if not hl then hl = item:CreateTexture(nil, "BACKGROUND"); item.pssHair = hl end
+  hl:SetColorTexture(1, 1, 1, 0.07); hl:SetHeight(1)
+  hl:ClearAllPoints(); hl:SetPoint("TOPLEFT", b, "BOTTOMLEFT", 0, -8); hl:SetPoint("RIGHT", item, "RIGHT", -10, 0)
+  -- "Passive" / "Racial" are drawn in a dark parchment font: make them readable.
+  local sub = rawget(rawget(item, "TextContainer") or {}, "SubName")
+  if sub and sub.SetTextColor then pcall(sub.SetTextColor, sub, 0.72, 0.70, 0.64) end
+  local req = rawget(rawget(item, "TextContainer") or {}, "RequiredLevel")
+  if req and req.SetTextColor then pcall(req.SetTextColor, req, 0.72, 0.70, 0.64) end
+end
+local function SpellBookHeader(h)
+  if not (S.active and type(h) == "table") then return end
+  if IsTexture(rawget(h, "Border")) then Gone(h.Border) end
+  if IsTexture(rawget(h, "Backplate")) then Gone(h.Backplate) end
+  local acc = col.accent or {0.86, 0.7, 0.35, 1}
+  local t = rawget(h, "Text")
+  if t and t.SetTextColor then pcall(t.SetTextColor, t, acc[1], acc[2], acc[3]) end
+  local rule = rawget(h, "pssRule")
+  if not rule then rule = h:CreateTexture(nil, "ARTWORK"); h.pssRule = rule end
+  rule:SetColorTexture(acc[1], acc[2], acc[3], 0.6); rule:SetHeight(1)
+  rule:ClearAllPoints(); rule:SetPoint("BOTTOMLEFT", h, "BOTTOMLEFT", 0, 4); rule:SetPoint("BOTTOMRIGHT", h, "BOTTOMRIGHT", -10, 4)
+end
+local function SpellBookFrameArt()
+  local psf = G("PlayerSpellsFrame")
+  local sb = psf and rawget(psf, "SpellBookFrame")
+  if not sb then return end
+  S:Backdrop(sb, "inset")
+  local psv = rawget(sb, "PagedSpellsFrame")
+  local v1, v2 = psv and rawget(psv, "View1"), psv and rawget(psv, "View2")
+  if v1 and v2 and v2:IsShown() then
+    local d = rawget(sb, "pssMid")
+    if not d then d = sb:CreateTexture(nil, "ARTWORK"); sb.pssMid = d end
+    local acc = col.accent or {0.86, 0.7, 0.35, 1}
+    d:SetColorTexture(acc[1], acc[2], acc[3], 0.35); d:SetWidth(1)
+    d:ClearAllPoints(); d:SetPoint("TOP", sb, "TOP", 0, -50); d:SetPoint("BOTTOM", sb, "BOTTOM", 0, 50); d:Show()
+  elseif rawget(sb, "pssMid") then sb.pssMid:Hide() end
+  for _, k in ipairs({"TopBar", "BookBGHalved", "BookBGLeft", "BookBGRight", "BookCornerFlipbook", "Bookmark"}) do
+    if IsTexture(rawget(sb, k)) then Gone(sb[k]) end
+  end
+  local function walk(f, d)
+    if type(f) ~= "table" or d > 8 then return end
+    if rawget(f, "Button") and rawget(f, "TextContainer") then pcall(SpellBookItem, f) end
+    if rawget(f, "Text") and IsTexture(rawget(f, "Border")) and IsTexture(rawget(f, "Backplate")) then pcall(SpellBookHeader, f) end
+    for _, c in ipairs(Children(f)) do walk(c, d + 1) end
+  end
+  walk(sb, 0)
+  local pc = rawget(rawget(sb, "PagedSpellsFrame") or {}, "PagingControls")
+  local pt = pc and rawget(pc, "PageText")
+  if pt and pt.SetTextColor then pcall(pt.SetTextColor, pt, 0.85, 0.83, 0.78) end
+end
+
+-- Talents (Forever: Blizzard_PlayerSpells/Camelot/ClassTalents/
+-- Blizzard_ClassTalentsFrame.xml/.lua): painted class art, inner frame and
+-- dividers -> theme panel; tree headers (MainRing, TextBackground, Divider)
+-- -> accent title with a rule; theme dividers between the three trees
+-- (trees centred at x 140 + 400*i from BackgroundBorder TOPLEFT).
+local function TalentHeader(h)
+  if not (S.active and type(h) == "table") then return end
+  for _, k in ipairs({"MainRing", "TextBackground", "Divider"}) do Gone(rawget(h, k)) end
+  local acc = col.accent or {0.86, 0.7, 0.35, 1}
+  local icon = rawget(h, "Icon")
+  if IsTexture(icon) and icon.GetMaskTexture then
+    for i = 1, 3 do
+      local ok, m = pcall(icon.GetMaskTexture, icon, i)
+      if ok and m then pcall(icon.RemoveMaskTexture, icon, m) end
+    end
+    pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+    local edge = rawget(h, "pssEdge")
+    if not edge then edge = CreateFrame("Frame", nil, h); h.pssEdge = edge end
+    edge:ClearAllPoints(); edge:SetPoint("TOPLEFT", icon, -1, 1); edge:SetPoint("BOTTOMRIGHT", icon, 1, -1)
+    S:Backdrop(edge, "slot", nil, "OVERLAY")
+  end
+  local n = rawget(h, "Name")
+  if n and n.SetTextColor then pcall(n.SetTextColor, n, acc[1], acc[2], acc[3]) end
+  local t = rawget(h, "Text")
+  if t and t.SetTextColor then
+    pcall(t.SetTextColor, t, 1, 1, 1)
+    -- Points spent: a small badge below the icon instead of over it.
+    if IsTexture(icon) then
+      pcall(t.ClearAllPoints, t)
+      pcall(t.SetPoint, t, "TOP", icon, "BOTTOM", 0, -3)
+    end
+  end
+end
+local function TalentsArt()
+  local psf = G("PlayerSpellsFrame")
+  local tf = psf and rawget(psf, "TalentsFrame")
+  if not tf then return end
+  for _, k in ipairs({"Background", "Clouds1", "Clouds2", "AirParticlesClose", "AirParticlesFar", "BackgroundBorder",
+    "DividerHorizontalLeft", "DividerHorizontalRight", "DividerVerticalLeft", "DividerVerticalRight"}) do Gone(rawget(tf, k)) end
+  -- The game's own spec art (one painting per tree, set per class by the
+  -- game) stays as the backdrop, dimmed so the talents read well on it.
+  local art = rawget(tf, "ClassBackground")
+  if IsTexture(art) then
+    if hidden[art] ~= nil then hidden[art] = nil; pcall(art.SetAlpha, art, 1) end
+    tinted[art] = true
+    pcall(art.SetVertexColor, art, 0.75, 0.75, 0.75, 1)
+  end
+  local cd = rawget(tf, "ClassCurrencyDisplay")
+  if cd then Gone(rawget(cd, "Border")) end
+  for _, h in ipairs(rawget(tf, "treeHeaders") or {}) do pcall(TalentHeader, h) end
+  local art = rawget(tf, "ClassBackground")
+  S:Backdrop(tf, "inset")
+  local acc = col.accent or {0.86, 0.7, 0.35, 1}
+  tf.pssDiv = tf.pssDiv or {}
+  local function L(k) local x = tf.pssDiv[k]; if not x then x = tf:CreateTexture(nil, "ARTWORK"); tf.pssDiv[k] = x end; return x end
+  -- Vertical dividers on the borders of the three paintings (the spec art is
+  -- one texture split in equal thirds).
+  local okW, w = pcall(art and art.GetWidth or function() end, art)
+  if art and okW and type(w) == "number" and w > 0 then
+    for i = 1, 2 do
+      local v = L("v" .. i)
+      v:SetColorTexture(acc[1], acc[2], acc[3], 0.35); v:SetWidth(1)
+      v:ClearAllPoints()
+      v:SetPoint("TOP", art, "TOPLEFT", w * i / 3, -60)
+      v:SetPoint("BOTTOM", art, "BOTTOMLEFT", w * i / 3, 20)
+      v:Show()
+    end
+  end
+  -- A rule under each tree header, centred on the header itself.
+  for i, h in ipairs(rawget(tf, "treeHeaders") or {}) do
+    local r = L("h" .. i)
+    r:SetColorTexture(acc[1], acc[2], acc[3], 0.6); r:SetHeight(1)
+    r:ClearAllPoints()
+    -- Span this tree's third of the painting (the header frame itself is
+    -- not centred on the tree: its icon and name hang off to one side).
+    local okL, al = pcall(art.GetLeft, art)
+    local okC, hx = pcall(h.GetCenter, h)
+    local okS1, s1 = pcall(art.GetEffectiveScale, art)
+    local okS2, s2 = pcall(h.GetEffectiveScale, h)
+    if okW and type(w) == "number" and w > 0 and okL and type(al) == "number" and okC and type(hx) == "number"
+      and okS1 and okS2 and s1 and s2 and s2 > 0 then
+      local k = s1 / s2
+      local x1 = (al + w * (i - 1) / 3 + 24) * k - hx
+      local x2 = (al + w * i / 3 - 24) * k - hx
+      r:SetPoint("LEFT", h, "CENTER", x1, -36); r:SetPoint("RIGHT", h, "CENTER", x2, -36)
+    else
+      r:SetPoint("LEFT", h, "CENTER", -150, -36); r:SetPoint("RIGHT", h, "CENTER", 150, -36)
+    end
+    r:Show()
+  end
+  for i = #(rawget(tf, "treeHeaders") or {}) + 1, 4 do if tf.pssDiv["h" .. i] then tf.pssDiv["h" .. i]:Hide() end end
+end
+local function HookSpellBook()
+  -- Theme passes (after loading screens) clear everything first: redo the
+  -- spellbook and talents art each pass, not only on the first hook.
+  if S.spellBookHooked then pcall(SpellBookFrameArt); pcall(TalentsArt); return true end
+  local im, hm = _G.SpellBookItemMixin, _G.SpellBookHeaderMixin
+  if type(im) ~= "table" or not G("PlayerSpellsFrame") then return false end
+  S.spellBookHooked = true
+  pcall(WindowNow, G("PlayerSpellsFrame"))
+  HookShow(G("PlayerSpellsFrame"), WindowNow)
+  pcall(PSS.HookSecure, im, "UpdateVisuals", function(it) pcall(SpellBookItem, it) end)
+  pcall(PSS.HookSecure, im, "ApplyBorderArt", function(it) pcall(SpellBookItem, it) end)
+  if type(hm) == "table" then pcall(PSS.HookSecure, hm, "Init", function(h) pcall(SpellBookHeader, h) end) end
+  HookShow(rawget(G("PlayerSpellsFrame"), "SpellBookFrame") or G("PlayerSpellsFrame"), function()
+    pcall(SpellBookFrameArt)
+    if C_Timer then C_Timer.After(0.1, function() pcall(SpellBookFrameArt) end) end
+  end)
+  local thm = _G.ClassTalentTreeHeaderMixin
+  if type(thm) == "table" and thm.Setup then pcall(PSS.HookSecure, thm, "Setup", function(h)
+    pcall(TalentHeader, h)
+    if C_Timer then C_Timer.After(0, function() if S.active then pcall(TalentsArt) end end) end
+  end) end
+  local tf = rawget(G("PlayerSpellsFrame"), "TalentsFrame")
+  if tf then
+    HookShow(tf, function() pcall(TalentsArt) end)
+    pcall(TalentsArt)
+  end
+  pcall(SpellBookFrameArt)
+  return true
+end
+
 local function SkinWindows()
   local list = {}
   for _, n in ipairs(WINDOWS) do list[#list + 1] = G(n) end
@@ -494,6 +860,33 @@ local function SkinWindows()
     w:SetScript("OnEvent", function()
       if not (S.active and C_Timer) then return end
       for _, t in ipairs({0, 0.05, 0.3}) do C_Timer.After(t, function() pcall(ItemTextPage) end) end
+    end)
+  end
+  local cf = G("CharacterFrame")
+  if cf then
+    pcall(CharacterPanel)
+    HookShow(G("PaperDollFrame") or cf, function()
+      pcall(CharacterPanel)
+      if C_Timer then for _, t in ipairs({0.1, 0.5}) do C_Timer.After(t, function() pcall(CharacterPanel) end) end end
+    end)
+  end
+  pcall(HookColoredBars)
+  for _, n in ipairs({"CharacterFrame", "PetStableFrame", "StableFrame"}) do
+    local f = G(n)
+    if f then
+      pcall(SquareAllColoredBars, f, 0)
+      HookShow(G(n == "CharacterFrame" and "ReputationFrame" or n) or f, function(w)
+        pcall(SquareAllColoredBars, f, 0)
+        if C_Timer then C_Timer.After(0.1, function() pcall(SquareAllColoredBars, f, 0) end) end
+      end)
+    end
+  end
+  if not HookSpellBook() and not S.spellBookWatch then
+    local w = CreateFrame("Frame")
+    S.spellBookWatch = w
+    w:RegisterEvent("ADDON_LOADED")
+    w:SetScript("OnEvent", function(_, _, name)
+      if name == "Blizzard_PlayerSpells" and S.active then pcall(HookSpellBook) end
     end)
   end
   -- Quest pages switch inside the window (details, progress, reward).
@@ -1161,6 +1554,7 @@ local function Clear()
   HideTrackerLines()
   HidePOIMarks()
   Unfade()
+  for t in pairs(S.tinted or {}) do pcall(t.SetVertexColor, t, 1, 1, 1, 1); S.tinted[t] = nil end
   HideBackdrops()
   Uncrop()
   UnflatBars()
