@@ -92,6 +92,9 @@ function P:SquareStyle(uf, unit)
   -- The game's own look: bar art, target glow, level badge, name.
   for _, k in ipairs({"barTexture", "background", "bgTexture", "border", "Border"}) do Hide(hb[k]) end
   Hide(hb)
+  -- Forever keeps the game's health bar AND its level badge (the yellow ring)
+  -- in one container: hidden as a whole, our bar is a separate frame.
+  Hide(uf.HealthBarsContainer)
   for _, k in ipairs({"selectionHighlight", "aggroHighlight", "SelectionBorder", "LevelFrame", "levelFrame"}) do Hide(uf[k]) end
   local gn = uf.name or uf.Name
   Hide(gn)
