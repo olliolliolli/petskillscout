@@ -118,6 +118,14 @@ function P:SquareStyle(uf, unit)
   pcall(function() isSel = sel and true or false end)
   local c = isSel and Col("accent") or Col("edge")
   local w = isSel and 2 or 1
+  -- Elite, rare and boss mobs: a gold frame (thicker when it is your target).
+  local cls = unit and Call(UnitClassification, unit)
+  local special = false
+  pcall(function() special = cls == "elite" or cls == "rareelite" or cls == "rare" or cls == "worldboss" end)
+  if special then
+    c = {1, 0.8, 0.25, 1}
+    w = isSel and 3 or 2
+  end
   f.edge:ClearAllPoints(); f.edge:SetPoint("TOPLEFT", -w, w); f.edge:SetPoint("BOTTOMRIGHT", w, -w)
   f.edge:SetVertexColor(c[1], c[2], c[3], 1)
   f.box.edge:SetVertexColor(c[1], c[2], c[3], 1)
@@ -130,7 +138,7 @@ end
 
 local ev = CreateFrame("Frame")
 for _, e in ipairs({"NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "PLAYER_TARGET_CHANGED", "UNIT_HEALTH",
-    "UNIT_MAXHEALTH", "UNIT_FACTION", "UNIT_LEVEL"}) do pcall(ev.RegisterEvent, ev, e) end
+    "UNIT_MAXHEALTH", "UNIT_FACTION", "UNIT_LEVEL", "UNIT_CLASSIFICATION_CHANGED"}) do pcall(ev.RegisterEvent, ev, e) end
 ev:SetScript("OnEvent", function(_, event, unit)
   if event == "PLAYER_TARGET_CHANGED" then
     for u, uf in pairs(unitOf) do pcall(P.SquareStyle, P, uf, u) end
