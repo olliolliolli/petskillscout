@@ -99,8 +99,18 @@ function P:SquareStyle(uf, unit)
   local r, g, b = Call(hb.GetStatusBarColor, hb)
   if r then pcall(f.bar.SetStatusBarColor, f.bar, r, g, b) end
   if gn and gn.GetText then pcall(f.name.SetText, f.name, gn:GetText()) end
-  local lt = (uf.LevelFrame or uf.levelFrame) and ((uf.LevelFrame or uf.levelFrame).levelText or (uf.LevelFrame or uf.levelFrame).LevelText)
-  if lt and lt.GetText then pcall(f.lvl.SetText, f.lvl, lt:GetText()) end
+  -- Level from the unit itself (the game's badge text was not the mob's
+  -- level here: a "60" showed); "??" for skull mobs.
+  local lv = unit and Call(UnitLevel, unit)
+  local okL = pcall(function()
+    if lv == -1 then f.lvl:SetText("??") else f.lvl:SetFormattedText("%d", lv) end
+  end)
+  if not okL then f.lvl:SetText("") end
+  -- The game's own level badge (the yellow "38" box): any child that holds a
+  -- level text is hidden, whatever this client calls it.
+  for _, c in ipairs({uf:GetChildren()}) do
+    if c ~= f and (rawget(c, "levelText") or rawget(c, "LevelText") or rawget(c, "Level")) then Hide(c) end
+  end
   -- Edges in the theme's edge colour (as every theme frame); your target in
   -- the accent colour and a little thicker.
   local sel = unit and Call(UnitIsUnit, unit, "target")
