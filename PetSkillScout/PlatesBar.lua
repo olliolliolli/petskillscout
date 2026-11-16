@@ -61,6 +61,20 @@ local function Build(uf)
   f.box.bg = f.box:CreateTexture(nil, "BACKGROUND", nil, -1); f.box.bg:SetTexture(FLAT); f.box.bg:SetAllPoints()
   f.box.bg:SetVertexColor(0.06, 0.07, 0.06, 0.9)
   f.lvl = f.box:CreateFontString(nil, "OVERLAY"); f.lvl:SetFont(FONT, 9, "OUTLINE"); f.lvl:SetPoint("CENTER", 0, 0)
+  -- Sharp gold points for elite / rare mobs: a diamond at each end and one
+  -- on top, each with a dark core, like the spikes of an elite frame.
+  f.spikes = {}
+  local function Spike(size)
+    local o = f:CreateTexture(nil, "OVERLAY", nil, 6); o:SetTexture(FLAT); o:SetSize(size, size); o:SetRotation(math.pi / 4)
+    local i = f:CreateTexture(nil, "OVERLAY", nil, 7); i:SetTexture(FLAT); i:SetSize(size - 4, size - 4); i:SetRotation(math.pi / 4)
+    i:SetPoint("CENTER", o, "CENTER", 0, 0)
+    f.spikes[#f.spikes + 1] = {o = o, i = i}
+    return o
+  end
+  Spike(11):SetPoint("CENTER", f, "RIGHT", 4, 0)
+  Spike(11):SetPoint("CENTER", f.box, "LEFT", -4, 0)
+  Spike(9):SetPoint("CENTER", f, "TOP", 0, 2)
+  Spike(9):SetPoint("CENTER", f, "BOTTOM", 0, -2)
   ours[uf] = f
   return f
 end
@@ -196,6 +210,16 @@ function P:SquareStyle(uf, unit)
   if special then
     c = {1, 0.8, 0.25, 1}
     w = isSel and 3 or 2
+  end
+  -- Rare: silver-gold points; elite and boss: deep gold.
+  local rareOnly = false
+  pcall(function() rareOnly = cls == "rare" end)
+  for _, sp in ipairs(f.spikes or {}) do
+    sp.o:SetShown(special and true or false); sp.i:SetShown(special and true or false)
+    if special then
+      if rareOnly then sp.o:SetVertexColor(0.92, 0.92, 1, 1) else sp.o:SetVertexColor(1, 0.8, 0.25, 1) end
+      sp.i:SetVertexColor(0.08, 0.06, 0.03, 1)
+    end
   end
   f.edge:ClearAllPoints(); f.edge:SetPoint("TOPLEFT", -w, w); f.edge:SetPoint("BOTTOMRIGHT", w, -w)
   -- The level box: same height and same edge as the bar.
