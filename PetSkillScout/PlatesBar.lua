@@ -138,12 +138,26 @@ function P:SquareStyle(uf, unit)
   -- The game already colours its own (hidden) level badge by difficulty: the
   -- same colour is taken over as it is (works when the level is secret).
   local diff = uf.PlayerLevelDiffFrame and uf.PlayerLevelDiffFrame.playerLevelDiffText
-  if diff and diff.GetTextColor then
-    local okD = pcall(function()
-      local r, g, b = diff:GetTextColor()
-      f.lvl:SetTextColor(r, g, b)
-    end)
-    if okD then f.lvlColoured = true end
+  -- The difficulty colour sits either on the badge's ring (a texture tinted
+  -- by the game) or on its number: the first one that is not plain white.
+  local pld = uf.PlayerLevelDiffFrame
+  local function useColour(r, g, b)
+    local white = false
+    pcall(function() white = r > 0.95 and g > 0.95 and b > 0.95 end)
+    if white then return false end
+    return pcall(f.lvl.SetTextColor, f.lvl, r, g, b)
+  end
+  if pld and pld.GetRegions then
+    for _, r in ipairs({pld:GetRegions()}) do
+      if not f.lvlColoured and r.GetObjectType and r:GetObjectType() == "Texture" and r.GetVertexColor then
+        local okV, cr, cg, cb = pcall(r.GetVertexColor, r)
+        if okV and cr and useColour(cr, cg, cb) then f.lvlColoured = true end
+      end
+    end
+  end
+  if not f.lvlColoured and diff and diff.GetTextColor then
+    local okD, cr, cg, cb = pcall(diff.GetTextColor, diff)
+    if okD and cr and useColour(cr, cg, cb) then f.lvlColoured = true end
   end
   local okC = f.lvlColoured or pcall(function()
     if lv == -1 then f.lvl:SetTextColor(1, 0.1, 0.1); f.lvlColoured = true; return end

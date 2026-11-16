@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.155"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.156"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -312,11 +312,18 @@ function PSS.PlateMap()
     local function walk(fr, path, depth)
         if depth > 5 or n > 40 then return end
         for _, r in ipairs({fr:GetRegions()}) do
+            if r:GetObjectType() == "Texture" and key(fr) == "PlayerLevelDiffFrame" then
+                local okV, cr, cg, cb = pcall(r.GetVertexColor, r)
+                local okA, at = pcall(r.GetAtlas, r)
+                PSS:Print(string.format("   badge tex %s atlas %s colour %s %s %s", key(r), tostring(okA and at), tostring(cr), tostring(cg), tostring(cb)))
+            end
             if r:GetObjectType() == "FontString" and n <= 40 then
                 n = n + 1
                 local okT, t = pcall(r.GetText, r)
                 local txt = okT and (issecretvalue and issecretvalue(t) and "<secret>" or tostring(t)) or "?"
                 PSS:Print(string.format("%s.%s text '%s' a=%.2f", path, key(r), txt, (r.GetAlpha and r:GetAlpha()) or 0))
+                local okC, cr, cg, cb = pcall(r.GetTextColor, r)
+                if okC and cr then PSS:Print(string.format("   colour %s %s %s", tostring(cr), tostring(cg), tostring(cb))) end
             end
         end
         for _, c in ipairs({fr:GetChildren()}) do
