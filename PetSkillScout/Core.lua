@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.150"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.151"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -302,29 +302,33 @@ end
 SLASH_PETSKILLSCOUT1 = "/petskills"
 SLASH_PETSKILLSCOUT2 = "/pss"
 function PSS.PlateMap()
-    -- Everything right of the target's health bar (finding the level badge).
+    -- Names only (positions of nameplate parts cannot be measured on this
+    -- client): every frame and text under the plate, with alpha and text.
     local pl = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit("target")
     if not pl and C_NamePlate and C_NamePlate.GetNamePlates then pl = C_NamePlate.GetNamePlates()[1] end
-    if not pl then PSS:Print("target a mob that has a nameplate first") else
-        local hb = (pl.UnitFrame or pl).healthBar or (pl.UnitFrame or pl).HealthBar
-        local hr = hb and hb:GetRight() or 0
-        local n = 0
-        local function key(o) return tostring(o:GetName() or (o.GetParentKey and o:GetParentKey()) or o:GetObjectType()) end
-        local function walk(fr, path, depth)
-            if depth > 6 or n > 25 then return end
-            for _, r in ipairs({fr:GetRegions()}) do
-                local l = r:GetLeft()
-                if l and l >= hr - 6 and n <= 25 then
-                    n = n + 1
-                    PSS:Print(string.format("%s.%s %s a=%.2f shown=%s x+%d w%d", path, key(r), r:GetObjectType(), r:GetAlpha() or 0,
-                        tostring(r:IsShown()), math.floor(l - hr), math.floor(r:GetWidth() or 0)))
-                end
+    if not pl then PSS:Print("no nameplate on screen") return end
+    local n = 0
+    local function key(o) return tostring((o.GetParentKey and o:GetParentKey()) or o:GetName() or o:GetObjectType()) end
+    local function walk(fr, path, depth)
+        if depth > 5 or n > 40 then return end
+        for _, r in ipairs({fr:GetRegions()}) do
+            if r:GetObjectType() == "FontString" and n <= 40 then
+                n = n + 1
+                local okT, t = pcall(r.GetText, r)
+                local txt = okT and (issecretvalue and issecretvalue(t) and "<secret>" or tostring(t)) or "?"
+                PSS:Print(string.format("%s.%s text '%s' a=%.2f", path, key(r), txt, r:GetEffectiveAlpha() or 0))
             end
-            for _, c in ipairs({fr:GetChildren()}) do walk(c, path .. ">" .. key(c), depth + 1) end
         end
-        walk(pl, "plate", 0)
-        if n == 0 then PSS:Print("nothing right of the bar") end
+        for _, c in ipairs({fr:GetChildren()}) do
+            n = n + 1
+            if n <= 40 then
+                PSS:Print(string.format("%s>%s a=%.2f eff=%.2f shown=%s ignoreParentAlpha=%s", path, key(c), c:GetAlpha() or 0,
+                    c:GetEffectiveAlpha() or 0, tostring(c:IsShown()), tostring(c.IsIgnoringParentAlpha and c:IsIgnoringParentAlpha())))
+            end
+            walk(c, path .. ">" .. key(c), depth + 1)
+        end
     end
+    walk(pl.UnitFrame or pl, "UF", 0)
 end
 SlashCmdList.PETSKILLSCOUT = function(msg)
     msg = (msg or ""):lower()
