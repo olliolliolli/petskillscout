@@ -4280,6 +4280,8 @@ local SETTINGS = {
         end
       end},
     {key="skinPlates", label="optSkinPlates", hint="optSkinPlatesHint", kind="toggle", default=true, apply=SkinApply},
+    {key="plateStack", label="optPlateStack", hint="optPlateStackHint", kind="toggle", default=true,
+      set=function(v) PetSkillScoutDB.plateStack = v; PSS:ApplyPlateStacking() end},
     {key="skinParty", label="optSkinParty", hint="optSkinPartyHint", kind="toggle", default=true, apply=SkinApply},
     {key="skinBags", label="optSkinBags", hint="optSkinBagsHint", kind="toggle", default=true, apply=SkinApply},
     {key="skinFonts", label="optSkinFonts", hint="optSkinFontsHint", kind="toggle", default=true, apply=SkinApply},

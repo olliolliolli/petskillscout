@@ -199,3 +199,20 @@ P.frame:SetScript("OnEvent", function(_, event, unit)
     pcall(P.UpdateTargets, P)
   end
 end)
+
+-- Stacked nameplates: in a crowd the plates sit one above another in a column
+-- instead of overlapping (the game's own setting, nameplateMotion 1). Set out
+-- of combat only; option "Stack nameplates" (default on).
+local stackEv = CreateFrame("Frame")
+for _, e in ipairs({"PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED"}) do pcall(stackEv.RegisterEvent, stackEv, e) end
+function PSS:ApplyPlateStacking()
+  if not (SetCVar and GetCVar) or (InCombatLockdown and InCombatLockdown()) then return end
+  local want = not (PetSkillScoutDB and PetSkillScoutDB.plateStack == false)
+  local v = want and "1" or "0"
+  if GetCVar("nameplateMotion") ~= v then pcall(SetCVar, "nameplateMotion", v) end
+  -- A little room between stacked plates, so the bars do not touch.
+  if want and GetCVar("nameplateOverlapV") and tonumber(GetCVar("nameplateOverlapV")) and tonumber(GetCVar("nameplateOverlapV")) > 1.0 then
+    pcall(SetCVar, "nameplateOverlapV", "1.0")
+  end
+end
+stackEv:SetScript("OnEvent", function() pcall(PSS.ApplyPlateStacking, PSS) end)
