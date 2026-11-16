@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.140"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.141"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -511,6 +511,20 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
                     tostring(x and math.floor(x)), tostring(y and math.floor(y)), tostring(v:GetFrameStrata()), tostring(v:GetFrameLevel()),
                     select("#", v:GetChildren())))
             end
+        end
+    elseif msg == "plates" then
+        local P, S = PSS.Plates, PSS.Skin
+        PSS:Print(string.format("plates on %s, theme active %s, option skinPlates %s, extras %s",
+            tostring(P and P.on), tostring(S and S.active), tostring(PetSkillScoutDB.skinPlates), tostring(PetSkillScoutDB.plateExtras)))
+        local list = C_NamePlate and C_NamePlate.GetNamePlates and C_NamePlate.GetNamePlates() or {}
+        PSS:Print("plates on screen: " .. #list)
+        for i, pl in ipairs(list) do
+            if i > 3 then break end
+            local uf = pl.UnitFrame or pl
+            local okF, forb = pcall(uf.IsForbidden, uf)
+            local hb = rawget(uf, "healthBar") or rawget(uf, "HealthBar")
+            PSS:Print(string.format("  %d: unit %s forbidden %s healthBar %s", i, tostring(rawget(pl, "namePlateUnitToken")),
+                tostring(okF and forb), tostring(hb and (hb:GetName() or "yes"))))
         end
     elseif msg == "hawk" then
         if PSS.HawkTimer and PSS.HawkTimer.Diag then PSS.HawkTimer:Diag() end
