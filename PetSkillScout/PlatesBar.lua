@@ -157,6 +157,10 @@ function P:SquareStyle(uf, unit)
     w = isSel and 3 or 2
   end
   f.edge:ClearAllPoints(); f.edge:SetPoint("TOPLEFT", -w, w); f.edge:SetPoint("BOTTOMRIGHT", w, -w)
+  -- The level box: same height and same edge as the bar.
+  f.box:SetSize(H + 6, H)
+  f.box:ClearAllPoints(); f.box:SetPoint("RIGHT", f, "LEFT", -(w * 2 + 2), 0)
+  f.box.edge:ClearAllPoints(); f.box.edge:SetPoint("TOPLEFT", -w, w); f.box.edge:SetPoint("BOTTOMRIGHT", w, -w)
   f.edge:SetVertexColor(c[1], c[2], c[3], 1)
   f.box.edge:SetVertexColor(c[1], c[2], c[3], 1)
   local bgc = Col("slot")
