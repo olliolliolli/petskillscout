@@ -56,6 +56,44 @@ G.DUAL_WIELD_LEVEL = 20
 
 -- Data index ---------------------------------------------------------------
 local byId, bySlot
+-- Quest rewards of WoW Forever (ATT, QuestDB / QuestItems) that the classic
+-- item list lacks: new Forever items like Master Hunter's Wand. Inventory type
+-- (Enum.InventoryType) -> slot kind and equip location.
+local INV = {[1] = {"head", "INVTYPE_HEAD"}, [2] = {"neck", "INVTYPE_NECK"}, [3] = {"shoulder", "INVTYPE_SHOULDER"},
+  [5] = {"chest", "INVTYPE_CHEST"}, [20] = {"chest", "INVTYPE_ROBE"}, [6] = {"waist", "INVTYPE_WAIST"},
+  [7] = {"legs", "INVTYPE_LEGS"}, [8] = {"feet", "INVTYPE_FEET"}, [9] = {"wrist", "INVTYPE_WRIST"},
+  [10] = {"hands", "INVTYPE_HAND"}, [11] = {"finger", "INVTYPE_FINGER"}, [12] = {"trinket", "INVTYPE_TRINKET"},
+  [13] = {"onehand", "INVTYPE_WEAPON"}, [21] = {"mainhand", "INVTYPE_WEAPONMAINHAND"},
+  [22] = {"offhand", "INVTYPE_WEAPONOFFHAND"}, [17] = {"twohand", "INVTYPE_2HWEAPON"},
+  [15] = {"ranged", "INVTYPE_RANGED"}, [26] = {"ranged", "INVTYPE_RANGEDRIGHT"},
+  [16] = {"back", "INVTYPE_CLOAK"}}
+local function AddQuestRewards()
+  local items, quests = PSS.QuestItems, PSS.QuestDB
+  if not (items and quests) then return end
+  local GC = PSS.GearCompare
+  for qid, r in pairs(quests) do
+    if type(r.i) == "table" then
+      for _, id in ipairs(r.i) do
+        local it = items[id]
+        local inv = it and INV[it.inv]
+        -- Only items ATT describes (name, item level) and that are not
+        -- encrypted in the game; they arrive with the data updates.
+        if inv and not byId[id] and (it.q or 0) >= 2 and type(it.n) == "string" and it.n ~= "" and it.il then
+          local ok, from = true, nil
+          if GC and GC.Usable then ok, from = GC:Usable(it.c, it.sc, inv[2]) end
+          if ok then
+            local lvl = math.max(r.l or 1, from or 0)
+            local rec = {id = id, n = it.n, slot = inv[1], q = it.q, lvl = lvl, req = lvl, st = {}, fac = r.s,
+              src = {{t = "q", n = r.n, f = r.s}}, forever = true}
+            byId[id] = rec
+            bySlot[rec.slot] = bySlot[rec.slot] or {}
+            table.insert(bySlot[rec.slot], rec)
+          end
+        end
+      end
+    end
+  end
+end
 local function Index()
   if byId then return end
   byId, bySlot = {}, {}
@@ -68,6 +106,7 @@ local function Index()
       end
     end
   end
+  pcall(AddQuestRewards)
 end
 function G:Get(id) Index(); return byId[id] end
 
@@ -79,9 +118,10 @@ function G:Spec()
   return "MM"
 end
 function G:SetSpec(s) if PetSkillScoutDB then PetSkillScoutDB.gearSpec = s end end
-function G:IncludeRaids() return DB().gearRaids == true end
-function G:IncludePvp() return DB().gearPvp == true end
-function G:IncludeRare() return DB().gearRare == true end
+-- BiS mode takes every source (raids, rare drops, PvP) regardless of the toggles.
+function G:IncludeRaids() return self.allSources or DB().gearRaids == true end
+function G:IncludePvp() return self.allSources or DB().gearPvp == true end
+function G:IncludeRare() return self.allSources or DB().gearRare == true end
 
 -- Realistic sources: a quest, a vendor or a drop with at least 2% chance.
 -- Rare world drops (BoE, auction house) only with the option on.
@@ -174,6 +214,19 @@ local function ItemLink(id)
   return Plain(link), Plain(name)
 end
 
+local exists = {}
+function G:Exists(id)
+  local v = exists[id]
+  if v == nil then
+    local fn = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
+    if not fn then return true end
+    local itemID, _, _, _, icon = Call(fn, id)
+    v = Plain(itemID) ~= nil and Plain(icon) ~= nil
+    exists[id] = v
+  end
+  return v
+end
+
 local requested = {}
 function G:Request(id)
   if not id or requested[id] then return end
@@ -198,6 +251,8 @@ function G:Stats(id, link)
     st.live = true
     return st
   end
+  -- Forever quest rewards carry no stats of their own: ask the client.
+  if rec and rec.forever then self:Request(id) end
   if rec then return rec.st end
   self:Request(id)
   return nil
@@ -323,6 +378,17 @@ end
 -- relaxed: also rare drops (used when the slot is empty and nothing practical exists).
 function G:Allowed(rec, maxLevel, relaxed)
   if rec.lvl > maxLevel then return false end
+  -- Hunters in Forever cannot use thrown weapons.
+  if rec.kind == "thrown" then return false end
+  -- Only items the game client knows: the classic list also holds items that
+  -- do not exist in Forever (shown as "?"). GetItemInfoInstant answers from
+  -- the client database without a server query.
+  if not self:Exists(rec.id) then return false end
+  -- Forever quest rewards only once the game has told us their stats.
+  if rec.forever then
+    local st = self:Stats(rec.id)
+    if not (st and st.live and next(st)) then return false end
+  end
   local fac = Faction()
   if rec.fac and fac and rec.fac ~= fac then return false end
   if rec.raid and not self:IncludeRaids() then return false end
@@ -356,6 +422,14 @@ end
 -- Each entry: {slot, pick = {rec, score}, alts = {...}, equipped = {id, link,
 -- score}, gain (percent, nil when nothing equipped), better (bool)}.
 function G:Plan(mode, spec)
+  if mode == "bis" then
+    -- Best in slot at your level from every source (raids, rare drops, PvP).
+    self.allSources = true
+    local ok, plan, level = pcall(self.Plan, self, "now", spec)
+    self.allSources = nil
+    if ok then return plan, level end
+    return {}, self:PlayerLevel()
+  end
   spec = spec or self:Spec()
   local level = mode == "max" and self:MaxLevel() or self:PlayerLevel()
   local plan, used = {}, {}

@@ -2077,15 +2077,18 @@ function UI:BuildGear()
     self.gearSpecBtns[i] = b
   end
   -- Mode.
-  self.gearNow = MakeButton(p, "", 150, 30, function() st.mode = "now"; st.alt = {}; UI:UpdateGear() end, {size = 12})
+  self.gearNow = MakeButton(p, "", 140, 30, function() st.mode = "now"; st.alt = {}; UI:UpdateGear() end, {size = 12})
   self.gearNow:SetPoint("TOPLEFT", p, "TOPLEFT", 376, 0)
-  self.gearMax = MakeButton(p, "", 160, 30, function() st.mode = "max"; st.alt = {}; UI:UpdateGear() end, {size = 12})
+  self.gearMax = MakeButton(p, "", 140, 30, function() st.mode = "max"; st.alt = {}; UI:UpdateGear() end, {size = 12})
   self.gearMax:SetPoint("LEFT", self.gearNow, "RIGHT", 4, 0)
+  self.gearBis = MakeButton(p, "BiS", 50, 30, function() st.mode = "bis"; st.alt = {}; UI:UpdateGear() end, {size = 12})
+  self.gearBis:SetPoint("LEFT", self.gearMax, "RIGHT", 4, 0)
+  SetTip(self.gearBis, function() return L("gearBisTip") end)
   self.gearRaids = MakeButton(p, "", 100, 30, function()
     if PetSkillScoutDB then PetSkillScoutDB.gearRaids = not PetSkillScoutDB.gearRaids end
     st.alt = {}; UI:UpdateGear()
   end, {size = 12})
-  self.gearRaids:SetPoint("LEFT", self.gearMax, "RIGHT", 12, 0)
+  self.gearRaids:SetPoint("LEFT", self.gearBis, "RIGHT", 12, 0)
   SetTip(self.gearRaids, function() return L("gearRaidsTip") end)
   self.gearRare = MakeButton(p, "", 150, 30, function()
     if PetSkillScoutDB then PetSkillScoutDB.gearRare = not PetSkillScoutDB.gearRare end
@@ -2207,15 +2210,16 @@ function UI:UpdateGear()
   local cap = G:MaxLevel()
   self.gearNow:SetText(L("gearModeNow"))
   self.gearMax:SetText(string.format(L("gearModeMax"), cap))
-  SetActive(self.gearNow, st.mode ~= "max")
+  SetActive(self.gearNow, st.mode ~= "max" and st.mode ~= "bis")
   SetActive(self.gearMax, st.mode == "max")
+  SetActive(self.gearBis, st.mode == "bis")
   self.gearRaids:SetText(L("gearRaids") .. ": " .. L(G:IncludeRaids() and "gearYes" or "gearNo"))
   SetActive(self.gearRaids, G:IncludeRaids())
   self.gearRare:SetText(L("gearRareDrops") .. ": " .. L(G:IncludeRare() and "gearYes" or "gearNo"))
   SetActive(self.gearRare, G:IncludeRare())
   self.gearPvp:SetText("PvP: " .. L(G:IncludePvp() and "gearYes" or "gearNo"))
   SetActive(self.gearPvp, G:IncludePvp())
-  local plan, level = G:Plan(st.mode == "max" and "max" or "now", spec)
+  local plan, level = G:Plan(st.mode == "max" and "max" or st.mode == "bis" and "bis" or "now", spec)
   local upgrades = 0
   for i, row in ipairs(self.gearRows) do
     local e = plan[i]
