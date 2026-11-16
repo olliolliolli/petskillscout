@@ -108,9 +108,24 @@ function P:SquareStyle(uf, unit)
   if not okL then f.lvl:SetText("") end
   -- The game's own level badge (the yellow "38" box): any child that holds a
   -- level text is hidden, whatever this client calls it.
-  for _, c in ipairs({uf:GetChildren()}) do
-    if c ~= f and (rawget(c, "levelText") or rawget(c, "LevelText") or rawget(c, "Level")) then Hide(c) end
+  -- Found by its content: a text that is just the level number (or "??"),
+  -- anywhere under the plate except our own frame; its holder is hidden.
+  local function hideLevel(fr, depth)
+    if depth > 4 or fr == f then return end
+    if rawget(fr, "levelText") or rawget(fr, "LevelText") or rawget(fr, "Level") then Hide(fr) end
+    for _, r in ipairs({fr:GetRegions()}) do
+      if r.GetObjectType and r:GetObjectType() == "FontString" then
+        local isLvl = false
+        pcall(function() local t = r:GetText(); isLvl = type(t) == "string" and (t:match("^%d+$") or t == "??") and true or false end)
+        if isLvl then
+          Hide(r)
+          if fr ~= uf and fr ~= hb then Hide(fr) end
+        end
+      end
+    end
+    for _, c in ipairs({fr:GetChildren()}) do hideLevel(c, depth + 1) end
   end
+  hideLevel(uf, 0)
   -- Edges in the theme's edge colour (as every theme frame); your target in
   -- the accent colour and a little thicker.
   local sel = unit and Call(UnitIsUnit, unit, "target")
