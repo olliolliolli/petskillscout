@@ -226,14 +226,13 @@ local function Extra(uf, hb)
   local e = extra[uf]
   if e then return e end
   e = {}
-  e.pct = hb:CreateFontString(nil, "OVERLAY")
-  Font(e.pct, 9)
-  e.pct:SetPoint("RIGHT", hb, "RIGHT", -2, 0)
+  e.pct = hb:CreateFontString(nil, "OVERLAY") -- (unused: PlatesBar.lua shows %)
+  e.pct:Hide()
   e.debuffs = {}
   for i = 1, 5 do
     local d = CreateFrame("Frame", nil, uf)
     d:SetSize(18, 18)
-    d:SetPoint("BOTTOMLEFT", hb, "TOPLEFT", (i - 1) * 20, 14)
+    d:SetPoint("BOTTOMLEFT", hb, "TOPLEFT", (i - 1) * 20, 18)
     local bg = d:CreateTexture(nil, "BACKGROUND"); bg:SetTexture(FLAT); bg:SetAllPoints(); bg:SetVertexColor(0, 0, 0, 1)
     d.icon = d:CreateTexture(nil, "ARTWORK"); d.icon:SetPoint("TOPLEFT", 1, -1); d.icon:SetPoint("BOTTOMRIGHT", -1, 1)
     d.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
