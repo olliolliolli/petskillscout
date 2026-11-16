@@ -126,6 +126,35 @@ function P:SquareStyle(uf, unit)
     for _, c in ipairs({fr:GetChildren()}) do hideLevel(c, depth + 1) end
   end
   hideLevel(uf, 0)
+  -- And by place: small pieces right of the game's health bar (the badge and
+  -- its yellow ring), our own frame and the cast bar excluded.
+  local okR, hr = pcall(hb.GetRight, hb)
+  if okR and type(hr) == "number" then
+    local cb = uf.castBar or uf.CastBar
+    local function byPlace(fr, depth)
+      if depth > 3 or fr == f or fr == cb then return end
+      for _, r in ipairs({fr:GetRegions()}) do
+        local okL, l = pcall(r.GetLeft, r)
+        local okW, w = pcall(r.GetWidth, r)
+        if okL and okW and type(l) == "number" and type(w) == "number" and l >= hr - 4 and w <= 40 then Hide(r) end
+      end
+      for _, c in ipairs({fr:GetChildren()}) do
+        local okL, l = pcall(c.GetLeft, c)
+        local okW, w = pcall(c.GetWidth, c)
+        if c ~= f and c ~= cb and okL and okW and type(l) == "number" and type(w) == "number" and l >= hr - 4 and w <= 40 then Hide(c)
+        else byPlace(c, depth + 1) end
+      end
+    end
+    byPlace(uf, 0)
+  end
+  -- Our level coloured like the game's: by how hard the mob is for you.
+  f.lvlColoured = false
+  local okC = pcall(function()
+    if lv == -1 then f.lvl:SetTextColor(1, 0.1, 0.1); f.lvlColoured = true; return end
+    local dc = GetCreatureDifficultyColor and GetCreatureDifficultyColor(lv) or (GetQuestDifficultyColor and GetQuestDifficultyColor(lv))
+    if dc and dc.r then f.lvl:SetTextColor(dc.r, dc.g, dc.b); f.lvlColoured = true end
+  end)
+  if not okC then f.lvlColoured = false end
   -- Edges in the theme's edge colour (as every theme frame); your target in
   -- the accent colour and a little thicker.
   local sel = unit and Call(UnitIsUnit, unit, "target")
@@ -146,7 +175,7 @@ function P:SquareStyle(uf, unit)
   f.box.edge:SetVertexColor(c[1], c[2], c[3], 1)
   local bgc = Col("slot")
   f.bg:SetVertexColor(bgc[1], bgc[2], bgc[3], 0.85); f.box.bg:SetVertexColor(bgc[1], bgc[2], bgc[3], 0.85)
-  f.lvl:SetTextColor(c[1], c[2], c[3])
+  if not f.lvlColoured then f.lvl:SetTextColor(c[1], c[2], c[3]) end
   f:Show()
   self:SquareHealth(uf, unit)
 end
