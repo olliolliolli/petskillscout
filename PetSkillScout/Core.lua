@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.151"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.152"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -316,14 +316,14 @@ function PSS.PlateMap()
                 n = n + 1
                 local okT, t = pcall(r.GetText, r)
                 local txt = okT and (issecretvalue and issecretvalue(t) and "<secret>" or tostring(t)) or "?"
-                PSS:Print(string.format("%s.%s text '%s' a=%.2f", path, key(r), txt, r:GetEffectiveAlpha() or 0))
+                PSS:Print(string.format("%s.%s text '%s' a=%.2f", path, key(r), txt, (r.GetAlpha and r:GetAlpha()) or 0))
             end
         end
         for _, c in ipairs({fr:GetChildren()}) do
             n = n + 1
             if n <= 40 then
-                PSS:Print(string.format("%s>%s a=%.2f eff=%.2f shown=%s ignoreParentAlpha=%s", path, key(c), c:GetAlpha() or 0,
-                    c:GetEffectiveAlpha() or 0, tostring(c:IsShown()), tostring(c.IsIgnoringParentAlpha and c:IsIgnoringParentAlpha())))
+                PSS:Print(string.format("%s>%s a=%.2f eff=%.2f shown=%s ignoreParentAlpha=%s", path, key(c), (c.GetAlpha and c:GetAlpha()) or 0,
+                    (c.GetEffectiveAlpha and c:GetEffectiveAlpha()) or 0, tostring(c.IsShown and c:IsShown()), tostring(c.IsIgnoringParentAlpha and c:IsIgnoringParentAlpha())))
             end
             walk(c, path .. ">" .. key(c), depth + 1)
         end
