@@ -525,6 +525,19 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
             local hb = rawget(uf, "healthBar") or rawget(uf, "HealthBar")
             PSS:Print(string.format("  %d: unit %s forbidden %s healthBar %s", i, tostring(rawget(pl, "namePlateUnitToken")),
                 tostring(okF and forb), tostring(hb and (hb:GetName() or "yes"))))
+            if hb then
+                local t = hb.GetStatusBarTexture and hb:GetStatusBarTexture()
+                local okT, tex = pcall(t and t.GetTexture or function() end, t)
+                local okA, atl = pcall(t and t.GetAtlas or function() end, t)
+                local e = PSS.Plates.extra and PSS.Plates.extra[uf]
+                PSS:Print(string.format("     bar visible %s %dx%d tex %s atlas %s | unit %s | extras %s pct '%s' | skinned %s",
+                    tostring(hb:IsVisible()), hb:GetWidth() or 0, hb:GetHeight() or 0, tostring(okT and tex), tostring(okA and atl),
+                    tostring(PSS.Plates.plateUnit and PSS.Plates.plateUnit[uf]), tostring(e ~= nil), tostring(e and e.pct:GetText()),
+                    tostring(PSS.Skin.BackdropOf and PSS.Skin:BackdropOf(hb) ~= nil)))
+                local kids = {}
+                for _, c in ipairs({uf:GetChildren()}) do kids[#kids + 1] = tostring(c:GetName() or c:GetDebugName and c:GetDebugName() or c:GetObjectType()) end
+                PSS:Print("     children: " .. table.concat(kids, ", "):sub(1, 220))
+            end
         end
     elseif msg == "hawk" then
         if PSS.HawkTimer and PSS.HawkTimer.Diag then PSS.HawkTimer:Diag() end

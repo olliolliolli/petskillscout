@@ -221,6 +221,7 @@ stackEv:SetScript("OnEvent", function() pcall(PSS.ApplyPlateStacking, PSS) end)
 -- and a cast bar that says when a spell can be interrupted (bright orange bar,
 -- gold edge, "KICK!"); grey when it cannot be. Display only.
 local extra = setmetatable({}, {__mode = "k"})
+P.extra, P.plateUnit = extra, plateUnit
 local function Extra(uf, hb)
   local e = extra[uf]
   if e then return e end
