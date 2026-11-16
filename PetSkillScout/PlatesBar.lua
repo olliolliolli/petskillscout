@@ -129,27 +129,8 @@ function P:SquareStyle(uf, unit)
     for _, c in ipairs({fr:GetChildren()}) do hideLevel(c, depth + 1) end
   end
   hideLevel(uf, 0)
-  -- And by place: small pieces right of the game's health bar (the badge and
-  -- its yellow ring), our own frame and the cast bar excluded.
-  local okR, hr = pcall(hb.GetRight, hb)
-  if okR and type(hr) == "number" then
-    local cb = uf.castBar or uf.CastBar
-    local function byPlace(fr, depth)
-      if depth > 3 or fr == f or fr == cb then return end
-      for _, r in ipairs({fr:GetRegions()}) do
-        local okL, l = pcall(r.GetLeft, r)
-        local okW, w = pcall(r.GetWidth, r)
-        if okL and okW and type(l) == "number" and type(w) == "number" and l >= hr - 4 and w <= 40 then Hide(r) end
-      end
-      for _, c in ipairs({fr:GetChildren()}) do
-        local okL, l = pcall(c.GetLeft, c)
-        local okW, w = pcall(c.GetWidth, c)
-        if c ~= f and c ~= cb and okL and okW and type(l) == "number" and type(w) == "number" and l >= hr - 4 and w <= 40 then Hide(c)
-        else byPlace(c, depth + 1) end
-      end
-    end
-    byPlace(uf, 0)
-  end
+  -- (No search by position: nameplate parts cannot be measured on this
+  -- client, "Can't measure restricted regions".)
   -- Our level coloured like the game's: by how hard the mob is for you.
   f.lvlColoured = false
   local okC = pcall(function()
