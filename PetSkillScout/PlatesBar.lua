@@ -211,13 +211,13 @@ function P:SquareStyle(uf, unit)
     c = {1, 0.8, 0.25, 1}
     w = isSel and 3 or 2
   end
-  -- Rare: silver-gold points; elite and boss: deep gold.
+  -- Gold points for every elite, rare and boss mob.
   local rareOnly = false
   pcall(function() rareOnly = cls == "rare" end)
   for _, sp in ipairs(f.spikes or {}) do
     sp.o:SetShown(special and true or false); sp.i:SetShown(special and true or false)
     if special then
-      if rareOnly then sp.o:SetVertexColor(0.92, 0.92, 1, 1) else sp.o:SetVertexColor(1, 0.8, 0.25, 1) end
+      sp.o:SetVertexColor(1, 0.8, 0.25, 1)
       sp.i:SetVertexColor(0.08, 0.06, 0.03, 1)
     end
   end
