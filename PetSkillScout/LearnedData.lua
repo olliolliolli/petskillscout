@@ -52,6 +52,7 @@ quests = {
   [603] = {n = "Ansirem's Key", g = 2543, gn = nil, f = "A", m = 1416, x = 14.3, y = 59.7, i = {}},
   [6073] = {n = "The Hunter's Path", g = 5515, gn = nil, f = "A", m = 1453, x = 67.4, y = 36.4, i = {}},
   [64] = {n = "The Forgotten Heirloom", g = 237, gn = nil, f = "A", m = 1436, x = 60, y = 19.4, i = {1179, 4541}},
+  [694] = {n = "Trelane's Defenses", g = 2789, gn = nil, f = "A", m = 1417, x = 46.6, y = 47, i = {}},
   [7041] = {n = "Vyletongue Corruption", g = 11715, gn = nil, f = "A", m = 1443, x = 68.4, y = 9, i = {17768, 17778, 17770}},
   [7065] = {n = "Corruption of Earth and Seed", g = 13698, gn = nil, f = "A", m = 1443, x = 63.9, y = 10.6, i = {17705, 17743, 17753}},
   [7070] = {n = "Shadowshard Fragments", g = 4967, gn = nil, f = "A", m = 1445, x = 66.4, y = 49.3, i = {17772, 17773}},

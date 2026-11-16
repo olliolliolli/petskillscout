@@ -209,6 +209,11 @@ CHANGELOG
 3.7.114
 - Theme: game menu and other newer buttons lose the red button art and the red glow on hover.
 
+3.7.138
+- Data update 2026-11-16: AllTheThings 9d6c28a (5067 quests: +3 new - A Lesson in Literacy, Legashi Horns,
+  The Old Key; quest givers for 4540). New pet teacher: Gray Fox (Duskwood, 22-23) teaches Trickster's Dance 1.
+  Learned data +1 quest.
+
 3.7.137
 - Data update 2026-11-15 (2): learned data +8 quests +22 ammo vendors +13 rare spots (AllTheThings unchanged).
 - Cooldown Manager: groups stacked and centred over the bars as one block with the hawk squares; held in place
