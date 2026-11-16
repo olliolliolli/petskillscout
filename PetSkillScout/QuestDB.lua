@@ -1,7 +1,7 @@
 -- Quests of WoW Forever (generated, do not edit by hand).
 -- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/AllTheThings),
 -- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.
--- Source commit 9d6c28a. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
+-- Source commit 5addfb6. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
 -- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),
 -- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,
 -- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.
@@ -3488,7 +3488,8 @@ PSS.QuestDB = {
 [78150]={p={81955,84398,79949,78145,79091,79092,79096,79535,79097,78142,81956,78147,79948,79950,81952,78149,79947,78146,84399,81949,84396,79951,78124,84402,84397,79093,78148,79952,81947,84401,78143,81953,79095,78127,84400,79094,84395,81954},pn=10,i={277203,277204},n="Friend of the Library"},
 [78261]={ob=410369,x=47.1,y=71.1,m=1421,cl={4},o="in",ox=58.2,oy=51.6,om=1442,n="The Horn of Xelthos (1/2)"},
 [78307]={ob=410369,x=47.1,y=71.1,m=1421,cl={4},p={78261},i={277210},n="The Horn of Xelthos (2/2)"},
-[78699]={ob=410369,x=47.1,y=71.1,m=1421,l=25,cl={4},p={78307},i={277246},n="The Eye of Bhossca"},
+[78676]={ob=410369,x=47.1,y=71.1,m=1421,l=25,cl={4},p={78307},o="i",n="The Eye of Bhossca (1/2)"},
+[78699]={ob=410369,x=47.1,y=71.1,m=1421,l=25,cl={4},p={78676},i={277246},n="The Eye of Bhossca (2/2)"},
 [78823]={l=26,n="Terror of the Desert Skies (Primitive Drawing)"},
 [78830]={g=715,x=35.6,y=10.8,m=1434,l=26,cl={3},o="i",ox=22.4,oy=67.6,om=1418,i={277209,277207},n="Terror of the Desert Skies (Hunter)"},
 [79007]={ob=415106,x=46.4,y=73.9,m=1413,l=14,s="H",i={2459,3388},n="... and that note you found (H)"},
@@ -4771,7 +4772,7 @@ PSS.QuestDB = {
 [97319]={g=10839,x=83.2,y=68.4,m=1420,l=55,s="H",n="A Cousin Abroad"},
 [97326]={g=268684,x=36,y=28.2,m=1454,l=5,s="H",o="i",i={281272,281273,281269,281271,281270},n="Rocks to Rests"},
 [97327]={g=235903,x=42,y=38.8,m=1447,l=55,d=1,o="i",n="Blackmaw Pouches"},
-[97328]={ob=661516,x=31.4,y=12.8,m=1434,l=30,o="i",n="Anything of Value"},
+[97328]={ob=661516,x=31.4,y=12.8,m=1434,l=30,o="i",ox=22.8,oy=11.1,om=1434,n="Anything of Value"},
 [97329]={g=268992,x=23.4,y=12.6,m=1434,l=30,o="i",n="Where's the Key?"},
 [97331]={g=268992,x=23.4,y=12.6,m=1434,l=30,p={97329},n="Zimmix's Great Escape"},
 [97332]={g=4631,x=26.2,y=73.4,m=1434,l=36,i={278019,2595,278017,278018},n="Twice Misplaced Trust"},
