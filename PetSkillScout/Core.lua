@@ -535,7 +535,7 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
                     tostring(PSS.Plates.plateUnit and PSS.Plates.plateUnit[uf]), tostring(e ~= nil), tostring(e and e.pct:GetText()),
                     tostring(PSS.Skin.BackdropOf and PSS.Skin:BackdropOf(hb) ~= nil)))
                 local kids = {}
-                for _, c in ipairs({uf:GetChildren()}) do kids[#kids + 1] = tostring(c:GetName() or c:GetDebugName and c:GetDebugName() or c:GetObjectType()) end
+                for _, c in ipairs({uf:GetChildren()}) do kids[#kids + 1] = tostring(c:GetName() or (c.GetDebugName and c:GetDebugName()) or c:GetObjectType()) end
                 PSS:Print("     children: " .. table.concat(kids, ", "):sub(1, 220))
             end
         end
