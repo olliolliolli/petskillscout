@@ -135,6 +135,23 @@ function P:SquareStyle(uf, unit)
   -- client, "Can't measure restricted regions".)
   -- Our level coloured like the game's: by how hard the mob is for you.
   f.lvlColoured = false
+  -- The standard level colours, worked out here: red 5+ levels above you,
+  -- orange 3-4, yellow within 2, green below that, grey when it gives no XP
+  -- (the game's grey level for your level). Skull: red.
+  pcall(function()
+    local me = UnitLevel("player")
+    local diff = lv - me
+    local r, g, b
+    if lv == -1 or diff >= 5 then r, g, b = 1, 0.1, 0.1
+    elseif diff >= 3 then r, g, b = 1, 0.5, 0.25
+    elseif diff >= -2 then r, g, b = 1, 0.82, 0
+    else
+      local grey = (GetQuestGreyLevel and GetQuestGreyLevel()) or (me <= 5 and 0 or me <= 39 and me - math.floor(me / 10) - 5 or me <= 59 and me - math.floor(me / 5) - 1 or me - 9)
+      if lv <= grey then r, g, b = 0.5, 0.5, 0.5 else r, g, b = 0.25, 0.75, 0.25 end
+    end
+    f.lvl:SetTextColor(r, g, b)
+    f.lvlColoured = true
+  end)
   -- The game already colours its own (hidden) level badge by difficulty: the
   -- same colour is taken over as it is (works when the level is secret).
   local diff = uf.PlayerLevelDiffFrame and uf.PlayerLevelDiffFrame.playerLevelDiffText
@@ -147,7 +164,7 @@ function P:SquareStyle(uf, unit)
     if white then return false end
     return pcall(f.lvl.SetTextColor, f.lvl, r, g, b)
   end
-  if pld and pld.GetRegions then
+  if not f.lvlColoured and pld and pld.GetRegions then
     for _, r in ipairs({pld:GetRegions()}) do
       if not f.lvlColoured and r.GetObjectType and r:GetObjectType() == "Texture" and r.GetVertexColor then
         local okV, cr, cg, cb = pcall(r.GetVertexColor, r)
