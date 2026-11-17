@@ -155,6 +155,8 @@ local function Make(kind)
   b.cd = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
   b.cd:SetAllPoints(b.icon)
   pcall(b.cd.SetDrawEdge, b.cd, false)
+  pcall(b.cd.SetHideCountdownNumbers, b.cd, false)
+  pcall(b.cd.SetSwipeColor, b.cd, 0, 0, 0, 0.65)
   b.edge = MakeEdge(b)
   b.label = b:CreateFontString(nil, "OVERLAY")
   b.label:SetFont(FONT, 10, "OUTLINE")
@@ -385,9 +387,15 @@ function R:Paint()
         or (GetSpellTexture and Call(GetSpellTexture, spell)))
       b.icon:SetTexture(Plain(tex) or "Interface\\Icons\\INV_Misc_QuestionMark")
       -- Cooldown swipe and range.
-      local left, s, d = 0, nil, nil
-      if spell and spell ~= "" then left, s, d = CooldownLeft(spell) end
-      if left > 0 and s and d then b.cd:SetCooldown(s, d) else b.cd:Clear() end
+      -- Swipe for the global cooldown and for the spell's own cooldown
+      -- (the game reports either one for the spell).
+      local _, s, d
+      if spell and spell ~= "" then _, s, d = CooldownLeft(spell) end
+      if type(s) == "number" and type(d) == "number" and s > 0 and d > 0 and s + d > Now() then
+        if b.cdS ~= s or b.cdD ~= d then b.cd:SetCooldown(s, d); b.cdS, b.cdD = s, d end
+      elseif b.cdS then
+        b.cd:Clear(); b.cdS, b.cdD = nil, nil
+      end
       local range = spell and spell ~= "" and UnitExists("target") and InRange(spell)
       if range == false then b.icon:SetVertexColor(1, 0.3, 0.3) else b.icon:SetVertexColor(1, 1, 1) end
       -- Border: accent when this button holds the advised spell, or for AoE
