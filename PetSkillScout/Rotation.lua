@@ -28,7 +28,7 @@ local FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
 local RESET = "reset=target/combat/8"
 local SPELL = {
   ["Hunter's Mark"] = 1130, ["Serpent Sting"] = 1978, ["Arcane Shot"] = 3044, ["Aimed Shot"] = 19434,
-  ["Multi-Shot"] = 2643, ["Volley"] = 1510, ["Raptor Strike"] = 2973, ["Mongoose Bite"] = 1495,
+  ["Multi-Shot"] = 2643, ["Volley"] = 1510, ["Auto Shot"] = 75, ["Raptor Strike"] = 2973, ["Mongoose Bite"] = 1495,
 }
 -- Debuffs we keep up and how long they last when the game hides auras.
 local DOT = {["Hunter's Mark"] = 120, ["Serpent Sting"] = 15}
@@ -111,7 +111,11 @@ function R:Macro(kind)
     if loc then out[#out + 1] = loc end
   end
   if #out == 0 then return nil end
+  -- "!Auto Shot" keeps Auto Shot on (never toggles it off): when mana runs
+  -- out and every shot fails, the press still shoots.
   local lines = {"/petattack"}
+  local auto = Learned("Auto Shot")
+  if auto then lines[#lines + 1] = "/cast !" .. auto end
   if self:Mode() == "prio" then
     -- Debuffs and hawks have no cooldown: in a /cast list they would be cast
     -- on every press, so the priority list takes the shots only.
@@ -325,6 +329,9 @@ function R:Advise()
       if good and range ~= false then return eng, loc end
     end
   end
+  -- Nothing castable (out of mana, all on cooldown): Auto Shot.
+  local auto = Learned("Auto Shot")
+  if auto then return "Auto Shot", auto end
 end
 
 -- Highlight on the action bars (our own border on the button, like retail's
