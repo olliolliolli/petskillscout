@@ -35,11 +35,11 @@ local DOT = {["Hunter's Mark"] = 120, ["Serpent Sting"] = 15}
 
 R.LISTS = {
   BM = {single = {"Hunter's Mark", "Serpent Sting", "Summon Hawk", "Aimed Shot", "Summon Hawk", "Arcane Shot"},
-        aoe = {"Multi-Shot", "Volley", "Summon Hawk", "Multi-Shot", "Arcane Shot"}},
+        aoe = {"Multi-Shot", "Summon Hawk", "Multi-Shot", "Arcane Shot"}},
   MM = {single = {"Hunter's Mark", "Serpent Sting", "Arcane Shot", "Aimed Shot", "Sniper Shot", "Arcane Shot"},
-        aoe = {"Multi-Shot", "Volley", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
+        aoe = {"Multi-Shot", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
   SV = {single = {"Hunter's Mark", "Serpent Sting", "Arcane Shot", "Multi-Shot", "Arcane Shot"},
-        aoe = {"Multi-Shot", "Volley", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
+        aoe = {"Multi-Shot", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
 }
 -- Advisor priority (the guides' order; conditions checked live).
 R.PRIO = {
@@ -96,7 +96,16 @@ function R:List(kind)
 end
 
 -- Macro text for a button.
+-- Volley lands on the ground: the game takes only the cursor or your own spot
+-- for such spells ([@cursor] / [@player]; there is no "at the target"), and it
+-- is a channel with no cooldown, so it has a button of its own: [@cursor]
+-- casts it at once where the cursor (or the gamepad aim) points.
 function R:Macro(kind)
+  if kind == "volley" then
+    local loc = Learned("Volley")
+    if not loc then return nil end
+    return "/cast [@cursor] " .. loc, {loc}
+  end
   local out, seen = {}, {}
   for _, n in ipairs(self:List(kind)) do
     local loc = Learned(n)
@@ -110,7 +119,7 @@ function R:Macro(kind)
     for _, loc in ipairs(out) do
       if not seen[loc] and not DOT[loc] and loc ~= Learned("Summon Hawk") then
         seen[loc] = true
-        lines[#lines + 1] = "/cast [@target,exists] " .. loc
+        lines[#lines + 1] = "/cast " .. loc
       end
     end
     if #lines == 1 then lines[#lines + 1] = "/cast " .. out[1] end
@@ -118,8 +127,7 @@ function R:Macro(kind)
     self.seqs[kind] = nil
   else
     local seq = RESET .. " " .. table.concat(out, ", ")
-    -- [@target]: area spells (Volley) land on your target, not on the cursor.
-    lines[#lines + 1] = "/castsequence [@target,exists] " .. seq
+    lines[#lines + 1] = "/castsequence " .. seq
     self.seqs = self.seqs or {}
     self.seqs[kind] = seq
   end
@@ -143,7 +151,9 @@ local function MakeEdge(owner, layer)
   e[4]:SetPoint("TOPRIGHT"); e[4]:SetPoint("BOTTOMRIGHT")
   return e
 end
-local NAMES = {single = "PetSkillScoutRotSingle", aoe = "PetSkillScoutRotAoE"}
+local NAMES = {single = "PetSkillScoutRotSingle", aoe = "PetSkillScoutRotAoE", volley = "PetSkillScoutRotVolley"}
+local LABEL = {single = "rotSingle", aoe = "rotAoE", volley = "rotVolley"}
+local SHORT = {single = "rotSingleShort", aoe = "rotAoEShort", volley = "rotVolleyShort"}
 local function Make(kind)
   local name = NAMES[kind]
   local b = CreateFrame("Button", name, UIParent, "SecureActionButtonTemplate")
@@ -169,7 +179,7 @@ local function Make(kind)
   b:SetScript("OnEnter", function(self)
     if not GameTooltip then return end
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:AddLine(L(kind == "single" and "rotSingle" or "rotAoE"))
+    GameTooltip:AddLine(L(LABEL[kind]))
     if self.spells then GameTooltip:AddLine(table.concat(self.spells, " > "), 1, 1, 1, true) end
     GameTooltip:AddLine(L(R:Mode() == "prio" and "rotTipPrio" or "rotTip"), 0.8, 0.8, 0.8, true)
     GameTooltip:Show()
@@ -177,7 +187,7 @@ local function Make(kind)
   b:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
   b:Hide()
   buttons[kind] = b
-  _G["BINDING_NAME_CLICK " .. name .. ":LeftButton"] = L(kind == "single" and "rotSingle" or "rotAoE")
+  _G["BINDING_NAME_CLICK " .. name .. ":LeftButton"] = L(LABEL[kind])
   return b
 end
 
@@ -194,14 +204,14 @@ function R:Apply()
   self.pending = nil
   known = {}
   local on = self:Enabled()
-  for _, kind in ipairs({"single", "aoe"}) do
+  for _, kind in ipairs({"single", "aoe", "volley"}) do
     local b = buttons[kind] or Make(kind)
     local text, spells
     if on then text, spells = self:Macro(kind) end
     b.spells = spells
     if text then
       b:SetAttribute("macrotext", text)
-      b.label:SetText(L(kind == "single" and "rotSingleShort" or "rotAoEShort"))
+      b.label:SetText(L(SHORT[kind]))
       b.key:SetText(KeyText(kind))
       b:Show()
     else
@@ -217,12 +227,17 @@ function R:Place()
   if InCombat() then return end
   local holder = PSS.Layout and PSS.Layout.barHolderFrame
   local y = (PSS.Layout and PSS.Layout.cdmTopY or 200) + 22
-  for i, kind in ipairs({"single", "aoe"}) do
+  local shown = {}
+  for _, kind in ipairs({"single", "aoe", "volley"}) do
+    if buttons[kind] and buttons[kind]:IsShown() then shown[#shown + 1] = kind end
+  end
+  for i, kind in ipairs(shown) do
     local b = buttons[kind]
+    local x = (i - (#shown + 1) / 2) * 48
     if b then
       b:ClearAllPoints()
-      if holder then b:SetPoint("BOTTOM", holder, "BOTTOM", (i == 1 and -24 or 24), y)
-      else b:SetPoint("BOTTOM", UIParent, "BOTTOM", (i == 1 and -24 or 24), 260) end
+      if holder then b:SetPoint("BOTTOM", holder, "BOTTOM", x, y)
+      else b:SetPoint("BOTTOM", UIParent, "BOTTOM", x, 260) end
       b:SetFrameStrata("MEDIUM")
     end
   end
@@ -401,7 +416,7 @@ function R:Paint()
       if range == false then b.icon:SetVertexColor(1, 0.3, 0.3) else b.icon:SetVertexColor(1, 1, 1) end
       -- Border: accent when this button holds the advised spell, or for AoE
       -- when 3+ enemies fight around you.
-      local glow = fight and ((rec and spell and strlower(rec) == strlower(spell)) or (kind == "aoe" and many))
+      local glow = fight and ((rec and spell and strlower(rec) == strlower(spell)) or ((kind == "aoe" or kind == "volley") and many))
       Edge(b, glow and 2 or 1, glow and acc or edge)
     end
   end
@@ -421,7 +436,7 @@ function R:Edit()
     f.boxes = {}
     for i, kind in ipairs({"single", "aoe"}) do
       local lab = f:CreateFontString(nil, "OVERLAY"); lab:SetFont(FONT, 11, ""); lab:SetPoint("TOPLEFT", 14, -24 - i * 44)
-      lab:SetText(L(kind == "single" and "rotSingle" or "rotAoE"))
+      lab:SetText(L(LABEL[kind]))
       local e = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
       e:SetSize(420, 22); e:SetPoint("TOPLEFT", 20, -40 - i * 44); e:SetAutoFocus(false); e:SetFontObject("ChatFontNormal")
       f.boxes[kind] = e
