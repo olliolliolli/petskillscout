@@ -28,18 +28,18 @@ local FONT = "Interface\\AddOns\\PetSkillScout\\Fonts\\NotoSans-Regular.ttf"
 local RESET = "reset=target/combat/8"
 local SPELL = {
   ["Hunter's Mark"] = 1130, ["Serpent Sting"] = 1978, ["Arcane Shot"] = 3044, ["Aimed Shot"] = 19434,
-  ["Multi-Shot"] = 2643, ["Raptor Strike"] = 2973, ["Mongoose Bite"] = 1495,
+  ["Multi-Shot"] = 2643, ["Volley"] = 1510, ["Raptor Strike"] = 2973, ["Mongoose Bite"] = 1495,
 }
 -- Debuffs we keep up and how long they last when the game hides auras.
 local DOT = {["Hunter's Mark"] = 120, ["Serpent Sting"] = 15}
 
 R.LISTS = {
   BM = {single = {"Hunter's Mark", "Serpent Sting", "Summon Hawk", "Aimed Shot", "Summon Hawk", "Arcane Shot"},
-        aoe = {"Multi-Shot", "Summon Hawk", "Multi-Shot", "Arcane Shot"}},
+        aoe = {"Multi-Shot", "Volley", "Summon Hawk", "Multi-Shot", "Arcane Shot"}},
   MM = {single = {"Hunter's Mark", "Serpent Sting", "Arcane Shot", "Aimed Shot", "Sniper Shot", "Arcane Shot"},
-        aoe = {"Multi-Shot", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
+        aoe = {"Multi-Shot", "Volley", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
   SV = {single = {"Hunter's Mark", "Serpent Sting", "Arcane Shot", "Multi-Shot", "Arcane Shot"},
-        aoe = {"Multi-Shot", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
+        aoe = {"Multi-Shot", "Volley", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
 }
 -- Advisor priority (the guides' order; conditions checked live).
 R.PRIO = {
@@ -110,7 +110,7 @@ function R:Macro(kind)
     for _, loc in ipairs(out) do
       if not seen[loc] and not DOT[loc] and loc ~= Learned("Summon Hawk") then
         seen[loc] = true
-        lines[#lines + 1] = "/cast " .. loc
+        lines[#lines + 1] = "/cast [@target,exists] " .. loc
       end
     end
     if #lines == 1 then lines[#lines + 1] = "/cast " .. out[1] end
@@ -118,7 +118,8 @@ function R:Macro(kind)
     self.seqs[kind] = nil
   else
     local seq = RESET .. " " .. table.concat(out, ", ")
-    lines[#lines + 1] = "/castsequence " .. seq
+    -- [@target]: area spells (Volley) land on your target, not on the cursor.
+    lines[#lines + 1] = "/castsequence [@target,exists] " .. seq
     self.seqs = self.seqs or {}
     self.seqs[kind] = seq
   end
@@ -297,7 +298,7 @@ function R:Advise()
   local spec = self:Spec()
   local many = Enemies() >= 3
   local order = {}
-  if many then order[1] = "Multi-Shot"; if spec == "BM" then order[2] = "Summon Hawk" end end
+  if many then order[1] = "Multi-Shot"; order[2] = "Volley"; if spec == "BM" then order[3] = "Summon Hawk" end end
   for _, n in ipairs(self.PRIO[spec] or self.PRIO.BM) do order[#order + 1] = n end
   for _, eng in ipairs(order) do
     local loc = Learned(eng)
