@@ -483,3 +483,41 @@ tick:SetScript("OnUpdate", function()
 end)
 tick.pssKey = "Rotation"
 PSS:Every(tick, 0.15)
+
+-- /pss rot diag: why nothing is highlighted (also saved for the developer).
+function R:Diag()
+  local out = {}
+  local function P(s) out[#out + 1] = s; PSS:Print(s) end
+  P(string.format("enabled %s spec %s mode %s combat %s target %s attackable %s", tostring(self:Enabled()), self:Spec(),
+    self:Mode(), tostring(UnitAffectingCombat("player")), tostring(UnitExists("target")),
+    tostring(Plain(UnitCanAttack("player", "target")))))
+  local spec = self:Spec()
+  for _, eng in ipairs(self.PRIO[spec] or {}) do
+    local loc = Learned(eng)
+    if loc then
+      local fn = C_Spell and C_Spell.IsSpellUsable or IsUsableSpell
+      local u1, u2 = Call(fn, loc)
+      local left, s, d = CooldownLeft(loc)
+      P(string.format("  %s: id %s usable %s/%s cd %.1f (%s,%s) range %s", eng, tostring(SpellID(loc)), tostring(u1),
+        tostring(u2), left, tostring(s), tostring(d), tostring(InRange(loc))))
+    else
+      P("  " .. eng .. ": not learned")
+    end
+  end
+  local eng, loc = self:Advise()
+  P("advice " .. tostring(eng) .. " id " .. tostring(loc and SpellID(loc)))
+  local n, sample = 0, {}
+  for _, pre in ipairs(BAR_PREFIX) do
+    for i = 1, 12 do
+      local btn = _G[pre .. i]
+      if btn then
+        local id = SpellOfButton(btn)
+        if id then n = n + 1; if #sample < 6 then sample[#sample + 1] = pre .. i .. "=" .. id end end
+      end
+    end
+  end
+  P("bar buttons with a spell: " .. n .. "  " .. table.concat(sample, " "))
+  local b1 = _G.ActionButton1
+  P("ActionButton1 action " .. tostring(b1 and b1.action) .. " attr " .. tostring(b1 and b1.GetAttribute and b1:GetAttribute("action")))
+  if PetSkillScoutDB then PetSkillScoutDB.rotDiag = out end
+end
