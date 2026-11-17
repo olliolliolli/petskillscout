@@ -2155,6 +2155,13 @@ function UI:BuildGear()
     row.alt:SetPoint("RIGHT", row, "RIGHT", -6, 0)
     -- Where the reward quest starts: arrow to the quest giver + world map on its zone.
     row.where = IconButton(row, "Interface\\Icons\\INV_Misc_Map_01", 22, function(b)
+      if b.vendor then
+        local v = b.vendor
+        local t = {name = b.vname or "?", mapID = v[4], points = {{v[2], v[3]}}}
+        if PSS.Nav then PSS.Nav:SetTarget(t) end
+        UI:OpenQuestMap(nil, v[4], t)
+        return
+      end
       local id, r = b.questID, b.quest
       if not (id and r and r.m and r.x) then
         if b.qname then PSS:Print(string.format(L("gearQuestUnknown"), b.qname)) end
@@ -2166,6 +2173,16 @@ function UI:BuildGear()
       if PSS.Nav then PSS.Nav:SetTarget(t) end
       UI:OpenQuestMap(nil, r.m, t)
     end, function(b)
+      if b.vendor then
+        local v = b.vendor
+        local zone = C_Map and C_Map.GetMapInfo and select(2, pcall(C_Map.GetMapInfo, v[4]))
+        zone = type(zone) == "table" and zone.name or "?"
+        local lines = {string.format(L("gearVendorAt"), b.vname or "?"), string.format("%s  %.1f, %.1f", zone, v[2], v[3])}
+        if b.vrep then lines[#lines + 1] = b.vrep end
+        if v.hol then lines[#lines + 1] = L("gearSeasonalTip") end
+        lines[#lines + 1] = L("gearQuestWhereHint")
+        return table.concat(lines, "\n")
+      end
       local r = b.quest
       if not (r and r.m and r.x) then return string.format(L("gearQuestUnknown"), b.qname or "?") end
       local W = PSS.QuestWorth
@@ -2293,11 +2310,17 @@ function UI:UpdateGear()
       if not keep then qid, qr, qchain = G:QuestFor(rec) end
       row.where.questID, row.where.quest, row.where.chain = qid, qr, qchain
       row.where.qname = (not keep) and G:QuestSourceName(rec) or nil
-      local known = qr and qr.m and qr.x and true or false
+      -- Vendor items: the button points at the vendor (ATT position).
+      local src1 = (not keep) and G:Sources(rec)[1]
+      row.where.vendor = (not keep and not qid and src1 and src1.t == "v" and rec.vendor) or nil
+      row.where.vname = src1 and src1.n
+      row.where.vrep = rec.rep and string.format(L("gearRep"), G:RepName(rec.rep), rec.rr and L("gearRepRank" .. rec.rr) or "") or nil
+      if row.where.vendor then qr = nil end
+      local known = (qr and qr.m and qr.x and true) or (row.where.vendor and true) or false
       -- Every quest reward gets the button; grey when the giver is not in the database.
       Show(row.where, known or row.where.qname ~= nil)
       row.where.icon:SetDesaturated(not known)
-      row.where:SetAlpha((known and not (qr.learned and not qr.confirmed)) and 1 or (known and 0.8 or 0.55))
+      row.where:SetAlpha((known and not (qr and qr.learned and not qr.confirmed)) and 1 or (known and 0.8 or 0.55))
       -- Gain in attack power.
       local delta = math.floor(e.pick.score - eq + 0.5)
       if e.wearing then
@@ -2341,7 +2364,7 @@ function UI:UpdateGear()
         row.src:SetText(PSS:Safe(l1 or "")); row.src2:SetText(PSS:Safe(l2 or ""))
         G:Request(up.id)
       end
-      row.where.questID, row.where.quest, row.where.qname = nil, nil, nil
+      row.where.questID, row.where.quest, row.where.qname, row.where.vendor = nil, nil, nil, nil
       Show(row.where, false)
       Show(row.bar, false)
       row:SetAlpha(0.7)

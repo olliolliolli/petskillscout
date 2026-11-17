@@ -107,6 +107,34 @@ local function Index()
     end
   end
   pcall(AddQuestRewards)
+  -- Vendors from ATT (VendorDB): where the vendor stands, and the reputation
+  -- the item needs (Revered with League of Arathor...), for every item.
+  local V = PSS.VendorDB or {}
+  for id, rec in pairs(byId) do
+    local v = V[id]
+    if v then
+      rec.vendor = v
+      if v.rep and not rec.rep then
+        local val = v.rep[2] or 0
+        rec.rep = v.rep[1]
+        rec.rr = val >= 42000 and 7 or val >= 21000 and 6 or val >= 9000 and 5 or val >= 3000 and 4 or nil
+      end
+    end
+  end
+end
+-- Faction name: our list first, then the game.
+function G:RepName(fid)
+  if self.REP_NAMES[fid] then return self.REP_NAMES[fid] end
+  local fn = C_Reputation and C_Reputation.GetFactionDataByID
+  if fn then
+    local ok, d = pcall(fn, fid)
+    if ok and type(d) == "table" and d.name then return d.name end
+  end
+  if GetFactionInfoByID then
+    local ok, name = pcall(GetFactionInfoByID, fid)
+    if ok and name then return name end
+  end
+  return "#" .. fid
 end
 function G:Get(id) Index(); return byId[id] end
 
@@ -608,7 +636,7 @@ function G:SourceShort(rec)
   local rep = ""
   if rec.rep then
     local rank = rec.rr and L("gearRepRank" .. rec.rr) or ""
-    rep = "  ·  " .. (self.REP_NAMES[rec.rep] or "") .. (rank ~= "" and (" (" .. rank .. ")") or "")
+    rep = "  ·  " .. self:RepName(rec.rep) .. (rank ~= "" and (" (" .. rank .. ")") or "")
   end
   if s.t == "d" then
     local who = s.n .. ((s.r == 2 or s.r == 4) and (" (" .. L("gearRare") .. ")") or "")
@@ -622,7 +650,8 @@ function G:SourceShort(rec)
     local where = s.z and ("  ·  " .. s.z) or ""
     return s.n, L("gearKindQuest") .. where .. rep .. tail
   elseif s.t == "v" then
-    return s.n, L("gearKindVendor") .. (s.i and ("  ·  " .. s.i) or "") .. rep .. tail
+    local hol = rec.vendor and rec.vendor.hol and ("  ·  " .. L("gearSeasonal")) or ""
+    return s.n, L("gearKindVendor") .. (s.i and ("  ·  " .. s.i) or "") .. rep .. hol .. tail
   elseif s.t == "c" then
     local have = self:ProfSkill(s.p) or 0
     local need = tonumber(s.s) or 1
@@ -655,7 +684,7 @@ function G:SourceLines(rec)
   local lines = {}
   if rec.rep then
     local rank = rec.rr and L("gearRepRank" .. rec.rr)
-    table.insert(lines, string.format(L("gearRep"), self.REP_NAMES[rec.rep] or ("#" .. rec.rep),
+    table.insert(lines, string.format(L("gearRep"), self:RepName(rec.rep),
       rank and rank ~= ("gearRepRank" .. rec.rr) and rank or ""))
   end
   for _, s in ipairs(self:Sources(rec)) do
