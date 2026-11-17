@@ -21,12 +21,20 @@ local SPELL = {
   ["Hunter's Mark"] = 1130, ["Serpent Sting"] = 1978, ["Arcane Shot"] = 3044, ["Aimed Shot"] = 19434,
   ["Multi-Shot"] = 2643, ["Raptor Strike"] = 2973, ["Mongoose Bite"] = 1495,
 }
+-- Single target follows the guides' priority (buffs like Aspect of the Hawk
+-- and Trueshot Aura, and long cooldowns, are left out - they are not cast in
+-- a loop). BM: "Summon Hawk if fewer than two are active, otherwise Arcane
+-- Shot", then Aimed Shot: a sequence has no conditions, so the hawk comes
+-- twice per cycle (each hawk lives 18 s). SV: the ranged part only - melee
+-- weaving (Raptor Strike + Mongoose Bite / Strider Kick) needs melee range,
+-- and a sequence would stop on a spell that is out of range. The guides give
+-- no multi-target rotation: those lists are ours (Multi-Shot first).
 R.LISTS = {
-  BM = {single = {"Hunter's Mark", "Serpent Sting", "Arcane Shot", "Aimed Shot", "Arcane Shot"},
+  BM = {single = {"Hunter's Mark", "Serpent Sting", "Summon Hawk", "Aimed Shot", "Summon Hawk", "Arcane Shot"},
+        aoe = {"Multi-Shot", "Summon Hawk", "Multi-Shot", "Arcane Shot"}},
+  MM = {single = {"Hunter's Mark", "Serpent Sting", "Arcane Shot", "Aimed Shot", "Sniper Shot", "Arcane Shot"},
         aoe = {"Multi-Shot", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
-  MM = {single = {"Hunter's Mark", "Serpent Sting", "Sniper Shot", "Arcane Shot", "Aimed Shot", "Arcane Shot"},
-        aoe = {"Multi-Shot", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
-  SV = {single = {"Hunter's Mark", "Serpent Sting", "Arcane Shot", "Aimed Shot", "Arcane Shot"},
+  SV = {single = {"Hunter's Mark", "Serpent Sting", "Arcane Shot", "Multi-Shot", "Arcane Shot"},
         aoe = {"Multi-Shot", "Serpent Sting", "Multi-Shot", "Arcane Shot"}},
 }
 
@@ -42,7 +50,7 @@ end
 
 -- Local name of a spell the player knows (by our ID, else by the English name).
 local function Known(name)
-  local id = SPELL[name]
+  local id = SPELL[name] or (name == "Summon Hawk" and DB().hawkSpell)
   local info = id and C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(id)
   local loc = info and Plain(info.name) or name
   local fn = C_SpellBook and C_SpellBook.FindSpellBookSlotForSpell
@@ -55,7 +63,11 @@ local function Known(name)
 end
 
 function R:Sequence(kind)
-  local spec = PSS.Gear and PSS.Gear.Spec and PSS.Gear:Spec() or "BM"
+  -- Own choice in the options; "auto" follows the spec picked in the Gear tab.
+  local spec = DB().rotationSpec
+  if spec ~= "BM" and spec ~= "MM" and spec ~= "SV" then
+    spec = PSS.Gear and PSS.Gear.Spec and PSS.Gear:Spec() or "BM"
+  end
   local list = (self.LISTS[spec] or self.LISTS.BM)[kind]
   local out = {}
   for _, n in ipairs(list) do
