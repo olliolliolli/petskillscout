@@ -14,7 +14,22 @@ local GT = PSS.GamepadTheme
 -- Matched to the game's own gamepad layout: the player frame sits left above
 -- the left button cluster (target mirrored on the right), the cast bar
 -- above the centre buttons.
-GT.UNIT_Y, GT.UNIT_X, GT.CAST_Y = 300, 325, 360
+GT.UNIT_Y, GT.UNIT_X, GT.CAST_Y = 340, 325, 400
+-- Cooldown Manager in gamepad mode: down at the screen bottom (above the
+-- bars it covered the gamepad buttons).
+GT.CDM_Y = 0
+-- The game's gamepad bar is lifted this much (UI units) so the Cooldown
+-- Manager rows fit under it.
+GT.BAR_UP = 70
+
+-- The game's gamepad bar on screen: the gamepad layout stays while it is
+-- shown, also when you touch the mouse (the game then reports the mouse as
+-- the active device and the frames slid back over the gamepad buttons).
+function GT:BarShown()
+  local root = _G.GamepadMainActionBarFrame
+  local ok, shown = pcall(function() return root and root:IsVisible() end)
+  return ok and shown and true or false
+end
 
 local function InCombat() return InCombatLockdown and InCombatLockdown() end
 local function LY() return PSS.Layout end
@@ -152,6 +167,18 @@ function GT:SkinBar()
     local want = (PetSkillScoutDB and tonumber(PetSkillScoutDB.gamepadScale)) or self.SCALE
     pcall(root.SetScale, root, want)
   end
+  if not InCombat() and root.GetNumPoints then
+    if not self.barPoints then
+      self.barPoints = {}
+      for i = 1, root:GetNumPoints() do self.barPoints[i] = {root:GetPoint(i)} end
+    end
+    local up = (PetSkillScoutDB and tonumber(PetSkillScoutDB.gamepadBarUp)) or self.BAR_UP
+    local sc = root:GetScale() or 1
+    pcall(root.ClearAllPoints, root)
+    for _, p in ipairs(self.barPoints) do
+      pcall(root.SetPoint, root, p[1], p[2], p[3], p[4] or 0, (p[5] or 0) + up / sc)
+    end
+  end
   if not self.rootHooked and root.HookScript then
     self.rootHooked = true
     pcall(root.HookScript, root, "OnShow", function() PSS:Soon("gp-skin", function() GT:SkinBar() end, 0.2) end)
@@ -160,6 +187,7 @@ function GT:SkinBar()
 end
 
 function GT:Apply(active)
+  active = active or self:BarShown()
   if InCombat() then self.pending = active; return end
   self.pending = nil
   self.active = active
@@ -168,6 +196,23 @@ function GT:Apply(active)
   if not (L and L.applied and L.applied.units) then SyncStrips() return end
   PlaceUnits(active)
   SyncStrips()
+  if L.PlaceCooldowns then pcall(L.PlaceCooldowns) end
+  -- The chat dock and tabs are laid out again after a mode change (they slid
+  -- over the panel edge).
+  if L.applied and L.applied.chat then
+    PSS:Soon("gp-chat", function()
+      if L.PlaceChat then pcall(L.PlaceChat, L) end
+      if L.StyleTabs then pcall(L.StyleTabs, L) end
+      if L.PlaceChatDock then pcall(L.PlaceChatDock) end
+    end, 0.3)
+  end
+  local root = _G.GamepadMainActionBarFrame
+  if root and root.HookScript and not self.visHooked then
+    self.visHooked = true
+    local function Re() PSS:Soon("gp-mode", function() GT:Apply(PSS.Gamepad and PSS.Gamepad:InUse() or false) end, 0.2) end
+    pcall(root.HookScript, root, "OnShow", Re)
+    pcall(root.HookScript, root, "OnHide", Re)
+  end
 end
 
 if PSS.Gamepad and PSS.Gamepad.OnChange then

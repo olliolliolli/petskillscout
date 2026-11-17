@@ -147,7 +147,6 @@ function G:Spec()
 end
 function G:SetSpec(s)
   if PetSkillScoutDB then PetSkillScoutDB.gearSpec = s end
-  if PSS.Rotation then pcall(PSS.Rotation.Apply, PSS.Rotation) end
 end
 -- BiS mode takes every source (raids, rare drops, PvP) regardless of the toggles.
 function G:IncludeRaids() return self.allSources or DB().gearRaids == true end

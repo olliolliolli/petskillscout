@@ -752,7 +752,7 @@ function LY.PlaceCooldowns()
           and hawk:Enabled() and PetSkillScoutDB and PetSkillScoutDB.hawkSpell then
         hx = math.floor(hawk:Width() / 2)
       end
-      v.pssAnchor = prev and {"BOTTOM", barHolder, "BOTTOM", 0, 0} or {"BOTTOM", barHolder, "BOTTOM", hx, LY.cdmY or 120}
+      v.pssAnchor = prev and {"BOTTOM", barHolder, "BOTTOM", 0, 0} or {"BOTTOM", barHolder, "BOTTOM", hx, (PSS.GamepadTheme and PSS.GamepadTheme.active and PSS.GamepadTheme.CDM_Y) or LY.cdmY or 120}
       if prev then
         -- Directly above the previous row, centred on the bars (not on the
         -- previous row, which may be shifted for the hawks).
@@ -794,7 +794,6 @@ function LY.PlaceCooldowns()
     end
   end
   cdmBusy = false
-  if PSS.Rotation and PSS.Rotation.Place then pcall(PSS.Rotation.Place, PSS.Rotation) end
 end
 
 local durBusy = false
@@ -1138,6 +1137,26 @@ function LY:StyleTabs()
     local tab = G("ChatFrame" .. i .. "Tab")
     if tab then
       local selected = TabSelected(tab, i)
+      -- Gamepad mode makes the tabs taller (32): they stuck out of the 24 high
+      -- dock and the window edge cut them. Kept at the dock's height.
+      if not tab.pssHeightHooked and hooksecurefunc then
+        tab.pssHeightHooked = true
+        local hb = false
+        pcall(PSS.HookSecure, tab, "SetHeight", function(self, h)
+          if hb or h == 24 then return end
+          hb = true; pcall(self.SetHeight, self, 24); hb = false
+        end)
+      end
+      pcall(tab.SetHeight, tab, 24)
+      -- The game's own tab art (taller in gamepad mode, the selected tab's
+      -- even more) made the row uneven: only our backdrop is drawn.
+      for _, k in ipairs({"Left", "Middle", "Right", "ActiveLeft", "ActiveMiddle", "ActiveRight",
+          "HighlightLeft", "HighlightMiddle", "HighlightRight", "SelectedLeft", "SelectedMiddle", "SelectedRight"}) do
+        local t = rawget(tab, k) or G((tab:GetName() or "") .. k)
+        if t and t.SetAlpha then pcall(t.SetAlpha, t, 0) end
+      end
+      local p1, r1, p2, x1, y1 = tab:GetPoint(1)
+      if i > 1 and p1 and y1 and y1 ~= 0 then pcall(tab.SetPoint, tab, p1, r1, p2, x1, 0) end
       S:Backdrop(tab, selected and "button" or "panel", {1, -3, -1, 1})
       if not tab.pssLine then
         tab.pssLine = tab:CreateTexture(nil, "OVERLAY")
@@ -1153,12 +1172,37 @@ function LY:StyleTabs()
       if type(fs) == "table" and fs.SetTextColor then
         pcall(fs.SetFont, fs, FONT, 11, "")
         if selected then fs:SetTextColor(acc[1], acc[2], acc[3]) else fs:SetTextColor(muted[1], muted[2], muted[3]) end
+        -- The text must fit (gamepad mode sized the tabs for another font).
+        pcall(fs.SetWidth, fs, 0); pcall(fs.SetWordWrap, fs, false)
+        -- Text in the middle of the tab (gamepad mode lays it out for a 32 high
+        -- tab: in our 24 high one it sat at the top edge).
+        pcall(fs.ClearAllPoints, fs); pcall(fs.SetPoint, fs, "CENTER", tab, "CENTER", 0, -1)
+        local okW, tw = pcall(fs.GetStringWidth, fs)
+        if okW and type(tw) == "number" and tw > 0 and (tab:GetWidth() or 0) < tw + 24 then
+          pcall(tab.SetWidth, tab, tw + 24)
+        end
       end
       if not tabsVisible[tab] and hooksecurefunc then
         tabsVisible[tab] = true
         pcall(PSS.HookSecure, tab, "SetAlpha", KeepVisible)
       end
       tabBusy = true; pcall(tab.SetAlpha, tab, 1); tabBusy = false
+    end
+  end
+  -- General (the first tab) sits outside the dock's scroll area and ended up
+  -- higher than the others: its bottom is put level with the next tab.
+  local first = G("ChatFrame1Tab")
+  local fb = first and first:GetBottom()
+  for i = 3, tonumber(NUM_CHAT_WINDOWS) or 10 do
+    local t = G("ChatFrame" .. i .. "Tab")
+    local tb = t and t:IsVisible() and t:GetBottom()
+    if fb and tb then
+      local d = tb - fb
+      if math.abs(d) > 0.5 then
+        local p1, r1, p2, x1, y1 = first:GetPoint(1)
+        if p1 then pcall(first.SetPoint, first, p1, r1, p2, x1, (y1 or 0) + d) end
+      end
+      break
     end
   end
 end
@@ -1174,13 +1218,41 @@ function PlaceDock()
     PSS:Soon("chattabs-later", PlaceDock, 0.5)
     return
   end
+  -- Gamepad mode: the game draws the LB glyph at the left of the tabs; the
+  -- tabs start a bit to the right of it.
+  local gx = (PSS.GamepadTheme and PSS.GamepadTheme.active) and 0 or 0
   local p, rel, rp, x, y = dock:GetPoint(1)
-  if dock:GetNumPoints() == 2 and p == "BOTTOMLEFT" and rel == leftPanel and rp == "TOPLEFT" and x == 0 and y == 2 then return end
+  if dock:GetNumPoints() == 2 and p == "BOTTOMLEFT" and rel == leftPanel and rp == "TOPLEFT" and x == gx and y == 2 then return end
   pcall(dock.ClearAllPoints, dock)
-  pcall(dock.SetPoint, dock, "BOTTOMLEFT", leftPanel, "TOPLEFT", 0, 2)
+  pcall(dock.SetPoint, dock, "BOTTOMLEFT", leftPanel, "TOPLEFT", gx, 2)
   pcall(dock.SetPoint, dock, "BOTTOMRIGHT", leftPanel, "TOPRIGHT", 0, 2)
   pcall(dock.SetHeight, dock, 24)
 end
+
+-- Gamepad mode: the game's LB / RB hints (GeneralDockManager.LeftTabHint /
+-- RightTabHint, FloatingChatFrame.xml) sit on the dock over the first and
+-- last tabs. They go just outside the dock, left and right of the tabs.
+local function PlaceTabHints()
+  local dock = G("GeneralDockManager")
+  if not dock then return end
+  for key, pt in pairs({LeftTabHint = {"BOTTOMRIGHT", "BOTTOMLEFT", -2}, RightTabHint = {"BOTTOMLEFT", "BOTTOMRIGHT", 2}}) do
+    local h = rawget(dock, key)
+    if h and h.SetPoint then
+      local function Put()
+        h.pssBusy = true
+        pcall(h.ClearAllPoints, h)
+        pcall(h.SetPoint, h, pt[1], dock, pt[2], pt[3], 3)
+        h.pssBusy = false
+      end
+      if not h.pssHooked and hooksecurefunc then
+        h.pssHooked = true
+        pcall(PSS.HookSecure, h, "SetPoint", function(self) if not self.pssBusy then Put() end end)
+      end
+      Put()
+    end
+  end
+end
+LY.PlaceChatDock = function() PlaceDock(); pcall(PlaceTabHints) end
 
 -- A tab dragged out of the dock becomes a loose window on top of the panel
 -- (its text then overlaps the main chat). With the theme every window stays

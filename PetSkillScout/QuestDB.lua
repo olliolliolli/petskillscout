@@ -1,7 +1,7 @@
 -- Quests of WoW Forever (generated, do not edit by hand).
 -- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/AllTheThings),
 -- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.
--- Source commit 89e90a1. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
+-- Source commit 858c85a. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
 -- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),
 -- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,
 -- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.
@@ -2713,6 +2713,7 @@ PSS.QuestDB = {
 [6825]={g=13179,x=50,y=32,m=1459,s="H",r=1,n="Call of Air - Guse's Fleet"},
 [6826]={g=13180,x=54.2,y=25.4,m=1459,s="H",r=1,n="Call of Air - Jeztor's Fleet"},
 [6827]={g=13181,x=45.1,y=14,m=1459,s="H",r=1,n="Call of Air - Mulverick's Fleet"},
+[6842]={},
 [6844]={g=13220,x=81.8,y=18.8,m=1451,l=54,p={1126},n="Umber, Archivist"},
 [6845]={g=11939,x=44.88,y=35.6,m=1450,l=54,p={6844},i={18400,18402},n="Uncovering Past Secrets"},
 [6881]={g=13442,x=43.9,y=12.6,m=1459,s="A",r=1,n="Ivus the Forest Lord"},
@@ -3875,7 +3876,7 @@ PSS.QuestDB = {
 [93089]={g=252476,x=66.2,y=76.6,m=2521,l=7,s="A",p={94369},n="What Comes Next"},
 [93090]={g=252476,x=66.2,y=76.6,m=2521,l=7,s="H",p={93836},n="What Comes Next"},
 [93122]={g=253177,x=58.4,y=88.6,m=1443,l=35,p={93058,93062},mr={92,9000},n="Checking Things Out"},
-[93125]={g=254040,x=40.8,y=65.1,m=2652,l=35,mr={92,9000},n="Going Home"},
+[93125]={g=254040,x=34.1,y=78,m=2652,l=35,p={93058,93062},mr={92,9000},n="Going Home"},
 [93127]={g=40833,x=68.8,y=50.4,m=2482,l=54,o="xxx",i={275666,275668},n="Summit Sentries"},
 [93128]={g=253177,x=58.4,y=88.6,m=1443,l=35,p={93122},mr={92,9000},o="n",ox=66,oy=80.4,om=1443,i={271801,271805,271802},n="Khan Jehn (Gelkis)"},
 [93129]={g=253851,x=59.2,y=54,m=2652,l=35,p={93066},mr={93,9000},o="i",n="Threat of Starvation"},

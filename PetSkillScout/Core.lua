@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.190"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.191"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -580,10 +580,39 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
                 PSS:Print("     children: " .. table.concat(kids, ", "):sub(1, 220))
             end
         end
-    elseif msg == "rot diag" or msg == "rotation diag" then
-        if PSS.Rotation then PSS.Rotation:Diag() end
-    elseif msg == "rotation" or msg == "rot" then
-        if PSS.Rotation then PSS.Rotation:Edit() end
+    elseif msg == "chat diag" then
+      local out = {}
+      local function P(t) out[#out + 1] = t; PSS:Print(t) end
+      local function D(n)
+        local f = _G[n]
+        if not f then P(n .. " nil"); return end
+        local pts = {}
+        for i = 1, (f.GetNumPoints and f:GetNumPoints() or 0) do
+          local a1, r, a2, x, y = f:GetPoint(i)
+          pts[#pts + 1] = string.format("%s>%s.%s %.0f,%.0f", tostring(a1), r and r.GetName and (r:GetName() or "?") or "nil", tostring(a2), x or 0, y or 0)
+        end
+        P(string.format("%s shown %s top %.0f bottom %.0f h %.0f scale %.2f strata %s lvl %s | %s", n, tostring(f:IsShown()),
+          f:GetTop() or -1, f:GetBottom() or -1, f:GetHeight() or 0, f:GetEffectiveScale() or 0, tostring(f:GetFrameStrata()),
+          tostring(f:GetFrameLevel()), table.concat(pts, "; ")))
+      end
+      P("gamepad active " .. tostring(PSS.GamepadTheme and PSS.GamepadTheme.active))
+      for _, n in ipairs({"GeneralDockManager", "ChatFrame1", "ChatFrame1Tab", "ChatFrame2Tab", "ChatFrame1Background",
+        "PetSkillScoutChatPanel"}) do D(n) end
+      for i = 1, 3 do
+        local tab = _G["ChatFrame" .. i .. "Tab"]
+        local fs = tab and (tab.GetFontString and tab:GetFontString() or tab.Text or _G["ChatFrame" .. i .. "TabText"])
+        if fs then
+          local a1, r, a2, x, y = fs:GetPoint(1)
+          P(string.format("tab%d w %.0f | text '%s' w %.0f str %.0f np %d %s>%s.%s %.0f,%.0f font %s", i, tab:GetWidth() or 0,
+            tostring(fs:GetText()), fs:GetWidth() or 0, fs:GetStringWidth() or 0, fs:GetNumPoints() or 0, tostring(a1),
+            r and r.GetName and (r:GetName() or "?") or "nil", tostring(a2), x or 0, y or 0, tostring(select(2, fs:GetFont()))))
+          for _, k in ipairs({"Left", "Middle", "Right", "ActiveLeft", "ActiveMiddle", "ActiveRight"}) do
+            local t = tab[k] or _G[tab:GetName() .. k]
+            if t then P(string.format("  %s w %.0f shown %s", k, t:GetWidth() or 0, tostring(t:IsShown()))) end
+          end
+        end
+      end
+      PetSkillScoutDB.chatDiag = out
     elseif msg == "hawk" then
         if PSS.HawkTimer and PSS.HawkTimer.Diag then PSS.HawkTimer:Diag() end
     elseif msg == "menu" then
