@@ -10,6 +10,4 @@
   </Binding>
   <Binding name="CLICK PetSkillScoutRotAoE:LeftButton" category="PetSkillScout">
   </Binding>
-  <Binding name="CLICK PetSkillScoutRotVolley:LeftButton" category="PetSkillScout">
-  </Binding>
 </Bindings>
