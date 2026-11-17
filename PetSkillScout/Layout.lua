@@ -762,6 +762,7 @@ function LY.PlaceCooldowns()
       pcall(v.ClearAllPoints, v)
       pcall(v.SetPoint, v, unpack(v.pssAnchor))
       prev = v
+      LY.cdmTopY = (v.pssAnchor[5] or 0) + (v.pssRowH or v:GetHeight() or 32)
       -- (Their alpha is left alone: Glowing Bars hides the icons on purpose
       -- with SetAlpha(0) when set to, and fighting it made them blink.)
       -- Above the bars' own panel (it covered them on the same layer).
@@ -793,6 +794,7 @@ function LY.PlaceCooldowns()
     end
   end
   cdmBusy = false
+  if PSS.Rotation and PSS.Rotation.Place then pcall(PSS.Rotation.Place, PSS.Rotation) end
 end
 
 local durBusy = false

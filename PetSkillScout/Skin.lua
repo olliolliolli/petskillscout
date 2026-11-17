@@ -1574,6 +1574,8 @@ function S:Refresh()
   self.active = false
   Clear()
   self.active, self.bars = want, wantBars
+  -- The beta rotation buttons live only with the theme.
+  if PSS.Rotation then PSS:Soon("rotation-apply", function() pcall(PSS.Rotation.Apply, PSS.Rotation) end, 0.3) end
   if not want then return end
   UpdateColours()
   pcall(SkinWindows)

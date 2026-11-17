@@ -4320,6 +4320,8 @@ local SETTINGS = {
   }},
   {id="hunter", title="setHunter", sub="setHunterSub", rows={
     {key="shotTimer", label="optShotTimer", hint="optShotTimerHint", kind="toggle", default=true},
+    {key="rotationBeta", label="optRotation", hint="optRotationHint", kind="toggle", default=false,
+      set=function(v) PetSkillScoutDB.rotationBeta = v; if PSS.Rotation then PSS.Rotation:Apply() end end},
     {key="hawkTimer", label="optHawkTimer", hint="optHawkTimerHint", kind="toggle", default=true,
       set=function(v) PetSkillScoutDB.hawkTimer = v; if PSS.HawkTimer then PSS.HawkTimer:Update() end end},
     {key="fastLoot", label="optFastLoot", hint="optFastLootHint", kind="toggle", default=false,

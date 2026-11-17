@@ -6,4 +6,8 @@
   </Binding>
   <Binding name="CLICK PetSkillScoutPetFollow:LeftButton" category="ADDONS">
   </Binding>
+  <Binding name="CLICK PetSkillScoutRotSingle:LeftButton" category="ADDONS">
+  </Binding>
+  <Binding name="CLICK PetSkillScoutRotAoE:LeftButton" category="ADDONS">
+  </Binding>
 </Bindings>
