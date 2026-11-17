@@ -1,13 +1,13 @@
 <Bindings>
-  <Binding name="PETSKILLSCOUT_TOGGLE" header="PETSKILLSCOUT" category="ADDONS">
+  <Binding name="PETSKILLSCOUT_TOGGLE" category="PetSkillScout">
     PetSkillScout_ToggleWindow()
   </Binding>
-  <Binding name="CLICK PetSkillScoutPetStay:LeftButton" category="ADDONS">
+  <Binding name="CLICK PetSkillScoutPetStay:LeftButton" category="PetSkillScout">
   </Binding>
-  <Binding name="CLICK PetSkillScoutPetFollow:LeftButton" category="ADDONS">
+  <Binding name="CLICK PetSkillScoutPetFollow:LeftButton" category="PetSkillScout">
   </Binding>
-  <Binding name="CLICK PetSkillScoutRotSingle:LeftButton" category="ADDONS">
+  <Binding name="CLICK PetSkillScoutRotSingle:LeftButton" category="PetSkillScout">
   </Binding>
-  <Binding name="CLICK PetSkillScoutRotAoE:LeftButton" category="ADDONS">
+  <Binding name="CLICK PetSkillScoutRotAoE:LeftButton" category="PetSkillScout">
   </Binding>
 </Bindings>
