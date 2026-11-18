@@ -48,22 +48,22 @@ local function Pad() return InputUtil and InputUtil.IsGamepadUIEnabled and Input
 function I:Enabled() return DB().ownBags ~= false end
 
 local TEXT = {
-  en = {title = "Inventory", search = "Search...", sort = "Clean Up", all = "All bags", backpack = "Backpack",
+  en = {title = "Inventory", search = "Search...", sort = "Sort", all = "All bags", backpack = "Backpack",
     padHelp = "A use   X pick up / put   Y clean up   LB/RB bag   B close   Select: game / window", combat = "In combat: view only",
     mouseHelp = "Right-click: use   Left-click: pick up / put"},
-  uk = {title = "Інвентар", search = "Пошук...", sort = "Прибрати", all = "Усі сумки", backpack = "Рюкзак",
+  uk = {title = "Інвентар", search = "Пошук...", sort = "Сортувати", all = "Усі сумки", backpack = "Рюкзак",
     padHelp = "A використати   X взяти / покласти   Y прибрати   LB/RB сумка   B закрити   Select: гра / вікно", combat = "У бою: лише перегляд",
     mouseHelp = "Права кнопка: використати   Ліва: взяти / покласти"},
-  pl = {title = "Ekwipunek", search = "Szukaj...", sort = "Uporządkuj", all = "Wszystkie torby", backpack = "Plecak",
+  pl = {title = "Ekwipunek", search = "Szukaj...", sort = "Sortuj", all = "Wszystkie torby", backpack = "Plecak",
     padHelp = "A użyj   X weź / połóż   Y uporządkuj   LB/RB torba   B zamknij", combat = "W walce: tylko podgląd",
     mouseHelp = "Prawy: użyj   Lewy: weź / połóż"},
-  de = {title = "Inventar", search = "Suchen...", sort = "Aufräumen", all = "Alle Taschen", backpack = "Rucksack",
+  de = {title = "Inventar", search = "Suchen...", sort = "Sortieren", all = "Alle Taschen", backpack = "Rucksack",
     padHelp = "A benutzen   X aufnehmen / ablegen   Y aufräumen   LB/RB Tasche   B schließen", combat = "Im Kampf: nur ansehen",
     mouseHelp = "Rechtsklick: benutzen   Linksklick: aufnehmen / ablegen"},
-  fr = {title = "Inventaire", search = "Rechercher...", sort = "Ranger", all = "Tous les sacs", backpack = "Sac à dos",
+  fr = {title = "Inventaire", search = "Rechercher...", sort = "Trier", all = "Tous les sacs", backpack = "Sac à dos",
     padHelp = "A utiliser   X prendre / poser   Y ranger   LB/RB sac   B fermer", combat = "En combat : lecture seule",
     mouseHelp = "Clic droit : utiliser   Clic gauche : prendre / poser"},
-  it = {title = "Inventario", search = "Cerca...", sort = "Riordina", all = "Tutte le borse", backpack = "Zaino",
+  it = {title = "Inventario", search = "Cerca...", sort = "Ordina", all = "Tutte le borse", backpack = "Zaino",
     padHelp = "A usa   X prendi / posa   Y riordina   LB/RB borsa   B chiudi", combat = "In combattimento: solo vista",
     mouseHelp = "Destro: usa   Sinistro: prendi / posa"},
   es = {title = "Inventario", search = "Buscar...", sort = "Ordenar", all = "Todas las bolsas", backpack = "Mochila",
@@ -72,7 +72,7 @@ local TEXT = {
   pt = {title = "Inventário", search = "Buscar...", sort = "Organizar", all = "Todas as bolsas", backpack = "Mochila",
     padHelp = "A usar   X pegar / pôr   Y organizar   LB/RB bolsa   B fechar", combat = "Em combate: só ver",
     mouseHelp = "Clique direito: usar   Esquerdo: pegar / pôr"},
-  ru = {title = "Инвентарь", search = "Поиск...", sort = "Разобрать", all = "Все сумки", backpack = "Рюкзак",
+  ru = {title = "Инвентарь", search = "Поиск...", sort = "Сортировать", all = "Все сумки", backpack = "Рюкзак",
     padHelp = "A использовать   X взять / положить   Y разобрать   LB/RB сумка   B закрыть", combat = "В бою: только просмотр",
     mouseHelp = "Правая кнопка: использовать   Левая: взять / положить"},
 }
@@ -111,8 +111,18 @@ local function Fill(parent, layer, c, a)
   local t = parent:CreateTexture(nil, layer); t:SetTexture(FLAT); t:SetVertexColor(c[1], c[2], c[3], a or c[4] or 1)
   return t
 end
+-- The theme's refresh (after a loading screen, a theme change) takes every
+-- backdrop it drew away and redraws only the game's windows: ours are put
+-- back each time the window is refreshed.
+local themed = {}
+local function ReBackdrop()
+  local S = PSS.Skin
+  if not (S and S.active and S.Backdrop) then return end
+  for f, kind in pairs(themed) do pcall(S.Backdrop, S, f, kind) end
+end
 local function Backdrop(f, kind)
   if PSS.Skin and PSS.Skin.active and PSS.Skin.Backdrop then
+    themed[f] = kind
     local ok = pcall(PSS.Skin.Backdrop, PSS.Skin, f, kind)
     if ok then return end
   end
@@ -145,7 +155,9 @@ local Blocked
 local function Build()
   if win then return win end
   win = CreateFrame("Frame", "PetSkillScoutInventory", UIParent)
-  win:SetFrameStrata("DIALOG"); win:SetToplevel(true)
+  -- HIGH like the game's own windows beside it: at DIALOG it covered the
+  -- loot window (HIGH) that opens when a clam or a box is opened from it.
+  win:SetFrameStrata("HIGH"); win:SetToplevel(true)
   win:SetClampedToScreen(true)
   win:EnableMouse(true); win:SetMovable(true); win:RegisterForDrag("LeftButton")
   win:SetScript("OnDragStart", function(self) if not InCombat() then self:StartMoving() end end)
@@ -262,7 +274,7 @@ local function MakeSecure()
     -- places in mail / trade, else uses or equips - what a right click in the
     -- game's bag does. (type "item" equips gear first: SecureTemplates.lua.)
     s:SetAttribute("type2", "macro")
-    s:SetFrameStrata("DIALOG")
+    s:SetFrameStrata("HIGH")
     s:SetScript("PostClick", function(self, button, down)
       -- Up and down both arrive now: pick up once, on the up press (or a Click()).
       if down or button ~= "LeftButton" or not self.bag then return end
@@ -455,6 +467,7 @@ function I:Refresh()
   win.title:SetText(T("title"))
   win.sort.text:SetText(T("sort"))
   win.search.hint:SetText(T("search"))
+  ReBackdrop()
   if PSS.PetCare and PSS.PetCare.Diet then
     local ok, d = pcall(PSS.PetCare.Diet, PSS.PetCare); diet = ok and d or nil
   end
@@ -914,7 +927,21 @@ local PARTNERS = {
   {frame = "TradeFrame", open = "TRADE_SHOW", close = "TRADE_CLOSED"},
   {frame = "GuildBankFrame", open = "GUILDBANKFRAME_OPENED", close = "GUILDBANKFRAME_CLOSED"},
 }
+-- Each partner window tells us itself when it goes away (Esc, the close
+-- button, walking off): the close events do not always come, or come while
+-- the window is still shown. The work runs on the next frame (driver).
+local hookedPartner = {}
+local function HookPartners()
+  for _, p in ipairs(PARTNERS) do
+    local f = G(p.frame)
+    if f and not hookedPartner[f] and f.HookScript then
+      hookedPartner[f] = true
+      f:HookScript("OnHide", function() I.partnerClosed = true; I.Schedule() end)
+    end
+  end
+end
 local function Partner()
+  HookPartners()
   for _, p in ipairs(PARTNERS) do
     local f = G(p.frame)
     if f and f:IsShown() then return f end
@@ -967,6 +994,7 @@ ev:SetScript("OnEvent", function(_, e)
     return
   end
   if openEv[e] then
+    HookPartners()
     I.partnerOpened = true; I.Schedule()
     return
   elseif closeEv[e] then

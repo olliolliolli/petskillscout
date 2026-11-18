@@ -837,7 +837,120 @@ local function HookSpellBook()
   return true
 end
 
+-- Loot window cards (Blizzard_UIPanels_Game/Mainline/LootFrame.xml): each
+-- row in LootFrame.ScrollBox has the game's card art (NameFrame
+-- "looting_itemcard_bg", BorderFrame "looting_itemcard_stroke_normal"). The
+-- cards are made as the list fills, so the list's Update is hooked once and
+-- every card shown is themed; the theme refresh calls this again.
+local function SkinLootCard(e)
+  if type(e) ~= "table" then return end
+  for _, k in ipairs({"NameFrame", "BorderFrame"}) do
+    local t = rawget(e, k)
+    if IsTexture(t) then Fade(t) end
+  end
+  S:Backdrop(e, "panel", {0, 0, 0, 0})
+  local tx = rawget(e, "Text")
+  if type(tx) == "table" and tx.SetFont then pcall(tx.SetFont, tx, "Interface/AddOns/PetSkillScout/Fonts/NotoSans-Regular.ttf", 12, "") end
+end
+local function SkinLoot()
+  local lf = G("LootFrame")
+  local box = lf and rawget(lf, "ScrollBox")
+  if not (box and box.ForEachFrame) then return end
+  if not S.lootHooked and box.Update then
+    S.lootHooked = true
+    PSS.HookSecure(box, "Update", function(b) if S.active then pcall(b.ForEachFrame, b, SkinLootCard) end end)
+  end
+  pcall(box.ForEachFrame, box, SkinLootCard)
+end
+
+-- The game's damage meter (Blizzard_DamageMeter: DamageMeter.xml,
+-- DamageMeterSessionWindow.xml, DamageMeterEntry.xml). Each window
+-- ("DamageMeterSessionWindow<n>", made in DamageMeter:SetupSessionWindow) has
+-- a Header texture ("ui-damagemeters-header-bar") and a ScrollBox of entries;
+-- an entry has StatusBar (bar "UI-HUD-CoolDownManager-Bar", shadow
+-- BackgroundRegions) and the Name / Value texts. The bar colour stays the
+-- game's (class colours). Entries are pooled: the list's Update is hooked.
+local DM_FONT = "Interface/AddOns/PetSkillScout/Fonts/NotoSans-Regular.ttf"
+local function SkinMeterEntry(e)
+  if type(e) ~= "table" or not S.active then return end
+  local bar = rawget(e, "StatusBar")
+  if type(bar) == "table" and bar.SetStatusBarTexture then
+    if not bar.pssFlat then
+      bar.pssFlat = true
+      local tex = bar.GetStatusBarTexture and bar:GetStatusBarTexture()
+      local r, g, b = 1, 1, 1
+      if tex and tex.GetVertexColor then r, g, b = tex:GetVertexColor() end
+      pcall(bar.SetStatusBarTexture, bar, FLAT)
+      tex = bar:GetStatusBarTexture()
+      if tex and r then pcall(tex.SetVertexColor, tex, r, g, b) end
+    end
+    for _, k in ipairs({"Background", "BackgroundEdge"}) do
+      local t = rawget(bar, k)
+      if IsTexture(t) then Fade(t) end
+    end
+    S:Backdrop(bar, "panel")
+    for _, k in ipairs({"Name", "Value"}) do
+      local fs = rawget(bar, k)
+      if type(fs) == "table" and fs.SetFont then
+        local _, size = fs:GetFont()
+        pcall(fs.SetFont, fs, DM_FONT, size or 12, "OUTLINE")
+      end
+    end
+  end
+end
+local function SkinMeterWindow(w)
+  if type(w) ~= "table" or not S.active then return end
+  local h = rawget(w, "Header")
+  if IsTexture(h) then
+    Fade(h)
+    if not w.pssHeader then
+      w.pssHeader = CreateFrame("Frame", nil, w)
+      w.pssHeader:SetFrameLevel(math.max(0, (w:GetFrameLevel() or 1) - 1))
+      w.pssHeader:SetAllPoints(h)
+      w.pssHeader.line = w.pssHeader:CreateTexture(nil, "ARTWORK")
+      w.pssHeader.line:SetTexture(FLAT); w.pssHeader.line:SetHeight(1)
+      w.pssHeader.line:SetPoint("BOTTOMLEFT"); w.pssHeader.line:SetPoint("BOTTOMRIGHT")
+    end
+    S:Backdrop(w.pssHeader, "panel")
+    local acc = col.accent or {0.86, 0.7, 0.35, 1}
+    w.pssHeader.line:SetVertexColor(acc[1], acc[2], acc[3], 0.8)
+  end
+  for _, k in ipairs({"SessionTimer"}) do
+    local fs = rawget(w, k)
+    if type(fs) == "table" and fs.SetFont then pcall(fs.SetFont, fs, DM_FONT, 12, "") end
+  end
+  local box = rawget(w, "ScrollBox")
+  if not box then
+    local mc = rawget(w, "MinimizeContainer")
+    box = mc and rawget(mc, "ScrollBox")
+  end
+  if box and box.ForEachFrame then
+    if not box.pssHooked and box.Update then
+      box.pssHooked = true
+      PSS.HookSecure(box, "Update", function(b) if S.active then pcall(b.ForEachFrame, b, SkinMeterEntry) end end)
+    end
+    pcall(box.ForEachFrame, box, SkinMeterEntry)
+  end
+  local lp = rawget(w, "LocalPlayerEntry")
+  if not lp then local mc = rawget(w, "MinimizeContainer"); lp = mc and rawget(mc, "LocalPlayerEntry") end
+  if lp then SkinMeterEntry(lp) end
+end
+local function SkinMeter()
+  local dm = G("DamageMeter")
+  if not dm then return end
+  if not S.meterHooked and dm.SetupSessionWindow then
+    S.meterHooked = true
+    PSS.HookSecure(dm, "SetupSessionWindow", function() if S.active then pcall(SkinMeter) end end)
+  end
+  for i = 1, 10 do
+    local w = G("DamageMeterSessionWindow" .. i)
+    if w then pcall(SkinMeterWindow, w) end
+  end
+end
+
 local function SkinWindows()
+  pcall(SkinLoot)
+  pcall(SkinMeter)
   local list = {}
   for _, n in ipairs(WINDOWS) do list[#list + 1] = G(n) end
   for i = 1, 13 do list[#list + 1] = G("ContainerFrame" .. i) end

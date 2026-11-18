@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.193"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.194"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -619,6 +619,40 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
           PetSkillScoutDB.tipDiagHide = st
         end)
       end
+    elseif msg == "tabtrace" then
+      -- Records the chat tabs frame by frame after the next tab click (where
+      -- each tab is, and which game functions ran), into PetSkillScoutDB.tabTrace.
+      local log, frame, tracer = {}, 0, PSS.tabTracer
+      PetSkillScoutDB.tabTrace = log
+      local function Snap(tag)
+        local parts = {tag, "f" .. frame}
+        for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
+          local t = _G["ChatFrame" .. i .. "Tab"]
+          if t and t:IsVisible() then
+            parts[#parts + 1] = string.format("%d:%.0f,%.0f,w%.0f,a%.2f", i, t:GetLeft() or -1, t:GetBottom() or -1, t:GetWidth() or 0, t:GetEffectiveAlpha() or 0)
+          end
+        end
+        log[#log + 1] = table.concat(parts, " ")
+      end
+      if not tracer then
+        tracer = CreateFrame("Frame"); PSS.tabTracer = tracer
+        for _, fn in ipairs({"FCF_Tab_OnClick", "FCFDock_SelectWindow", "FCFDock_UpdateTabs", "FCFTab_UpdateColors", "FCF_DockUpdate"}) do
+          if type(_G[fn]) == "function" then hooksecurefunc(fn, function()
+            if tracer.armed then tracer.armed = false; tracer.on = true; tracer.start() end
+            if tracer.on then tracer.snap(fn) end
+          end) end
+        end
+        tracer:SetScript("OnUpdate", function(self)
+          if not self.on then return end
+          frame = frame + 1; self.snap("frame")
+          if frame > 40 then self.on = false; PSS:Print("tabtrace: saved, do /reload") end
+        end)
+      end
+      tracer.snap = Snap
+      tracer.start = function() frame = 0; Snap("start") end
+      tracer.on = false
+      tracer.armed = true
+      PSS:Print("tabtrace: now click another chat tab once")
     elseif msg == "chat diag" then
       local out = {}
       local function P(t) out[#out + 1] = t; PSS:Print(t) end
@@ -635,8 +669,16 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
           tostring(f:GetFrameLevel()), table.concat(pts, "; ")))
       end
       P("gamepad active " .. tostring(PSS.GamepadTheme and PSS.GamepadTheme.active))
-      for _, n in ipairs({"GeneralDockManager", "ChatFrame1", "ChatFrame1Tab", "ChatFrame2Tab", "ChatFrame1Background",
-        "PetSkillScoutChatPanel"}) do D(n) end
+      for _, n in ipairs({"GeneralDockManager", "GeneralDockManagerScrollFrame", "GeneralDockManagerScrollFrameChild",
+        "ChatFrame1", "ChatFrame1Background", "PetSkillScoutChatPanel"}) do D(n) end
+      for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
+        local cf = _G["ChatFrame" .. i]
+        if cf and _G["ChatFrame" .. i .. "Tab"] and _G["ChatFrame" .. i .. "Tab"]:IsShown() then
+          P(string.format("cf%d docked %s static %s sel %s", i, tostring(cf.isDocked), tostring(cf.isStaticDocked),
+            tostring(SELECTED_CHAT_FRAME == cf)))
+          D("ChatFrame" .. i .. "Tab")
+        end
+      end
       for i = 1, 3 do
         local tab = _G["ChatFrame" .. i .. "Tab"]
         local fs = tab and (tab.GetFontString and tab:GetFontString() or tab.Text or _G["ChatFrame" .. i .. "TabText"])

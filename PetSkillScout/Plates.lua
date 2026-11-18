@@ -210,6 +210,16 @@ function PSS:ApplyPlateStacking()
   local want = not (PetSkillScoutDB and PetSkillScoutDB.plateStack == false)
   local v = want and "1" or "0"
   if GetCVar("nameplateMotion") ~= v then pcall(SetCVar, "nameplateMotion", v) end
+  -- This client (12.x) has no working nameplateMotion: stacking is the bit
+  -- field "nameplateStackingTypes", one bit per Enum.NamePlateStackType
+  -- (Blizzard_SettingsDefinitions_Frame/Nameplates.lua). Enemy plates only.
+  local ST = Enum and Enum.NamePlateStackType
+  if ST and ST.Enemy and C_CVar and C_CVar.GetCVar and C_CVar.GetCVar("nameplateStackingTypes")
+      and GetCVarBitfield and SetCVarBitfield then
+    if (GetCVarBitfield("nameplateStackingTypes", ST.Enemy) and true or false) ~= want then
+      pcall(SetCVarBitfield, "nameplateStackingTypes", ST.Enemy, want)
+    end
+  end
   -- A little room between stacked plates, so the bars do not touch.
   if want and GetCVar("nameplateOverlapV") and tonumber(GetCVar("nameplateOverlapV")) and tonumber(GetCVar("nameplateOverlapV")) > 1.0 then
     pcall(SetCVar, "nameplateOverlapV", "1.0")

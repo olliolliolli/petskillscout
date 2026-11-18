@@ -1200,22 +1200,24 @@ function LY:StyleTabs()
       tabBusy = true; pcall(tab.SetAlpha, tab, 1); tabBusy = false
     end
   end
-  -- General (the first tab) sits outside the dock's scroll area and ended up
-  -- higher than the others: its bottom is put level with the next tab.
-  local first = G("ChatFrame1Tab")
-  local fb = first and first:GetBottom()
-  for i = 3, tonumber(NUM_CHAT_WINDOWS) or 10 do
-    local t = G("ChatFrame" .. i .. "Tab")
-    local tb = t and t:IsVisible() and t:GetBottom()
-    if fb and tb then
-      local d = tb - fb
-      if math.abs(d) > 0.5 then
-        local p1, r1, p2, x1, y1 = first:GetPoint(1)
-        if p1 then pcall(first.SetPoint, first, p1, r1, p2, x1, (y1 or 0) + d) end
-      end
-      break
-    end
+  -- The dock's tabs come in two groups (FCFDock_UpdateTabs): fixed ones
+  -- (General, Combat Log) sit on the dock's bottom edge, the others are
+  -- centred in its scroll area. That area was taller than the 24 high dock
+  -- (31, gamepad sizes), so those tabs stood higher than General and the row
+  -- jumped when tabs were switched. The scroll area and its child get the
+  -- dock's height, so both groups line up.
+  local dock = G("GeneralDockManager")
+  local sf = dock and (rawget(dock, "scrollFrame") or G("GeneralDockManagerScrollFrame"))
+  local child = sf and (sf.GetScrollChild and sf:GetScrollChild() or G("GeneralDockManagerScrollFrameChild"))
+  local h = dock and dock:GetHeight()
+  if sf and h and h > 0 then
+    if math.abs((sf:GetHeight() or 0) - h) > 0.5 then pcall(sf.SetHeight, sf, h) end
+    if child and math.abs((child:GetHeight() or 0) - h) > 0.5 then pcall(child.SetHeight, child, h) end
   end
+  -- General back on the dock's bottom edge (an older fix moved it up).
+  local first = G("ChatFrame1Tab")
+  local p1, r1, p2, x1, y1 = first and first:GetPoint(1)
+  if p1 == "BOTTOMLEFT" and y1 and y1 ~= 0 then pcall(first.SetPoint, first, p1, r1, p2, x1, 0) end
 end
 
 local PlaceDock
@@ -1384,6 +1386,7 @@ tabWatch.pssKey = "chat tabs"
 PSS:Every(tabWatch, 2)
 
 local chatHooked = false
+local syncBusy = false
 local function HookChat()
   if chatHooked or not hooksecurefunc then return end
   chatHooked = true
@@ -1393,7 +1396,17 @@ local function HookChat()
     if type(_G[fn]) == "function" then PSS.HookSecure(fn, function()
       local tab = G("ChatFrame2Tab")
       local ok, point = pcall(tab and tab.GetPoint or function() end, tab, 1)
-      if ok and point ~= "BOTTOMRIGHT" then PSS:Soon("combat-tab", function() pcall(PlaceCombatTab) end, 0.1) end
+      -- Right away, in the same frame: done a moment later, the game's own
+      -- order (Combat Log beside General) flashed on every tab switch.
+      -- Every time (not only when Combat Log is out of place): the game also
+      -- puts the other tabs back into its scroll strip, 4 px off from our row,
+      -- and the later pass moved them back - a visible twitch.
+      local _ = ok and point
+      if not syncBusy then
+        syncBusy = true
+        pcall(LY.StyleTabs, LY); pcall(PlaceCombatTab)
+        syncBusy = false
+      end
     end) end
   end
   for _, fn in ipairs({"FCF_StopDragging", "FCF_UnDockFrame", "FCF_OpenNewWindow"}) do

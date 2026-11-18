@@ -273,7 +273,9 @@ end
 ---------------------------------------------------------------------------
 -- Target: own aura row
 ---------------------------------------------------------------------------
-local ICON, GAP, PER_ROW = 24, 3, 9
+-- Same look as your own buffs: bigger squares, the time written on the icon
+-- (the clock's own numbers ran into each other at 24 px: "25m27m").
+local ICON, GAP, PER_ROW = 32, 3, 7
 local row, icons = nil, {}
 
 local function AuraAt(unit, i, filter)
@@ -301,12 +303,18 @@ local function NewIcon(i)
   if ok and cd then
     cd:SetAllPoints(b.icon)
     if cd.SetDrawEdge then pcall(cd.SetDrawEdge, cd, false) end
-    if cd.SetHideCountdownNumbers then pcall(cd.SetHideCountdownNumbers, cd, false) end
+    if cd.SetHideCountdownNumbers then pcall(cd.SetHideCountdownNumbers, cd, true) end
     b.cd = cd
   end
-  b.count = b:CreateFontString(nil, "OVERLAY")
-  Font(b.count, 10)
-  b.count:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+  -- Texts above the clock's swipe.
+  b.top = CreateFrame("Frame", nil, b)
+  b.top:SetAllPoints(); b.top:SetFrameLevel((b.cd and b.cd:GetFrameLevel() or b:GetFrameLevel()) + 2)
+  b.count = b.top:CreateFontString(nil, "OVERLAY")
+  Font(b.count, 12)
+  b.count:SetPoint("TOPRIGHT", b, "TOPRIGHT", -1, -1)
+  b.dur = b.top:CreateFontString(nil, "OVERLAY")
+  Font(b.dur, 11)
+  b.dur:SetPoint("BOTTOM", b, "BOTTOM", 0, 2)
   local S = Skin()
   if S then
     b.bd = S:Backdrop(b, "slot", {0, 0, 0, 0}, "OVERLAY")
@@ -330,10 +338,19 @@ local function NewIcon(i)
   return b
 end
 
+local function TimeText(left)
+  if left >= 3600 then return string.format("%dh", math.floor(left / 3600 + 0.5)) end
+  if left >= 60 then return string.format("%dm", math.floor(left / 60 + 0.5)) end
+  return string.format("%d", math.floor(left + 0.5))
+end
 local function SetCooldown(b, duration, expires, auraID)
+  b.expires = nil
+  if b.dur then b.dur:SetText("") end
   if not b.cd then return end
   local d, e = Plain(duration), Plain(expires)
+  if b.cd.SetHideCountdownNumbers then pcall(b.cd.SetHideCountdownNumbers, b.cd, true) end
   if type(d) == "number" and type(e) == "number" and d > 0 then
+    b.expires = e
     pcall(b.cd.SetCooldown, b.cd, e - d, d)
     b.cd:Show()
     return
@@ -341,7 +358,11 @@ local function SetCooldown(b, duration, expires, auraID)
   -- Secret values: the client can drive the swipe itself.
   if auraID and C_UnitAuras and C_UnitAuras.GetAuraDuration and b.cd.SetCooldownFromDurationObject then
     local obj = Call(C_UnitAuras.GetAuraDuration, "target", auraID)
-    if obj and pcall(b.cd.SetCooldownFromDurationObject, b.cd, obj) then b.cd:Show(); return end
+    if obj and pcall(b.cd.SetCooldownFromDurationObject, b.cd, obj) then
+      -- Time unknown to us (secret): the clock writes it itself.
+      if b.cd.SetHideCountdownNumbers then pcall(b.cd.SetHideCountdownNumbers, b.cd, false) end
+      b.cd:Show(); return
+    end
   end
   if b.cd.Clear then pcall(b.cd.Clear, b.cd) end
   b.cd:Hide()
@@ -397,7 +418,7 @@ function A:PlaceTargetRow()
   if badge and badge:IsShown() then
     row:SetPoint("BOTTOMRIGHT", badge, "TOPRIGHT", 0, 4)
   else
-    row:SetPoint("BOTTOMRIGHT", target, "TOPRIGHT", 0, 20)
+    row:SetPoint("BOTTOMRIGHT", target, "TOPRIGHT", 0, 3) -- right on the health bar (no XP bar on a target)
   end
 end
 
@@ -406,6 +427,20 @@ local function BuildTargetRow()
   local target = LY and LY.units and LY.units.target
   if not target or row then return end
   row = CreateFrame("Frame", "PetSkillScoutTargetAuras", target)
+  -- Times on the icons, 5 times a second, only while the row is shown.
+  local t = 0
+  row:SetScript("OnUpdate", function(_, e)
+    t = t + (e or 0)
+    if t < 0.2 then return end
+    t = 0
+    local now = GetTime()
+    for _, b in ipairs(icons) do
+      if b:IsShown() and b.expires and b.dur then
+        local left = b.expires - now
+        b.dur:SetText(left > 0 and TimeText(left) or "")
+      end
+    end
+  end)
   row:SetSize(PER_ROW * (ICON + GAP) - GAP, ICON * 2 + GAP)
   A.row, A.icons = row, icons
 end
