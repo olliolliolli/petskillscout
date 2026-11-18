@@ -100,6 +100,13 @@ function P:SquareStyle(uf, unit)
   local hb = uf.healthBar or uf.HealthBar
   if not hb then return end
   local f = Build(uf)
+  -- Objects (furniture, fishing pools, chests...) have plates too, but no
+  -- health and no level: the game hides both for them (NamePlateHealthBar
+  -- IsGameObject, NameplateLevelFrameMixin:ShouldDisplay). Ours too.
+  local obj = unit and UnitIsGameObject and Call(UnitIsGameObject, unit)
+  local isObj = false
+  pcall(function() isObj = obj and true or false end)
+  if isObj then f:Hide(); return end
   f:ClearAllPoints()
   f:SetPoint("CENTER", hb, "CENTER", 0, 0)
   if unit then unitOf[unit] = uf end

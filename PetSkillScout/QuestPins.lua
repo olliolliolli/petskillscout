@@ -221,8 +221,11 @@ local function Update()
   local canvas, mapID, width, height, scale = PSS.Map:GetCanvasInfo()
   if not canvas or not QP:Enabled() then HideAll(); last.mapID = false; return end
   local level = PSS.QuestWorth:PlayerLevel()
-  if not dirty and last.mapID == mapID and last.width == width and last.height == height
-     and last.scale == scale and last.level == level then return end
+  local same = last.mapID == mapID and last.width == width and last.height == height
+     and last.scale == scale and last.level == level
+  local now = GetTime and GetTime() or 0
+  if same and (not dirty or now - (last.at or 0) < 2) then return end
+  last.at = now -- same map: dirty rebuilds at most every 2 s (quest/bag events ask many times a second)
   last.mapID, last.width, last.height, last.scale, last.level = mapID, width, height, scale, level
   dirty = false
   HideAll()

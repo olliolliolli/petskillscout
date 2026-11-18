@@ -141,14 +141,6 @@ function A:Filter(text, onlyFast, onlyRare, canTame)
   return out
 end
 
--- "attack 1.2s" (green when faster than the standard 2.0 s).
-function A:SpeedText(rec)
-  if not rec or not rec.speed then return "?" end
-  local text = string.format(PSS:L("atlasSpeed"), rec.speed)
-  if rec.fast then return "|cff7ee0a3" .. text .. "|r" end
-  if rec.speed > 2.0 then return "|cffff9a6a" .. text .. "|r" end
-  return text
-end
 
 function A:TeachesText(rec)
   if not (rec and rec.teaches) then return nil end

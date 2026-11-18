@@ -182,9 +182,10 @@ local function Update()
     last.mapID = false
     return
   end
-  if not dirty and last.mapID == mapID and last.width == width and last.height == height and last.scale == scale then
-    return
-  end
+  local same = last.mapID == mapID and last.width == width and last.height == height and last.scale == scale
+  local now = GetTime and GetTime() or 0
+  if same and (not dirty or now - (last.at or 0) < 2) then return end
+  last.at = now -- same map: dirty rebuilds at most every 2 s (quest/bag events ask many times a second)
   last.mapID, last.width, last.height, last.scale = mapID, width, height, scale
   dirty = false
   HideAll()

@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.192"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.193"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -580,6 +580,27 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
                 PSS:Print("     children: " .. table.concat(kids, ", "):sub(1, 220))
             end
         end
+    elseif msg == "inv diag" then
+      local keys = {"PADDUP", "PADDDOWN", "PAD1", "PAD2", "PAD3", "PAD4"}
+      local out = {}
+      for _, k in ipairs(keys) do out[#out + 1] = k .. "=" .. tostring(GetBindingAction(k, true)) end
+      local I = PSS.Inventory
+      local line = "inv: pad " .. tostring(InputUtil and InputUtil.IsGamepadUIEnabled and InputUtil.IsGamepadUIEnabled())
+        .. " owns " .. tostring(I and I.Owns and I:Owns()) .. " | " .. table.concat(out, " ")
+        .. " | " .. tostring(I and I.Diag and I:Diag())
+      PSS:Print(line); PetSkillScoutDB.invDiag = line
+    elseif msg == "gp tip" then
+      local GT = PSS.GamepadTheme
+      local c = _G.GameTooltipDefaultContainer
+      local u = PSS.Layout and PSS.Layout.units or {}
+      local p1, r1, p2, x1, y1 = c and c:GetPoint(1)
+      local t1, tr = GameTooltip:GetPoint(1)
+      local out = string.format("pad %s active %s combat %s | container %s %s>%s.%s %s,%s | pet %s %s player %s | tip %s>%s",
+        tostring(GT and GT.Pad and GT.Pad()), tostring(GT and GT.active), tostring(InCombatLockdown()),
+        tostring(c ~= nil), tostring(p1), tostring(r1 and r1.GetName and r1:GetName()), tostring(p2), tostring(x1), tostring(y1),
+        tostring(u.pet ~= nil), tostring(u.pet and u.pet:IsVisible()), tostring(u.player and u.player:IsVisible()),
+        tostring(t1), tostring(tr and tr.GetName and tr:GetName()))
+      PSS:Print(out); PetSkillScoutDB.gpTip = out
     elseif msg == "tip diag" then
       PSS.tipDiag = not PSS.tipDiag
       PSS:Print("tooltip diag " .. (PSS.tipDiag and "on: hover an item and wait" or "off"))
@@ -860,3 +881,20 @@ PSS.events:SetScript("OnEvent", function(_, event, addon)
         if PSS.UI and PSS.UI.Refresh then PSS.UI:Refresh() end
     end
 end)
+
+-- Which action the game blocked (shown as "PetSkillScout has been blocked"):
+-- kept for the developer, and printed once.
+do
+  local f = CreateFrame("Frame")
+  for _, e in ipairs({"ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN"}) do pcall(f.RegisterEvent, f, e) end
+  f:SetScript("OnEvent", function(_, e, addon, func)
+    if addon ~= "PetSkillScout" then return end
+    local line = date("%H:%M:%S") .. " " .. e .. " " .. tostring(func)
+    if PetSkillScoutDB then
+      PetSkillScoutDB.blocked = PetSkillScoutDB.blocked or {}
+      table.insert(PetSkillScoutDB.blocked, 1, line)
+      while #PetSkillScoutDB.blocked > 20 do table.remove(PetSkillScoutDB.blocked) end
+    end
+    print("|cff70d6ffPetSkillScout|r: blocked: " .. tostring(func))
+  end)
+end

@@ -1198,16 +1198,14 @@ local function TrackFontObject(fs, size)
   if type(name) ~= "string" or not name:find("^ObjectiveTracker") or trackFontObjs[name] then return end
   trackFontObjs[name] = size
   pcall(fo.SetFont, fo, TRACK_FONT, size, "")
-  PSS:Soon("tracker-relayout", function()
-    if InCombatLockdown and InCombatLockdown() then return end
-    local mgr = G("ObjectiveTrackerManager")
-    -- (No tracker update from addon code any more: it tainted the tracker,
-    -- and the game then blocked its right-side frame container in combat.)
-    local _ = mgr
-  end, 0.1)
 end
 
 local function SetTrackFont(fs, size)
+  -- Already in the theme font at this size: nothing to do (most passes).
+  if type(fs) == "table" and fs.GetFont then
+    local ok, cur, sz = pcall(fs.GetFont, fs)
+    if ok and cur == TRACK_FONT and type(sz) == "number" and math.floor(sz + 0.5) == size then return end
+  end
   if type(fs) == "table" then pcall(TrackFontObject, fs, size) end
   if type(fs) == "table" and fs.SetFont then pcall(fs.SetFont, fs, TRACK_FONT, size, "") end
   if type(fs) == "table" and fs.SetShadowOffset then
@@ -1276,6 +1274,9 @@ local function StylePOI(b, title)
     tracked = ok and t == q
   end
   local acc = col.accent or {1, 1, 1, 1}
+  local sig = tostring(done) .. tostring(tracked) .. acc[1] .. acc[2] .. acc[3]
+  if m.pssSig == sig and m:IsShown() then return end
+  m.pssSig = sig
   m:SetSize(12, 12)
   if done then
     m.fill:SetVertexColor(0, 0, 0, 0)
@@ -1348,21 +1349,6 @@ for _, e in ipairs({"SUPER_TRACKING_CHANGED", "QUEST_LOG_UPDATE", "QUEST_WATCH_L
 end
 poiEvents:SetScript("OnEvent", function()
   if S.active then PSS:Soon("tracker-poi", function() if S.active then pcall(SkinTrackerBlocks) end end, 0.2) end
-end)
-
--- A turned-in or abandoned quest sometimes leaves its empty space in the
--- tracker until the next full update: ask for one shortly after.
-local relayEvents = CreateFrame("Frame")
-for _, e in ipairs({"QUEST_TURNED_IN", "QUEST_REMOVED"}) do pcall(relayEvents.RegisterEvent, relayEvents, e) end
-relayEvents:SetScript("OnEvent", function()
-  local function relayout()
-    if InCombatLockdown and InCombatLockdown() then return end
-    local mgr = G("ObjectiveTrackerManager")
-    -- (No tracker update from addon code any more: it tainted the tracker,
-    -- and the game then blocked its right-side frame container in combat.)
-    local _ = mgr
-  end
-  if C_Timer then C_Timer.After(0.5, relayout); C_Timer.After(2, relayout) end
 end)
 
 local trackerHooked = false
@@ -1595,7 +1581,6 @@ function S:Count()
   for _ in pairs(hidden) do n = n + 1 end
   return n
 end
-function S:IsFaded(region) return hidden[region] ~= nil end
 function S:BackdropOf(frame) return backdrops[frame] end
 function S:Colour(k) return col[k] end
 

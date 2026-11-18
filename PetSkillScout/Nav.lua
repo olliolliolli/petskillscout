@@ -549,8 +549,13 @@ local function UpdateMinimap()
   end
   local mapID, px, py = Nav:PlayerPos()
   if not mapID then for _, p in ipairs(pins) do p:Hide() end HideArea() return end
-  if mmDirty or cached.mapID ~= mapID then
+  -- Rebuilding the pin list is the costly part (thousands of quests): on the
+  -- same map at most once every 2 s, however often something asks for it
+  -- (quest log, gossip and bag events ask many times a second).
+  local now = GetTime and GetTime() or 0
+  if cached.mapID ~= mapID or (mmDirty and now - (cached.builtAt or 0) >= 2) then
     cached.mapID, cached.list = mapID, Candidates(mapID)
+    cached.builtAt = now
     mmDirty = false
     cached.fresh = true
   end
@@ -674,7 +679,7 @@ end)
 -- A full pass (which pins, how they look) runs 5 times a second. Between
 -- passes, while you run or the map turns, the pins already on the minimap only
 -- shift by how far you moved: no table work, no map lookups.
-MM.FAST, MM.SLOW = 0.05, 0.2
+MM.FAST, MM.SLOW = 0.1, 0.25
 function MM.Interval(speed, rotating)
   if (type(speed) == "number" and speed > 0) or rotating then return MM.FAST end
   return MM.SLOW

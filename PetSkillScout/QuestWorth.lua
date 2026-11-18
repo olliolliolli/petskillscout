@@ -184,7 +184,7 @@ function W:Offered(id, npc)
     if m and x then rec.m, rec.x, rec.y = m, math.floor(x * 1000 + 0.5) / 10, math.floor(y * 1000 + 0.5) / 10 end
   end
   PetSkillScoutDB.questOffered[id] = rec
-  self.byMap = nil
+  self:Touch(id)
   if PSS.QuestPins and PSS.QuestPins.Refresh then PSS.QuestPins:Refresh() end
 end
 
@@ -590,26 +590,49 @@ W.COLORS = {great = {0.74, 0.45, 1.0}, ok = {1.0, 0.82, 0.0}, skip = {0.55, 0.55
 W.HEX = {great = "|cffbd73ff", ok = "|cffffd100", skip = "|cff8c8c8c"}
 
 -- Quests of the database by quest giver and by map (built once).
+-- One quest changed (a learned position, an NPC offer): only that quest is
+-- moved in the index - the full rebuild over every quest took ~20 ms and ran
+-- each time a position came in.
+local function Drop(list, id)
+  if not list then return end
+  for i = #list, 1, -1 do if list[i] == id then table.remove(list, i) end end
+end
+function W:Touch(id)
+  if not self.byMap then return end
+  self.dirty = self.dirty or {}
+  self.dirty[id] = true
+end
+function W:Place(id)
+  local r = self:Record(id) or {}
+  if r.m and r.x then
+    self.byMap[r.m] = self.byMap[r.m] or {}
+    table.insert(self.byMap[r.m], id)
+  end
+  if r.g then
+    self.byGiver[r.g] = self.byGiver[r.g] or {}
+    table.insert(self.byGiver[r.g], id)
+  end
+  self.mapOf[id], self.giverOf[id] = r.m, r.g
+end
 function W:Index()
-  if self.byMap then return end
-  self.byMap, self.byGiver = {}, {}
+  if self.byMap then
+    if self.dirty then
+      for id in pairs(self.dirty) do
+        Drop(self.byMap[self.mapOf[id] or false], id); Drop(self.byGiver[self.giverOf[id] or false], id)
+        self:Place(id)
+      end
+      self.dirty = nil
+    end
+    return
+  end
+  self.byMap, self.byGiver, self.mapOf, self.giverOf, self.dirty = {}, {}, {}, {}, nil
   local ids = {}
   for id in pairs(PSS.QuestDB or {}) do ids[id] = true end
   -- Quests learned in game (also ones the database does not have).
   local QLm = PSS.QuestLearn
   if QLm and QLm.Records and DB().questObs then for id in pairs(QLm:Records()) do ids[id] = true end end
   for id in pairs(DB().questOffered or {}) do ids[id] = true end
-  for id in pairs(ids) do
-    local r = self:Record(id) or {}
-    if r.m and r.x then
-      self.byMap[r.m] = self.byMap[r.m] or {}
-      table.insert(self.byMap[r.m], id)
-    end
-    if r.g then
-      self.byGiver[r.g] = self.byGiver[r.g] or {}
-      table.insert(self.byGiver[r.g], id)
-    end
-  end
+  for id in pairs(ids) do self:Place(id) end
 end
 
 -- Available quests on a map with their ratings, best first.
@@ -693,20 +716,6 @@ function W:OnMap(mapID, level)
   return out
 end
 
--- Best verdict of the available quests of an NPC (for nameplates).
-function W:GiverVerdict(npc, level)
-  self:Index()
-  local best
-  for _, id in ipairs(self.byGiver[npc] or {}) do
-    local rec = self:Record(id)
-    if not (rec and rec.hol and not (PSS.Holidays and PSS.Holidays:IsActive(rec.hol))) and self:Available(id, level) then
-      local v = self:Verdict(id, level)
-      if v == "great" then return "great" end
-      if v == "ok" or not best then best = v end
-    end
-  end
-  return best
-end
 
 -- Events: learn XP and times.
 local ev = CreateFrame("Frame")

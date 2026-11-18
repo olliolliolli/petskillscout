@@ -94,8 +94,25 @@ end
 
 -- Best food: the lowest item level that still gives full happiness (within
 -- 10 levels of the pet), otherwise the highest the pet will still eat (30).
+-- The bag scan is kept until the bags, the pet or its level change (the feed
+-- button asks for it several times a second).
+local foodCache, foodGen, bagGen = nil, nil, 0
+local foodEv = CreateFrame("Frame")
+for _, e in ipairs({"BAG_UPDATE_DELAYED", "UNIT_PET", "UNIT_LEVEL", "GET_ITEM_INFO_RECEIVED", "PET_UI_UPDATE"}) do
+  pcall(foodEv.RegisterEvent, foodEv, e)
+end
+foodEv:SetScript("OnEvent", function() bagGen = bagGen + 1 end)
 function PC:BestFood()
   local diet = self:Diet()
+  local d = ""
+  if diet then for code = 1, 6 do if diet[code] then d = d .. code end end end
+  local key = bagGen .. ":" .. d .. ":" .. tostring(UnitLevel and PSS.Plain(UnitLevel("pet")))
+  if foodGen == key then return foodCache end
+  local best = self:ScanFood(diet)
+  foodCache, foodGen = best, key
+  return best
+end
+function PC:ScanFood(diet)
   if not (diet and PSS.Foods) then return nil end
   local petLevel = (UnitLevel and PSS.Plain(UnitLevel("pet"))) or 1
   local full, partial, total = nil, nil, {}
@@ -301,15 +318,17 @@ events:SetScript("OnEvent", function(_, event, unit, powerType)
   end
   if event == "UNIT_PET_EXPERIENCE" or ((event == "UNIT_POWER_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH") and unit == "pet") then
     if PSS.UI and PSS.UI.view == "pet" and PSS.UI.RefreshPetStats and PetSkillScoutFrame and PetSkillScoutFrame:IsShown() then
-      if PSS.UI.Guard then PSS.UI.Guard("pet stats", PSS.UI.RefreshPetStats, PSS.UI) else PSS.UI:RefreshPetStats() end
+      PSS:Soon("pet stats", function()
+        if PSS.UI.Guard then PSS.UI.Guard("pet stats", PSS.UI.RefreshPetStats, PSS.UI) else PSS.UI:RefreshPetStats() end
+      end, 0.2)
     end
     if event ~= "UNIT_POWER_UPDATE" then return end
   end
   if event == "UNIT_POWER_UPDATE" and (unit ~= "pet" or powerType ~= "HAPPINESS") then return end
   if (event == "UNIT_HAPPINESS" or event == "UNIT_LEVEL") and unit ~= "pet" then return end
   if event == "UNIT_PET" and unit ~= "player" then return end
-  PC:CheckReminder()
-  PC:UpdateButton()
+  -- Happiness and focus ticks come in bursts: one pass per burst.
+  PSS:Soon("petcare", function() PC:CheckReminder(); PC:UpdateButton() end, 0.2)
 end)
 -- Happiness also decays without events on some clients: poll gently.
 local poll = 0

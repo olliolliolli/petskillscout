@@ -134,8 +134,10 @@ function ST:OnUpdate()
     if not self.shooting then f:Hide() end
     return
   end
-  local speed = self.speed or self:Speed()
-  local elapsed = Now() - self.last
+  local now = Now()
+  if not self.speed and (not f.pssSpeedAt or now - f.pssSpeedAt > 0.2) then f.pssSpeed, f.pssSpeedAt = self:Speed(), now end
+  local speed = self.speed or f.pssSpeed
+  local elapsed = now - self.last
   -- After the cycle: hide when Auto Shot is off, otherwise wait for the shot.
   if elapsed > speed + 0.4 and not self.shooting then
     f:Hide(); self.last = nil

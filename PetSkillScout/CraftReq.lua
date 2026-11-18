@@ -79,7 +79,7 @@ end
 
 local Step
 local function StepRaw()
-  for _ = 1, 6 do
+  for _ = 1, 3 do
     local e = table.remove(queue)
     if not e then
       passes = passes + 1
@@ -97,7 +97,7 @@ local function StepRaw()
       pcall(C_Item.RequestLoadItemDataByID, e[2])
     end
   end
-  if C_Timer then C_Timer.After(0.3, Step) end
+  if C_Timer then C_Timer.After(0.5, Step) end
 end
 
 Step = PSS:Timed("CraftReq pattern scan", StepRaw)

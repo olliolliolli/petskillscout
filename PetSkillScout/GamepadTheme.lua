@@ -270,3 +270,45 @@ ev:SetScript("OnEvent", function(_, event)
     end)
   end
 end)
+
+-- Tooltips in the game's gamepad interface (InputUtil.IsGamepadUIEnabled,
+-- the same check Forever's own code uses).
+-- * Aura procs: in gamepad mode the game shows them by itself in a separate
+--   tooltip, BuffFrameTooltip (BuffFrame.lua ShowNextAuraForTooltip, CVar
+--   GamepadShowAutoAuraTooltip), owned by the aura icon, ANCHOR_BOTTOMLEFT -
+--   over the health bar. Both it and GameTooltip on an aura go above the icon.
+-- * Mobs, players, objects: GameTooltip_SetDefaultAnchor takes the corner of
+--   GameTooltipDefaultContainer (SharedTooltipTemplates.lua). In gamepad mode
+--   that container is put under the pet's health bar (the player frame when
+--   there is no pet); it goes back to its own place with keyboard and mouse.
+local function Pad()
+  return InputUtil and InputUtil.IsGamepadUIEnabled and InputUtil.IsGamepadUIEnabled() and true or false
+end
+GT.Pad = Pad
+if hooksecurefunc then
+  local function Lift(tt)
+    if not Pad() then return end
+    local owner = tt:GetOwner()
+    if not (owner and owner.GetTop) then return end
+    pcall(tt.ClearAllPoints, tt)
+    -- Left edge on the player's health bar, bottom just above the aura icons.
+    local L = LY()
+    local pf = L and L.units and L.units.player
+    local bar = pf and (pf.hp or pf)
+    local ot, bt = owner:GetTop(), bar and bar.GetTop and bar:GetTop()
+    if bar and bar:IsVisible() and ot and bt then
+      -- Icon and bar have different scales: the gap is measured on screen and
+      -- put into the bar's own units.
+      local os, bs = owner:GetEffectiveScale() or 1, bar:GetEffectiveScale() or 1
+      pcall(tt.SetPoint, tt, "BOTTOMLEFT", bar, "TOPLEFT", 0, (ot * os - bt * bs) / (tt:GetEffectiveScale() or 1) + 1)
+    else
+      pcall(tt.SetPoint, tt, "BOTTOMLEFT", owner, "TOPLEFT", 0, 8)
+    end
+  end
+  for _, tt in ipairs({_G.GameTooltip, _G.BuffFrameTooltip}) do
+    for _, m in ipairs({"SetUnitAura", "SetUnitBuff", "SetUnitDebuff", "SetUnitAuraByAuraInstanceID",
+        "SetUnitBuffByAuraInstanceID", "SetUnitDebuffByAuraInstanceID"}) do
+      if tt and type(tt[m]) == "function" then pcall(hooksecurefunc, tt, m, Lift) end
+    end
+  end
+end

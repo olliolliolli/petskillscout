@@ -108,7 +108,10 @@ local function Prune(recs)
     n = n + 1
     if not oldest or (r.t or 0) < oldest then oldest, oldestID = r.t or 0, id end
   end
-  if n > MAX_RECORDS and oldestID then recs[oldestID] = nil end
+  if n > MAX_RECORDS and oldestID then
+    recs[oldestID] = nil
+    if PSS.QuestWorth and PSS.QuestWorth.Touch then PSS.QuestWorth:Touch(oldestID) end
+  end
 end
 
 -- Merge one report (own or from the network). Returns the record.
@@ -146,7 +149,7 @@ function QL:Add(id, data, who)
   if who == Me() then rec.me = true end
   self.changed = true
   -- Map pins use confirmed positions: rebuild the quest index.
-  if PSS.QuestWorth then PSS.QuestWorth.byMap = nil end
+  if PSS.QuestWorth and PSS.QuestWorth.Touch then PSS.QuestWorth:Touch(id) end
   if PSS.QuestPins and PSS.QuestPins.Refresh then PSS.QuestPins:Refresh() end
   return rec
 end

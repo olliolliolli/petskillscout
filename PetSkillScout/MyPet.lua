@@ -164,19 +164,6 @@ function M:AvailableSkills()
   end
   return available,estimatedFree
 end
-function M:NextRank(spell)
-  if not spell.key or not spell.rank then return nil end
-  local available={}
-  for rank in pairs((PSS.Ranks and PSS.Ranks[spell.key]) or {}) do available[tonumber(rank)]=true end
-  for _,b in ipairs(PSS.Beasts or {}) do
-    if b.ability==spell.key and tonumber(b.rank) then available[tonumber(b.rank)]=true end
-  end
-  local nextRank
-  for rank in pairs(available) do
-    if rank>spell.rank and (not nextRank or rank<nextRank) then nextRank=rank end
-  end
-  return nextRank
-end
 M.events=CreateFrame('Frame')
 for _,event in ipairs({'PLAYER_ENTERING_WORLD','UNIT_PET','PET_BAR_UPDATE','PET_UI_UPDATE','SPELLS_CHANGED','UNIT_LEVEL'}) do
   -- Some events differ between WoW client versions; skip unsupported ones.

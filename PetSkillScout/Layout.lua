@@ -228,8 +228,8 @@ local function UpdateHealth(f)
   if Plain(Call(UnitIsDeadOrGhost, u)) then
     text = DEAD or "Dead"
   elseif pc and pm then
-    text = Short(pc)
-    if pm > 0 and pc < pm and f.big then text = text .. "  |cffbbbbbb" .. math.floor(pc / pm * 100 + 0.5) .. "%|r" end
+    -- Big frames: current / max health.
+    text = f.big and pm > 0 and (Short(pc) .. " / " .. Short(pm)) or Short(pc)
   elseif cur ~= nil and AbbreviateNumbers then
     text = Call(AbbreviateNumbers, cur)
   end
@@ -246,8 +246,16 @@ local function UpdatePower(f)
   if cur ~= nil then pcall(f.pp.SetValue, f.pp, cur) end
   f.pp:SetStatusBarColor(PowerColour(u))
   if f.ppText then
-    local pc = Plain(cur)
-    pcall(f.ppText.SetText, f.ppText, pc and pc > 0 and Short(pc) or "")
+    -- Current / max mana (rage, energy...); hidden values in combat are
+    -- written as the game abbreviates them.
+    local pc, pm = Plain(cur), Plain(max)
+    local text = ""
+    if pc and pm then
+      if pm > 0 then text = Short(pc) .. " / " .. Short(pm) end
+    elseif cur ~= nil and AbbreviateNumbers then
+      text = Call(AbbreviateNumbers, cur) or ""
+    end
+    pcall(f.ppText.SetText, f.ppText, text)
   end
 end
 
@@ -356,6 +364,7 @@ local function MakeUnit(unit, w, h, ph, big)
     f.name:SetPoint("RIGHT", f.hp, "RIGHT", -70, 0)
     if f.pp then
       f.ppText = Text(f.pp, 9, "RIGHT")
+      f.ppText:SetDrawLayer("OVERLAY", 7)
       f.ppText:SetTextColor(0.9, 0.9, 0.9)
       f.ppText:SetPoint("RIGHT", f.pp, "RIGHT", -3, 0)
     end
@@ -501,8 +510,10 @@ local function StartUnitEvents()
       if units[u] then UpdatePortrait(units[u]) end
     elseif event == "PLAYER_TARGET_CHANGED" then
       UpdateUnit(units.target); UpdateUnit(units.targettarget); UpdatePortrait(units.target)
-    elseif event == "UNIT_PET" or event == "UNIT_HAPPINESS" then
+    elseif event == "UNIT_PET" then
       UpdateUnit(units.pet)
+    elseif event == "UNIT_HAPPINESS" then
+      PSS:Soon("unit pet", function() pcall(UpdateUnit, units.pet) end, 0.2)
     elseif event == "UNIT_TARGET" then
       if u == "target" then UpdateUnit(units.targettarget) end
     elseif event:find("^PLAYER_") or event == "GROUP_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" or event == "ROLE_CHANGED_INFORM" then
@@ -1708,6 +1719,22 @@ end
 local function TooltipAnchor(tt)
   if not (rightBar and LY.applied.chat) then return end
   pcall(tt.ClearAllPoints, tt)
+  -- Gamepad interface: under the pet's health bar (the player frame when
+  -- there is no pet), clear of the quest list at the right.
+  local GT = PSS.GamepadTheme
+  if GT and GT.Pad and GT.Pad() then
+    local f = (units.pet and units.pet:IsVisible() and units.pet) or (units.player and units.player:IsVisible() and units.player)
+    if f then
+      -- Smaller there, under the unit frames; normal size again when hidden.
+      pcall(tt.SetScale, tt, 0.8)
+      if not tt.pssScaleHook then
+        tt.pssScaleHook = true
+        tt:HookScript("OnHide", function(self) if self:GetScale() ~= 1 then pcall(self.SetScale, self, 1) end end)
+      end
+      pcall(tt.SetPoint, tt, "TOPLEFT", f, "BOTTOMLEFT", 0, -8 / 0.8)
+      return
+    end
+  end
   pcall(tt.SetPoint, tt, "BOTTOMRIGHT", rightBar, "TOPRIGHT", 0, 70)
 end
 

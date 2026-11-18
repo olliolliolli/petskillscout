@@ -232,8 +232,6 @@ local function MenuButton()
 end
 GN.MenuButton = MenuButton
 
--- (A stick combo was tried in 3.6.1; only the menu button is kept.)
-function GN:ComboAvailable() return false end
 
 -- The button under the game menu is no longer created (3.7.118): the
 -- addon is on the gamepad Main Menu wheel below, and /pss or the minimap

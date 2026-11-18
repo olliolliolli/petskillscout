@@ -63,17 +63,23 @@ function A:StyleButton(b, debuff)
   local icon = F(b, "Icon") or F(b, "icon") or (name and G(name .. "Icon"))
   -- Modern aura buttons are taller than wide (room for the duration), so
   -- the icon gets its own square box at the top of the button.
-  if not b.pssSide then
-    local side = icon and icon.GetWidth and Plain(icon:GetWidth()) or 0
-    if type(side) ~= "number" or side < 8 then side = Plain(b:GetWidth()) or 30 end
-    b.pssSide = side
-  end
+  -- Player buffs: big squares, the time written on the icon.
+  b.pssSide = 40
   local side = b.pssSide
+  if not InCombat() then pcall(b.SetSize, b, side, side) end
+  -- The aura container sets the stock size again on every layout: kept.
+  if not b.pssSizeHook and hooksecurefunc then
+    b.pssSizeHook = true
+    local busy = false
+    pcall(PSS.HookSecure, b, "SetSize", function(self, w, h)
+      if busy or not self.pssSide or (w == self.pssSide and h == self.pssSide) or InCombat() then return end
+      busy = true; pcall(self.SetSize, self, self.pssSide, self.pssSide); busy = false
+    end)
+  end
   local box = b.pssBox
   if not box and not InCombat() then
     box = CreateFrame("Frame", nil, b)
-    box:SetSize(side, side)
-    box:SetPoint("TOP", b, "TOP", 0, 0)
+    box:SetPoint("TOPLEFT"); box:SetPoint("BOTTOMRIGHT")
     box:SetFrameLevel(b:GetFrameLevel())
     b.pssBox = box
   end
@@ -104,18 +110,20 @@ function A:StyleButton(b, debuff)
   if debuff then EdgeColour(bd, typeColour or DEBUFF_COLOURS.none) else EdgeColour(bd, Col("edge")) end
   local dur = F(b, "Duration") or (name and G(name .. "Duration"))
   if dur then
-    Font(dur, 9)
+    Font(dur, 12)
+    pcall(dur.SetDrawLayer, dur, "OVERLAY", 7)
+    if dur.GetParent and box and dur:GetParent() ~= box then pcall(dur.SetParent, dur, box) end
     if not InCombat() then
       pcall(dur.ClearAllPoints, dur)
-      pcall(dur.SetPoint, dur, "TOP", box or b, "BOTTOM", 0, -1)
+      pcall(dur.SetPoint, dur, "BOTTOM", box or b, "BOTTOM", 0, 2)
     end
   end
   local count = F(b, "Count") or (name and G(name .. "Count"))
   if count then
-    Font(count, 10)
+    Font(count, 12)
     if not InCombat() then
       pcall(count.ClearAllPoints, count)
-      pcall(count.SetPoint, count, "BOTTOMRIGHT", box or b, "BOTTOMRIGHT", -1, 2)
+      pcall(count.SetPoint, count, "TOPRIGHT", box or b, "TOPRIGHT", -1, -1)
     end
   end
   styled[b] = true
@@ -158,7 +166,7 @@ end
 -- rows grow upwards; debuffs start above the last buff row. Blizzard lays
 -- the buttons out top-down, so after each of its updates the shown buttons
 -- are re-anchored in Blizzard's order (layoutIndex, else screen position).
-local PER_ROW_PLAYER = 8
+local PER_ROW_PLAYER = 6
 
 local function Shown(b) return b and b.IsShown and b:IsShown() end
 
@@ -199,7 +207,8 @@ local function Stack(list, anchor, baseY)
     local ratio = ascale / scale -- anchor pixels -> button units
     local side = b.pssSide or Plain(b:GetWidth()) or 30
     local h = Plain(b:GetHeight()) or side
-    local step, rowH = side + 4, math.max(h, side + 12) + 2
+    -- Side by side, no gaps; rows straight on top of each other.
+    local step, rowH = side, side
     local col, row = (k - 1) % PER_ROW_PLAYER, math.floor((k - 1) / PER_ROW_PLAYER)
     -- Only move a button that is not already there: every move makes the
     -- aura container lay itself out again, which calls our hook again.
@@ -222,10 +231,15 @@ function A:Arrange()
   local player = LY and LY.units and LY.units.player
   if not player then return end
   -- Leave room for the XP bar when it sits on top of the player frame.
-  local xpShown = LY.xpBar and LY.xpBar:IsShown() and (LY.xpOffset or 0) or 0
-  local base = 6 + xpShown
-  local used = Stack(Collect(G("BuffFrame"), "BuffButton"), player, base)
-  Stack(Collect(G("DebuffFrame"), "DebuffButton"), player, base + used + (used > 0 and 4 or 0))
+  -- The first row stands right on top of the XP bar (anchored to the bar
+  -- itself), right aligned; debuffs above the buffs.
+  local xp = LY.xpBar
+  local anchor = (xp and xp:IsShown() and xp:IsVisible()) and xp or player
+  -- Buffs and debuffs (the Ghost / spirit one too) in the same rows, all
+  -- the same size: debuffs continue to the left of the buffs.
+  local list = Collect(G("BuffFrame"), "BuffButton")
+  for _, d in ipairs(Collect(G("DebuffFrame"), "DebuffButton")) do list[#list + 1] = d end
+  Stack(list, anchor, 0)
 end
 
 -- Above the player frame: buffs, then debuffs; right aligned with it.

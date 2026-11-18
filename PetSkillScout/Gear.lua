@@ -208,8 +208,19 @@ local function TooltipPercents(link)
   return out
 end
 
+-- An item's stats do not change: read once per link (the Gear tab asked
+-- thousands of times per redraw, each with a tooltip scan).
+local statCache = {}
+local RuntimeStatsRaw
 local function RuntimeStats(link)
   if type(link) ~= "string" then return nil end
+  local c = statCache[link]
+  if c then return c end
+  c = RuntimeStatsRaw(link)
+  if c then statCache[link] = c end
+  return c
+end
+function RuntimeStatsRaw(link)
   local fn = (C_Item and C_Item.GetItemStats) or GetItemStats
   local t = Call(fn, link)
   if type(t) ~= "table" or next(t) == nil then return nil end
@@ -302,10 +313,6 @@ function G:Score(st, slot, spec)
   return s
 end
 
-function G:ItemScore(id, spec, link)
-  local rec = self:Get(id)
-  return self:Score(self:Stats(id, link), rec and rec.slot or "other", spec)
-end
 
 -- Equipped item of an inventory slot: id, link, score.
 function G:Equipped(inv, spec)
@@ -753,6 +760,12 @@ local function RedrawGear()
 end
 G.Redraw = RedrawGear
 G.frame:SetScript("OnEvent", function(_, event, unit)
+  -- Item data arrives for every item the game loads (tooltips, chat, other
+  -- addons): redraw only for the ones this tab asked for.
+  if event == "GET_ITEM_INFO_RECEIVED" or event == "ITEM_DATA_LOAD_RESULT" then
+    if not (type(unit) == "number" and requested[unit] == true) then return end
+    requested[unit] = "got"
+  end
   dirty = true
   -- New gear: redraw at once and again when the item's stats have arrived.
   -- Slot 0 is ammo (changes on every shot): nothing to redraw.
@@ -765,7 +778,7 @@ end)
 local t = 0
 G.frame:SetScript("OnUpdate", function(_, e)
   t = t + (e or 0)
-  if t < 0.5 then return end
+  if t < 1.5 then return end
   t = 0
   if dirty then
     dirty = false

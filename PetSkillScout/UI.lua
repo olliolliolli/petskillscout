@@ -933,9 +933,6 @@ function UI:ShowView(name)
 end
 
 -- Compatibility with older callers.
-function UI:ShowPet(show) self:ShowView(show and "pet" or "beasts") end
-function UI:ShowRare(show) self:ShowView(show and "rares" or "beasts") end
-function UI:ShowAtlas(show) self:ShowView("beasts") end
 
 function UI:RefreshHeader()
   -- Tabs sized to their text; the character chip gets the room that is left.
@@ -1762,8 +1759,6 @@ function UI:UpdateRares(rebuild)
 end
 
 -- Compatibility: older modules call these.
-function UI:RefreshRare() if self.view == "rares" then self:UpdateRares(true) end end
-function UI:UpdateRareList() if self.view == "rares" then self:UpdateRares() end end
 
 ---------------------------------------------------------------------------
 -- Route: skill ranks to learn -> teaching beasts in a travel order
@@ -4331,6 +4326,10 @@ local SETTINGS = {
     {key="gearRolls", label="optGearRolls", hint="optGearRollsHint", kind="toggle", default=true},
     {key="gearBagArrows", label="optGearBagArrows", hint="optGearBagArrowsHint", kind="toggle", default=true,
       apply=function() if PSS.GearCompare then PSS.GearCompare:MarkAllBags() end end},
+    {key="ownBags", label="optOwnBags", hint="optOwnBagsHint", kind="toggle", default=true,
+      apply=function() if PSS.Inventory and not PSS.Inventory:Enabled() then PSS.Inventory:Close() end end},
+    {key="bagsUI", label="optBagsUI", hint="optBagsUIHint", kind="toggle", default=true,
+      apply=function() if PSS.Bags then PSS.Bags:Refresh() end end},
   }},
   {id="quests", title="setQuests", sub="setQuestsSub", rows={
     {key="questAlert", label="optQuestAlert", hint="optQuestAlertHint", kind="toggle", default=true},

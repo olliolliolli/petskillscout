@@ -157,5 +157,11 @@ ev:SetScript("OnEvent", function(_, event, a1)
   elseif event == "CVAR_UPDATE" and not (type(a1) == "string" and a1:find("GamePad")) then
     return
   end
-  pcall(Update)
+  -- The device flips on every mouse touch while a pad is connected: the
+  -- theme is re-laid out only once the input settles (half a second).
+  if event == "GAME_PAD_ACTIVE_CHANGED" and PSS.Soon then
+    PSS:Soon("gamepad-update", function() pcall(Update) end, 0.5)
+  else
+    pcall(Update)
+  end
 end)
