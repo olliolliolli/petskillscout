@@ -27,6 +27,9 @@ GT.BAR_UP = 70
 -- the active device and the frames slid back over the gamepad buttons).
 function GT:BarShown()
   local root = _G.GamepadMainActionBarFrame
+  -- Keyboard interface: the normal action bars are on screen.
+  local ab = _G.ActionButton1
+  if ab and ab:IsVisible() then return false end
   local ok, shown = pcall(function() return root and root:IsVisible() end)
   return ok and shown and true or false
 end
@@ -45,7 +48,11 @@ local function PlaceUnits(active)
   if not (L and L.units) then return end
   for key, x in pairs({player = -GT.UNIT_X, target = GT.UNIT_X}) do
     local f = L.units[key]
-    if f and Free(key) then
+    -- Moved only when not already there: moving frames each pass made the
+    -- game re-check what is under the mouse, and item tooltips closed.
+    local p1, r1, p2, x1, y1 = f and f:GetPoint(1)
+    local there = active and p1 == "BOTTOM" and r1 == UIParent and x1 == x and y1 == GT.UNIT_Y and f:GetNumPoints() == 1
+    if f and Free(key) and not there then
       pcall(f.ClearAllPoints, f)
       if active then pcall(f.SetPoint, f, "BOTTOM", UIParent, "BOTTOM", x, GT.UNIT_Y)
       else
@@ -54,7 +61,8 @@ local function PlaceUnits(active)
     end
   end
   local cb = _G.CastingBarFrame or _G.PlayerCastingBarFrame
-  if cb and active then
+  local c1, _, _, _, cy = cb and cb:GetPoint(1)
+  if cb and active and not (c1 == "BOTTOM" and cy == GT.CAST_Y) then
     pcall(cb.ClearAllPoints, cb)
     pcall(cb.SetPoint, cb, "BOTTOM", UIParent, "BOTTOM", 0, GT.CAST_Y)
   end
@@ -174,6 +182,10 @@ function GT:SkinBar()
     end
     local up = (PetSkillScoutDB and tonumber(PetSkillScoutDB.gamepadBarUp)) or self.BAR_UP
     local sc = root:GetScale() or 1
+    local q = self.barPoints[1]
+    local c1, c2, c3, c4, c5 = root:GetPoint(1)
+    local wantY = q and (q[5] or 0) + up / sc
+    if q and c1 == q[1] and c2 == q[2] and c3 == q[3] and c5 and math.abs(c5 - wantY) < 0.5 then return true end
     pcall(root.ClearAllPoints, root)
     for _, p in ipairs(self.barPoints) do
       pcall(root.SetPoint, root, p[1], p[2], p[3], p[4] or 0, (p[5] or 0) + up / sc)

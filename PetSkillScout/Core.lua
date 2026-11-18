@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.191"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.192"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -580,6 +580,24 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
                 PSS:Print("     children: " .. table.concat(kids, ", "):sub(1, 220))
             end
         end
+    elseif msg == "tip diag" then
+      PSS.tipDiag = not PSS.tipDiag
+      PSS:Print("tooltip diag " .. (PSS.tipDiag and "on: hover an item and wait" or "off"))
+      if not PSS.tipDiagHooked and GameTooltip then
+        PSS.tipDiagHooked = true
+        GameTooltip:HookScript("OnHide", function()
+          if not PSS.tipDiag then return end
+          local st = debugstack and debugstack(2, 12, 0) or "?"
+          PSS:Print("tooltip hidden by: " .. st)
+          PetSkillScoutDB.tipDiag = st
+        end)
+        hooksecurefunc(GameTooltip, "Hide", function()
+          if not PSS.tipDiag then return end
+          local st = debugstack and debugstack(2, 12, 0) or "?"
+          PSS:Print("GameTooltip:Hide from: " .. st)
+          PetSkillScoutDB.tipDiagHide = st
+        end)
+      end
     elseif msg == "chat diag" then
       local out = {}
       local function P(t) out[#out + 1] = t; PSS:Print(t) end

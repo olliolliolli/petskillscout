@@ -752,7 +752,7 @@ function LY.PlaceCooldowns()
           and hawk:Enabled() and PetSkillScoutDB and PetSkillScoutDB.hawkSpell then
         hx = math.floor(hawk:Width() / 2)
       end
-      v.pssAnchor = prev and {"BOTTOM", barHolder, "BOTTOM", 0, 0} or {"BOTTOM", barHolder, "BOTTOM", hx, (PSS.GamepadTheme and PSS.GamepadTheme.active and PSS.GamepadTheme.CDM_Y) or LY.cdmY or 120}
+      v.pssAnchor = prev and {"BOTTOM", barHolder, "BOTTOM", 0, 0} or {"BOTTOM", barHolder, "BOTTOM", hx, (PSS.GamepadTheme and PSS.GamepadTheme.active and not (G("ActionButton1") and G("ActionButton1"):IsVisible()) and PSS.GamepadTheme.CDM_Y) or LY.cdmY or 120}
       if prev then
         -- Directly above the previous row, centred on the bars (not on the
         -- previous row, which may be shifted for the hawks).
