@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.196"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.197"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -278,6 +278,16 @@ function PSS:InitializeDB()
     if not PetSkillScoutDB.howlV1 then
         PetSkillScoutDB.rareSound = nil
         PetSkillScoutDB.howlV1 = true
+    end
+    -- 3.7.197: everything that changes or adds to the game's own interface
+    -- (game settings, action bars, tooltips, map pins, alerts, chat posts)
+    -- is off unless the player switches it on. Options the player set
+    -- themselves keep their value.
+    if not PetSkillScoutDB.defaultsOffV1 then
+        for _, k in ipairs({"plateStack", "spellBarAuto", "petBarAuto", "gearBagArrows", "gearTooltip", "gearQuest", "gearRolls", "shotTimer", "hawkTimer", "tooltip", "tooltipSkills", "tooltipSeen", "rareMapPins", "minimapPins", "questMinimap", "questObjPins", "questAlert", "questWorth", "rareAlertPopup", "rareSound", "rareChat", "rareTimerAlert", "announceOn", "announceRare", "announceRank", "announceMilestone", "petCareReminder", "guardSound", "showcaseShare"}) do
+            if PetSkillScoutDB[k] == nil then PetSkillScoutDB[k] = false end
+        end
+        PetSkillScoutDB.defaultsOffV1 = true
     end
 end
 
