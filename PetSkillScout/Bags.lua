@@ -67,6 +67,7 @@ local function Col(k, def)
 end
 local function On()
   if DB().bagsUI ~= true then return false end -- off unless switched on
+  if PSS.RevUILoaded and PSS:RevUILoaded() then return false end
   -- Our own inventory window replaces the game's bags: nothing to dress up.
   if PSS.Inventory and PSS.Inventory.Enabled and PSS.Inventory:Enabled() then return false end
   if not (PSS.Skin and PSS.Skin.active) then return false end

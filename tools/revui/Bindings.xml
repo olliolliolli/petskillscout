@@ -1,0 +1,5 @@
+<Bindings>
+  <Binding name="REVUI_SORTBAGS" header="REVUI" category="RevUI">
+    RevUI_SortBags()
+  </Binding>
+</Bindings>

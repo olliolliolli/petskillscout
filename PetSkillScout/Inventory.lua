@@ -45,7 +45,12 @@ local function Col(k, def)
   return c or def
 end
 local function Pad() return InputUtil and InputUtil.IsGamepadUIEnabled and InputUtil.IsGamepadUIEnabled() and true or false end
-function I:Enabled() return DB().ownBags == true end -- off unless switched on
+-- Part of the theme: off whenever the theme is off (or RevUI draws it).
+function I:Enabled()
+  if DB().ownBags ~= true or (PSS.RevUILoaded and PSS:RevUILoaded()) then return false end
+  if PSS.Skin and PSS.Skin.Wanted and not PSS.Skin:Wanted() then return false end
+  return true
+end -- off unless switched on
 
 local TEXT = {
   en = {title = "Inventory", search = "Search...", sort = "Sort", all = "All bags", backpack = "Backpack",

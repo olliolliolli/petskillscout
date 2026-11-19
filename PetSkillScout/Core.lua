@@ -17,7 +17,7 @@ function PSS:Credit(short)
   return "PetSkillScout " .. v .. "  ·  by " .. PSS.AUTHOR .. "  ·  " .. PSS.HOME
 end
 local GetMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.197"
+PSS.version = (GetMeta and GetMeta(PSS.name, "Version")) or "3.7.198"
 PSS.events = CreateFrame("Frame")
 PSS.player = { faction = "Unknown", race = "Unknown", level = 1, zone = "Unknown", mapID = nil, x = nil, y = nil }
 PSS.filters = { ability = "Bite", rank = 3, family = "All", minLevel = 1, maxLevel = 60 }
@@ -175,6 +175,15 @@ function PSS:Soon(key, fn, delay)
     else pcall(fn) end
   end
   if C_Timer and C_Timer.After then C_Timer.After(delay or 0.1, run) else run() end
+end
+
+-- RevUI (the same author's theme addon, built from this theme code) takes
+-- over the whole theme when it is loaded: PetSkillScout's own copy stays off.
+function PSS:RevUILoaded()
+    local f = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+    if not f then return false end
+    local ok, r = pcall(f, "RevUI")
+    return ok and r and true or false
 end
 
 function PSS:Print(msg)

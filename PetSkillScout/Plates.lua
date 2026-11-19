@@ -207,6 +207,7 @@ local stackEv = CreateFrame("Frame")
 for _, e in ipairs({"PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED"}) do pcall(stackEv.RegisterEvent, stackEv, e) end
 function PSS:ApplyPlateStacking()
   if not (SetCVar and GetCVar) or (InCombatLockdown and InCombatLockdown()) then return end
+  if PSS.RevUILoaded and PSS:RevUILoaded() then return end
   local want = not (PetSkillScoutDB and PetSkillScoutDB.plateStack == false)
   local v = want and "1" or "0"
   if GetCVar("nameplateMotion") ~= v then pcall(SetCVar, "nameplateMotion", v) end

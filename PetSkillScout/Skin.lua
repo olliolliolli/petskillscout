@@ -51,6 +51,7 @@ local function Theme() return PSS.UI and PSS.UI.ThemeKey and PSS.UI.ThemeKey() o
 
 function S:Wanted()
   local db = PetSkillScoutDB
+  if PSS.RevUILoaded and PSS:RevUILoaded() then return false end
   return db and db.skinGame == true and Theme() ~= "blizzard" and not self:Conflict() and true or false
 end
 
