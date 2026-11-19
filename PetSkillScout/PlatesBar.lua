@@ -214,9 +214,12 @@ function P:SquareStyle(uf, unit)
   local cls = unit and Call(UnitClassification, unit)
   local special = false
   pcall(function() special = cls == "elite" or cls == "rareelite" or cls == "rare" or cls == "worldboss" end)
+  -- Dungeon and raid bosses (BossDB, from ATT): red-orange, always thick.
+  local boss = unit and PSS.IsBoss and PSS:IsBoss(unit)
+  if boss then special = true end
   if special then
-    c = {1, 0.8, 0.25, 1}
-    w = isSel and 3 or 2
+    c = boss and {1, 0.35, 0.2, 1} or {1, 0.8, 0.25, 1}
+    w = (isSel or boss) and 3 or 2
   end
   -- Gold points for every elite, rare and boss mob.
   local rareOnly = false

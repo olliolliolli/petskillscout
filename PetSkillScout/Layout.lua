@@ -269,7 +269,8 @@ local function UpdateName(f)
     local lvl = Plain(Call(UnitLevel, u))
     local cls = Plain(Call(UnitClassification, u))
     local s = (type(lvl) == "number" and lvl > 0) and tostring(lvl) or "??"
-    f.level:SetText(s .. (cls and CLASSIF[cls] or ""))
+    local boss = PSS.IsBoss and PSS:IsBoss(u)
+    f.level:SetText(s .. ((boss and " B") or (cls and CLASSIF[cls]) or ""))
     local c = GetQuestDifficultyColor and type(lvl) == "number" and lvl > 0 and Call(GetQuestDifficultyColor, lvl)
     if c and c.r then f.level:SetTextColor(c.r, c.g, c.b) else f.level:SetTextColor(1, 0.82, 0) end
   end

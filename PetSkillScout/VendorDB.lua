@@ -1,4 +1,4 @@
--- Vendors of hunter-usable gear: generated from AllTheThings (Forever), commit 1bcd391, MIT licence (QuestDB-LICENSE.txt).
+-- Vendors of hunter-usable gear: generated from AllTheThings (Forever), commit c055ad1, MIT licence (QuestDB-LICENSE.txt).
 -- [item] = {npc, x, y, uiMapID, rep = {factionID, standing}, hol = event}
 local PSS = PetSkillScout
 PSS.VendorDB = {
