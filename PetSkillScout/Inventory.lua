@@ -45,7 +45,7 @@ local function Col(k, def)
   return c or def
 end
 local function Pad() return InputUtil and InputUtil.IsGamepadUIEnabled and InputUtil.IsGamepadUIEnabled() and true or false end
-function I:Enabled() return DB().ownBags ~= false end
+function I:Enabled() return DB().ownBags == true end -- off unless switched on
 
 local TEXT = {
   en = {title = "Inventory", search = "Search...", sort = "Sort", all = "All bags", backpack = "Backpack",
@@ -990,7 +990,7 @@ end
 ev:SetScript("OnEvent", function(_, e)
   if e == "PLAYER_ENTERING_WORLD" then
     HookGame()
-    if not InCombat() then MakeSecure() end
+    if not InCombat() and I:Enabled() then MakeSecure() end
     return
   end
   if openEv[e] then
@@ -1007,7 +1007,7 @@ ev:SetScript("OnEvent", function(_, e)
     return
   end
   if e == "PLAYER_REGEN_ENABLED" then
-    MakeSecure()
+    if I:Enabled() then MakeSecure() end
     I.combat = nil
     I:HideGameBags()
     if I.closed and win then win:EnableMouse(false); MuteChildren(win, true) end

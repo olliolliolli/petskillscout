@@ -4326,9 +4326,9 @@ local SETTINGS = {
     {key="gearRolls", label="optGearRolls", hint="optGearRollsHint", kind="toggle", default=true},
     {key="gearBagArrows", label="optGearBagArrows", hint="optGearBagArrowsHint", kind="toggle", default=true,
       apply=function() if PSS.GearCompare then PSS.GearCompare:MarkAllBags() end end},
-    {key="ownBags", label="optOwnBags", hint="optOwnBagsHint", kind="toggle", default=true,
+    {key="ownBags", label="optOwnBags", hint="optOwnBagsHint", kind="toggle", default=false,
       apply=function() if PSS.Inventory and not PSS.Inventory:Enabled() then PSS.Inventory:Close() end end},
-    {key="bagsUI", label="optBagsUI", hint="optBagsUIHint", kind="toggle", default=true,
+    {key="bagsUI", label="optBagsUI", hint="optBagsUIHint", kind="toggle", default=false,
       apply=function() if PSS.Bags then PSS.Bags:Refresh() end end},
   }},
   {id="quests", title="setQuests", sub="setQuestsSub", rows={
