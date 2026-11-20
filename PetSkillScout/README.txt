@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.201
+- Gear: a ring or trinket is compared with each of the two equipped ones; stat differences drop
+  the fraction like the game's own comparison.
+- Theme: a mob tagged by someone outside your group turns grey on its nameplate at once.
+- Data update 2026-11-20 (2): quest giver positions from AllTheThings commit 792e1a4; learned data
+  from the game (7 quests, 6 rare spots).
+
 3.7.200
 - Data update 2026-11-20: quests, rewards, beasts and bosses from AllTheThings commit 6276795;
   learned data from the game (8 quests, 1 vendor, 14 rare spots).
