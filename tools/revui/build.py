@@ -11,7 +11,7 @@ OUT = os.path.join(sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, ".."
 VERSION = open(os.path.join(HERE, "VERSION")).read().strip()
 
 # Load order matters: Skin before Bags/Inventory/Layout, Layout before the rest.
-FILES = ["BossDB.lua", "Gamepad.lua", "Skin.lua", "Bags.lua", "Inventory.lua", "Layout.lua", "ClassPower.lua",
+FILES = ["Profiler.lua", "BossDB.lua", "Gamepad.lua", "Skin.lua", "Bags.lua", "Inventory.lua", "SkinText.lua", "Layout.lua", "ClassPower.lua",
          "Auras.lua", "Plates.lua", "PlatesBar.lua", "GamepadTheme.lua"]
 # Frame names of PetSkillScout itself that the shared code looks for: kept.
 KEEP = ["PetSkillScoutMinimapButton", "PetSkillScoutGameMenuButton", "PetSkillScoutFrame"]
@@ -21,6 +21,8 @@ def transform(name, s):
     s = s.replace("PetSkillScoutDB", "RevUIDB")
     s = s.replace("PetSkillScout_SortBags", "RevUI_SortBags").replace("BINDING_NAME_PETSKILLSCOUT_SORTBAGS", "BINDING_NAME_REVUI_SORTBAGS")
     s = s.replace("PetSkillScout" + chr(92)*2 + "Fonts", "RevUI" + chr(92)*2 + "Fonts")
+    if name == "Profiler.lua":
+        s = s.replace('"PetSkillScout"', '"RevUI"').replace("^PetSkillScout", "^RevUI").replace("PSS.name", "PSS.name").replace("/pss cpu", "/rev cpu")
     if name == "Inventory.lua":
         s = s.replace("PetSkillScouts", "RevUI").replace("PetSkillScout", "RevUI")
     s = s.replace("AddOns\\PetSkillScout\\\\", "AddOns\\RevUI\\\\").replace("AddOns/PetSkillScout/", "AddOns/RevUI/")

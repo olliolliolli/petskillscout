@@ -968,7 +968,9 @@ local CHAT_SIZES = {s = {380, 230}, m = {440, 290}, l = {520, 350}, xl = {620, 4
 LY.CHAT_SIZES = CHAT_SIZES
 function LY:ChatSize()
   local v = CHAT_SIZES[DB().skinChatSize or "m"] or CHAT_SIZES.m
-  return v[1], v[2]
+  -- Exact sizes from the sliders win over the preset.
+  local w, h = tonumber(DB().chatW), tonumber(DB().chatH)
+  return (w and w >= 300 and w <= 900) and w or v[1], (h and h >= 150 and h <= 700) and h or v[2]
 end
 
 local function Hex(c) return string.format("%02x%02x%02x", c[1] * 255, c[2] * 255, c[3] * 255) end
@@ -2113,6 +2115,7 @@ function LY:PlaceMinimap()
   pcall(mm.SetPoint, mm, "CENTER", mmHolder, "CENTER", 0, 0)
   local size = self:MinimapSize()
   pcall(mmHolder.SetSize, mmHolder, size, size)
+  if self.movables and self.movables.minimap and self:Saved("minimap") then self:ApplyPosition("minimap") end
   pcall(mm.SetSize, mm, size, size)
   if zoneText then pcall(zoneText.SetWidth, zoneText, size - 10) end
   if mm.SetMaskTexture then pcall(mm.SetMaskTexture, mm, FLAT) end
@@ -2508,6 +2511,40 @@ function LY:Movable(key, frame, label)
   for i = 1, (frame.GetNumPoints and frame:GetNumPoints() or 0) do pts[i] = {frame:GetPoint(i)} end
   self.movables[key] = {key = key, frame = frame, label = label, default = pts}
   if self:Saved(key) and not InCombat() then self:ApplyPosition(key) end
+  if not InCombat() then self:ApplyScale(key) end
+end
+
+-- Size of a movable part (Settings sliders): DB.layoutScale[key], 0.5-2.
+function LY:ApplyScale(key)
+  local m = self.movables[key]
+  if not m or InCombat() then return end
+  local t = DB().layoutScale
+  local v = t and tonumber(t[key]) or 1
+  if v < 0.5 or v > 2 then v = 1 end
+  -- The minimap is sized by pixels (skinMinimapSize): scaling it would
+  -- magnify the map picture and every pin, so it always stays at 1.
+  if key == "minimap" then v = 1 end
+  if m.frame.SetScale and math.abs((m.frame:GetScale() or 1) - v) > 0.001 then
+    -- SetScale also scales the frame's anchor offsets: keep its centre where
+    -- it was (the frame flew across the screen while the slider moved).
+    local cx, cy = m.frame:GetCenter()
+    local old = m.frame:GetEffectiveScale() or 1
+    pcall(m.frame.SetScale, m.frame, v)
+    if self:Saved(key) then
+      self:ApplyPosition(key)
+    elseif cx and cy then
+      local ns = m.frame:GetEffectiveScale() or 1
+      m.frame:ClearAllPoints()
+      m.frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cx * old / ns, cy * old / ns)
+      local ui = UIParent:GetEffectiveScale() or 1
+      PetSkillScoutDB = PetSkillScoutDB or {}
+      PetSkillScoutDB.layoutPos = PetSkillScoutDB.layoutPos or {}
+      PetSkillScoutDB.layoutPos[key] = {x = cx * old / ui, y = cy * old / ui}
+    end
+  end
+end
+function LY:ApplyScales()
+  for key in pairs(self.movables) do self:ApplyScale(key) end
 end
 
 function LY:ApplyPosition(key)

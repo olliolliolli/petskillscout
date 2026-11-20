@@ -34,8 +34,18 @@ function R.IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) == true 
 function R.Plain(v) if R.IsSecret(v) then return nil end return v end
 function R:Safe(text) return text end
 
--- No profiler in RevUI: timed wrappers are the plain functions.
-function R:Timed(_, fn) return fn end
+-- fn, timed by /rev cpu while a check runs (free otherwise).
+R.loadStart = debugprofilestop and debugprofilestop() or nil
+function R:Timed(key, fn)
+  return function(...)
+    local P = R.Profiler
+    if not (P and P.cost and debugprofilestop) then return fn(...) end
+    local t = debugprofilestop()
+    local r = {fn(...)}
+    P:Add(key, debugprofilestop() - t)
+    return unpack(r)
+  end
+end
 function R:Debug() end
 
 -- Run a frame's OnUpdate on a timer instead of every frame (a hidden frame is
@@ -46,22 +56,40 @@ function R:Every(frame, interval)
   frame:SetScript("OnUpdate", nil)
   frame.pssTick = fn
   frame.pssTicker = C_Timer.NewTicker(interval, function()
-    if frame:IsShown() then pcall(fn, frame, interval) end
+    if frame:IsShown() then
+      local P = R.Profiler
+      if P and P.cost and debugprofilestop then
+        local t = debugprofilestop(); pcall(fn, frame, interval)
+        P:Add((frame.GetName and frame:GetName() or "timer") .. " " .. tostring(frame.pssKey or ""), debugprofilestop() - t)
+      else pcall(fn, frame, interval) end
+    end
   end)
 end
 
-function R.HookSecure(a, b, c)
-  if type(a) == "string" then return hooksecurefunc(a, b) end
-  return hooksecurefunc(a, b, c)
+local function HookName(a, b)
+  if type(a) == "string" then return a end
+  local n = type(a) == "table" and a.GetName and a:GetName()
+  return (n or "?") .. ":" .. tostring(b)
 end
-function R.HookScript(f, script, fn) return f:HookScript(script, fn) end
+function R.HookSecure(a, b, c)
+  if type(a) == "string" then return hooksecurefunc(a, R:Timed("hook " .. HookName(a), b)) end
+  return hooksecurefunc(a, b, R:Timed("hook " .. HookName(a, b), c))
+end
+function R.HookScript(f, script, fn) return f:HookScript(script, R:Timed("hook " .. HookName(f, script), fn)) end
 
 -- Runs fn once, a moment later, however often it is asked in between.
 local soonQueued = {}
 function R:Soon(key, fn, delay)
   if soonQueued[key] then return end
   soonQueued[key] = true
-  local function run() soonQueued[key] = nil; pcall(fn) end
+  local function run()
+    soonQueued[key] = nil
+    local P = R.Profiler
+    if P and P.cost and debugprofilestop then
+      local t = debugprofilestop(); pcall(fn)
+      P:Add("pass " .. tostring(key), debugprofilestop() - t)
+    else pcall(fn) end
+  end
   if C_Timer and C_Timer.After then C_Timer.After(delay or 0.1, run) else run() end
 end
 

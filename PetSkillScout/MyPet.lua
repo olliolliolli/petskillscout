@@ -108,6 +108,30 @@ function M:Scan()
     seen[id]=spell
     table.insert(self.spells,spell)
   end
+  -- Forever has the modern spellbook API only (C_SpellBook, pet bank = 1);
+  -- the old globals GetSpellName / GetSpellBookItemName do not exist there,
+  -- so without this the pet's book was never read.
+  local CSB=C_SpellBook
+  if CSB and CSB.GetSpellBookItemName then
+    local bank=(Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet) or 1
+    local n=safe(CSB.HasPetSpells)
+    n=(type(n)=='number' and n>0) and math.min(n,200) or 40
+    for index=1,n do
+      local nm,sub=safe(CSB.GetSpellBookItemName,index,bank)
+      if type(nm)=='string' and nm~='' then
+        local rank=parseRank(sub)
+        local info=CSB.GetSpellBookItemInfo and safe(CSB.GetSpellBookItemInfo,index,bank)
+        local sid=type(info)=='table' and (info.spellID or info.actionID) or nil
+        local mapped=type(sid)=='number' and PET_SPELL_RANKS[sid] or nil
+        if mapped then nm=mapped.name; rank=mapped.rank or rank end
+        if not rank and type(sid)=='number' then
+          local _,s2=safe(GetSpellInfo,sid); rank=parseRank(s2)
+          if not rank and C_Spell and C_Spell.GetSpellSubtext then rank=parseRank(safe(C_Spell.GetSpellSubtext,sid)) end
+        end
+        addSpell(nm,nil,rank)
+      end
+    end
+  end
   local count=safe(HasPetSpells)
   local maxIndex=(type(count)=='number' and count>0) and math.min(count,200) or 100
   local misses=0
@@ -143,6 +167,9 @@ function M:Scan()
     end
   end
   table.sort(self.spells,function(a,b) return a.name < b.name end)
+  -- Every scan also records the pet's look, so a pet kept only a few
+  -- minutes still counts in the collection.
+  if PSS.Collection and PSS.Collection.OnPet then pcall(PSS.Collection.OnPet, PSS.Collection) end
 end
 function M:AvailableSkills()
   if not self.active then return {},nil end

@@ -45,6 +45,19 @@ local OWN = {
     move = "Переместить рамки", sec1 = "Тема", sec2 = "Рамки юнитов", sec3 = "Панели, чат и миникарта",
     sec4 = "Индикаторы", sec5 = "Сумки", help = "/revui - настройки   /revui move - перемещение рамок"},
 }
+local OWN2 = {
+  en = {sec6 = "Sizes and positions", chatW = "Chat width", chatH = "Chat height", mmSize = "Minimap size",
+    scale = "Size: %s", resetPos = "Reset positions", resetAll = "Reset sizes",
+    p_player = "player frame", p_target = "target frame", p_targettarget = "target of target", p_pet = "pet frame",
+    p_party = "party frames", p_bars = "action bars", p_chat = "chat", p_info = "info bar", p_minimap = "minimap",
+    p_buttons = "addon buttons", p_shot = "shot timer", moveHint2 = "Move: the button above or /revui move, then drag the frames; Shift-click on one returns it to its place."},
+  uk = {sec6 = "Розміри й розташування", chatW = "Ширина чату", chatH = "Висота чату", mmSize = "Розмір мінімапи",
+    scale = "Розмір: %s", resetPos = "Скинути розташування", resetAll = "Скинути розміри",
+    p_player = "рамка гравця", p_target = "рамка цілі", p_targettarget = "ціль цілі", p_pet = "рамка пета",
+    p_party = "рамки групи", p_bars = "панелі дій", p_chat = "чат", p_info = "інфопанель", p_minimap = "мінімапа",
+    p_buttons = "кнопки аддонів", p_shot = "таймер пострілу", moveHint2 = "Переміщення: кнопка вгорі або /revui move, далі тягніть рамки; Shift-клік по рамці повертає її на місце."},
+}
+for lang, t in pairs(OWN2) do for k, v in pairs(t) do OWN[lang][k] = v end end
 for lang, t in pairs(OWN) do
   R.Locale[lang] = R.Locale[lang] or {}
   for k, v in pairs(t) do R.Locale[lang]["rv_" .. k] = v end
@@ -53,6 +66,19 @@ end
 local function SkinApply()
   if R.Skin then pcall(R.Skin.Refresh, R.Skin) end
   if R.Layout then pcall(R.Layout.Apply, R.Layout) end
+end
+
+local function ChatApply()
+  local LY = R.Layout
+  if LY and LY.applied and LY.applied.chat then pcall(LY.PlaceChat, LY); pcall(LY.FitChatFrame, LY) end
+end
+local function MinimapApply()
+  local LY = R.Layout
+  if LY and LY.applied and LY.applied.minimap then pcall(LY.PlaceMinimap, LY); pcall(LY.RefreshMinimapButtons, LY); pcall(LY.SquareMinimapButtons, LY) end
+end
+local function ScaleValue(key)
+  local t = RevUIDB and RevUIDB.layoutScale
+  return t and tonumber(t[key]) or 1
 end
 
 local ROWS = {
@@ -71,16 +97,15 @@ local ROWS = {
   {key = "cdmAbove", label = "optCdmAbove", hint = "optCdmAboveHint",
     apply = function() if R.Layout and R.Layout.PlaceCooldowns then pcall(R.Layout.PlaceCooldowns) end end},
   {key = "skinChat", label = "optSkinChat", hint = "optSkinChatHint", apply = SkinApply},
-  {key = "skinChatSize", label = "optChatSize", choice = {{"s", "sizeS"}, {"m", "sizeM"}, {"l", "sizeL"}, {"xl", "sizeXL"}},
-    default = "m", apply = function() if R.Layout and R.Layout.applied.chat then pcall(R.Layout.PlaceChat, R.Layout) end end},
   {key = "skinMinimap", label = "optSkinMinimap", hint = "optSkinMinimapHint", apply = SkinApply},
   {key = "skinMinimapBar", label = "optMinimapBar", hint = "optMinimapBarHint",
     apply = function() if R.Layout and R.Layout.applied.minimap then pcall(R.Layout.SquareMinimapButtons, R.Layout) end end},
-  {key = "skinMinimapSize", label = "optMinimapSize", choice = {{150, "sizeS"}, {176, "sizeM"}, {210, "sizeL"}, {250, "sizeXL"}},
-    default = 176, apply = function()
-      local LY = R.Layout
-      if LY and LY.applied.minimap then pcall(LY.PlaceMinimap, LY); pcall(LY.RefreshMinimapButtons, LY); pcall(LY.SquareMinimapButtons, LY) end
-    end},
+  {sec = "sec6"},
+  {key = "chatW", label = "rv_chatW", slider = {300, 900, 10}, default = 440, apply = ChatApply},
+  {key = "chatH", label = "rv_chatH", slider = {150, 700, 10}, default = 290, apply = ChatApply},
+  {key = "skinMinimapSize", label = "rv_mmSize", slider = {120, 320, 2}, default = 176, apply = MinimapApply},
+  {scale = "player"}, {scale = "target"}, {scale = "targettarget"}, {scale = "pet"}, {scale = "party"},
+  {scale = "bars"}, {scale = "chat"}, {scale = "info"}, {scale = "buttons"}, {scale = "shot"},
   {sec = "sec4"},
   {key = "skinPlates", label = "optSkinPlates", hint = "optSkinPlatesHint", apply = SkinApply},
   {key = "plateExtras", label = "optPlateExtras", hint = "optPlateExtrasHint"},
@@ -141,6 +166,45 @@ local function Build()
       line:SetColorTexture(0.85, 0.7, 0.43, 0.5); line:SetHeight(1)
       line:SetPoint("TOPLEFT", 4, y - 18); line:SetPoint("TOPRIGHT", -4, y - 18)
       y = y - 26
+    elseif row.slider or row.scale then
+      local label = body:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+      label:SetPoint("TOPLEFT", 30, y - 5)
+      local min, max, step = 50, 200, 5
+      if row.slider then min, max, step = row.slider[1], row.slider[2], row.slider[3] end
+      local sl = CreateFrame("Slider", nil, body, "OptionsSliderTemplate")
+      sl:SetWidth(220); sl:SetPoint("TOPLEFT", 300, y - 4)
+      sl:SetMinMaxValues(min, max); sl:SetValueStep(step); sl:SetObeyStepOnDrag(true)
+      for _, k in ipairs({"Low", "High", "Text"}) do local r = sl[k]; if r and r.SetText then r:SetText("") end end
+      local val = body:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+      val:SetPoint("LEFT", sl, "RIGHT", 10, 0)
+      local function Get()
+        if row.scale then return math.floor(ScaleValue(row.scale) * 100 + 0.5) end
+        return tonumber(DB()[row.key]) or row.default
+      end
+      local busy = false
+      local function Show()
+        busy = true
+        local v = Get(); sl:SetValue(v)
+        val:SetText(row.scale and (v .. "%") or tostring(v))
+        label:SetText(row.scale and string.format(L("rv_scale"), L("rv_p_" .. row.scale)) or L(row.label))
+        busy = false
+      end
+      sl:SetScript("OnValueChanged", function(_, v)
+        if busy then return end
+        v = math.floor(v / step + 0.5) * step
+        if row.scale then
+          RevUIDB.layoutScale = RevUIDB.layoutScale or {}
+          RevUIDB.layoutScale[row.scale] = v / 100
+          val:SetText(v .. "%")
+          if R.Layout and R.Layout.ApplyScale then pcall(R.Layout.ApplyScale, R.Layout, row.scale) end
+        else
+          RevUIDB[row.key] = v
+          val:SetText(tostring(v))
+          if row.apply then row.apply() end
+        end
+      end)
+      row.refresh = Show
+      y = y - 34
     elseif row.choice then
       local label = body:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
       label:SetPoint("TOPLEFT", 30, y - 5); label:SetText(L(row.label))
@@ -175,6 +239,25 @@ local function Build()
       y = y - (row.hint and 44 or 30)
     end
   end
+  local hint = body:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+  hint:SetPoint("TOPLEFT", 4, y - 6); hint:SetPoint("RIGHT", body, "RIGHT", -8, 0)
+  hint:SetJustifyH("LEFT"); hint:SetText(L("rv_moveHint2"))
+  y = y - 30
+  local rp = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
+  rp:SetSize(200, 24); rp:SetPoint("TOPLEFT", 4, y)
+  rp:SetText(L("rv_resetPos")); rp:SetScript("OnClick", function()
+    local LY = R.Layout
+    if LY and LY.movables and not InCombatLockdown() then for k in pairs(LY.movables) do pcall(LY.ResetPosition, LY, k) end end
+  end)
+  local rs = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
+  rs:SetSize(200, 24); rs:SetPoint("LEFT", rp, "RIGHT", 8, 0)
+  rs:SetText(L("rv_resetAll")); rs:SetScript("OnClick", function()
+    RevUIDB.layoutScale = nil; RevUIDB.chatW = nil; RevUIDB.chatH = nil; RevUIDB.skinMinimapSize = nil
+    if R.Layout and R.Layout.ApplyScales then pcall(R.Layout.ApplyScales, R.Layout) end
+    ChatApply(); MinimapApply()
+    for _, r in ipairs(ROWS) do if r.refresh then r.refresh() end end
+  end)
+  y = y - 34
   body:SetHeight(-y + 10)
 end
 panel:SetScript("OnShow", function()
@@ -189,8 +272,17 @@ if Settings and Settings.RegisterCanvasLayoutCategory then
 end
 
 SLASH_REVUI1 = "/revui"
+SLASH_REVUI2 = "/rev"
 SlashCmdList.REVUI = function(msg)
   msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+  if msg == "cpu" or msg == "cpu login" then
+    if not R.Profiler then return end
+    if msg == "cpu login" then
+      RevUIDB.cpuAtLogin = true
+      R:Print("CPU check will run for 30 s at the next login: /reload now.")
+    else R.Profiler:Start() end
+    return
+  end
   if msg == "move" then
     if R.Layout and R.Layout.Unlock then pcall(R.Layout.Unlock, R.Layout, true) end
     return
@@ -202,3 +294,51 @@ SlashCmdList.REVUI = function(msg)
   end
 end
 BINDING_HEADER_REVUI = "RevUI"
+
+-- Minimap button: click opens the settings, drag moves it around the minimap.
+local mm = CreateFrame("Button", "RevUIMinimapButton", Minimap)
+mm:SetSize(31, 31)
+mm:SetFrameStrata("MEDIUM")
+mm:SetFrameLevel(8)
+mm:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+mm:RegisterForDrag("LeftButton")
+mm.icon = mm:CreateTexture(nil, "ARTWORK")
+mm.icon:SetTexture("Interface/AddOns/RevUI/icon")
+mm.icon:SetSize(20, 20)
+mm.icon:SetPoint("CENTER", 0, 1)
+mm.border = mm:CreateTexture(nil, "OVERLAY")
+mm.border:SetTexture("Interface/Minimap/MiniMap-TrackingBorder")
+mm.border:SetSize(53, 53)
+mm.border:SetPoint("TOPLEFT")
+mm:SetHighlightTexture("Interface/Minimap/UI-Minimap-ZoomButton-Highlight")
+local function MMPlace()
+  local a = math.rad((RevUIDB and RevUIDB.minimapAngle) or 200)
+  local r = (Minimap:GetWidth() / 2) + 5
+  mm:ClearAllPoints()
+  mm:SetPoint("CENTER", Minimap, "CENTER", math.cos(a) * r, math.sin(a) * r)
+end
+mm:SetScript("OnDragStart", function(self)
+  self:SetScript("OnUpdate", function()
+    local mx, my = Minimap:GetCenter()
+    local cx, cy = GetCursorPosition()
+    local s = Minimap:GetEffectiveScale()
+    RevUIDB.minimapAngle = math.deg(math.atan2(cy / s - my, cx / s - mx))
+    MMPlace()
+  end)
+end)
+mm:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+mm:SetScript("OnClick", function() SlashCmdList.REVUI("") end)
+mm:SetScript("OnEnter", function(self)
+  GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+  GameTooltip:SetText("RevUI " .. tostring(R.version))
+  GameTooltip:AddLine(L("rv_help"), 1, 1, 1, true)
+  GameTooltip:Show()
+end)
+mm:SetScript("OnLeave", function() GameTooltip:Hide() end)
+local mmEv = CreateFrame("Frame")
+mmEv:RegisterEvent("PLAYER_LOGIN")
+mmEv:SetScript("OnEvent", function()
+  RevUIDB = RevUIDB or {}
+  MMPlace()
+  if RevUIDB.minimapButton == false then mm:Hide() end
+end)
