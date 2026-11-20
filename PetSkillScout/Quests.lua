@@ -218,7 +218,9 @@ function Q:Gain(e, spec)
   local best, bestId, known = nil, nil, false
   for _, id in ipairs(e.items or {}) do
     local st = G:Stats(id)
-    if st then
+    -- A Forever reward whose stats the server has not sent yet comes back
+    -- empty: unknown, not "no gain".
+    if st and (st.live or st.dps or next(st)) then
       known = true
       local s = G:Score(st, "ranged", spec)
       if not best or s > best then best, bestId = s, id end
