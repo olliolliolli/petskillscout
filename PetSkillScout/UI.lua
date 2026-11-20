@@ -4293,6 +4293,8 @@ local SETTINGS = {
       set=function(v) PetSkillScoutDB.cdmAbove = v; if v and PSS.Layout and PSS.Layout.PlaceCooldowns then PSS.Layout.PlaceCooldowns() end end},
     {key="skinMinimapBar", label="optMinimapBar", hint="optMinimapBarHint", kind="toggle", default=true,
       apply=function() if PSS.Layout and PSS.Layout.applied.minimap then PSS.Layout:SquareMinimapButtons() end end},
+    {key="mmButtonsFree", label="optMmFree", hint="optMmFreeHint", kind="toggle", default=false,
+      apply=function() if PSS.Layout and PSS.Layout.applied.minimap then PSS.Layout:SquareMinimapButtons() end end},
     {key="skinMinimapSize", label="optMinimapSize", hint="optMinimapSizeHint", kind="choice", default=176,
       options={{150,"sizeS"},{176,"sizeM"},{210,"sizeL"},{250,"sizeXL"}},
       apply=function()

@@ -2452,7 +2452,7 @@ function LY:Apply()
   end
   if self.applied.minimap then
     if G("PetSkillScoutMinimapHolder") then self:Movable("minimap", G("PetSkillScoutMinimapHolder"), "slot_minimap") end
-    if self.bar then self:Movable("buttons", self.bar, "slot_buttons") end
+    if self.bar and DB().mmButtonsFree then self:Movable("buttons", self.bar, "slot_buttons") end
   end
   if PSS.ShotTimer and PSS.ShotTimer:Enabled() then self:Movable("shot", PSS.ShotTimer:Build(), "slot_shot") end
   pcall(self.ApplyPositions, self)
@@ -2499,6 +2499,8 @@ LY.movables = {}
 local movers = {}
 
 function LY:Saved(key)
+  -- Addon buttons stick to the minimap (move with it) unless set free.
+  if key == "buttons" and not (PetSkillScoutDB and PetSkillScoutDB.mmButtonsFree) then return nil end
   local t = PetSkillScoutDB and PetSkillScoutDB.layoutPos
   return t and t[key]
 end

@@ -100,6 +100,8 @@ local ROWS = {
   {key = "skinMinimap", label = "optSkinMinimap", hint = "optSkinMinimapHint", apply = SkinApply},
   {key = "skinMinimapBar", label = "optMinimapBar", hint = "optMinimapBarHint",
     apply = function() if R.Layout and R.Layout.applied.minimap then pcall(R.Layout.SquareMinimapButtons, R.Layout) end end},
+  {key = "mmButtonsFree", label = "optMmFree", hint = "optMmFreeHint",
+    apply = function() if R.Layout and R.Layout.applied.minimap then pcall(R.Layout.SquareMinimapButtons, R.Layout) end end},
   {sec = "sec6"},
   {key = "chatW", label = "rv_chatW", slider = {300, 900, 10}, default = 440, apply = ChatApply},
   {key = "chatH", label = "rv_chatH", slider = {150, 700, 10}, default = 290, apply = ChatApply},

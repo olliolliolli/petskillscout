@@ -280,9 +280,25 @@ local function MakeSecure()
     -- game's bag does. (type "item" equips gear first: SecureTemplates.lua.)
     s:SetAttribute("type2", "macro")
     s:SetFrameStrata("HIGH")
+    -- A spell waiting for an item (fill a supply crate, enchant, ...): the
+    -- left click puts the item into the spell, as the game's bag does
+    -- (ContainerFrameItemButton_OnClick: SpellCanTargetItem -> UseContainerItem).
+    -- Done through the secure "/use bag slot" so it is not blocked.
+    s:SetScript("PreClick", function(self, button, down)
+      if InCombat() or not self.bag then return end
+      local t = (SpellCanTargetItem and SpellCanTargetItem()) or (SpellCanTargetItemID and SpellCanTargetItemID())
+      self.pssTarget = t and true or nil
+      if t then
+        self:SetAttribute("type1", "macro")
+        self:SetAttribute("macrotext1", (SLASH_USE1 or "/use") .. " " .. self.bag .. " " .. self.slot)
+      elseif self:GetAttribute("type1") then
+        self:SetAttribute("type1", nil)
+      end
+    end)
     s:SetScript("PostClick", function(self, button, down)
       -- Up and down both arrive now: pick up once, on the up press (or a Click()).
       if down or button ~= "LeftButton" or not self.bag then return end
+      if self.pssTarget then self.pssTarget = nil; return end
       local link = Plain(Call(C_Container.GetContainerItemLink, self.bag, self.slot))
       if link and HandleModifiedItemClick and IsModifiedClick() and HandleModifiedItemClick(link) then return end
       Call(C_Container.PickupContainerItem, self.bag, self.slot)
@@ -355,6 +371,11 @@ function I:Paint()
   local acc = Col("accent", {0.85, 0.7, 0.43, 1})
   local focus = DB().bagFocus
   local searching = win.search:GetText() ~= ""
+  local ctxOn = false
+  pcall(function()
+    ctxOn = ItemButtonUtil and ItemButtonUtil.GetItemContext and ItemButtonUtil.GetItemContext() ~= nil
+      and ItemButtonUtil.GetItemContext() ~= ItemButtonUtil.ItemContextEnum.BankDepositing
+  end)
   for i = 1, self.count or 0 do
     local c = cells[i]
     local info = Call(C_Container.GetContainerItemInfo, c.bag, c.slot)
@@ -383,7 +404,14 @@ function I:Paint()
     c.paw:SetShown(food and diet and diet[food[1]] and true or false)
     local s, d, e = Call(C_Container.GetContainerItemCooldown, c.bag, c.slot)
     if s and d and e then pcall(c.cd.SetCooldown, c.cd, s, d) else c.cd:Clear() end
-    local dim = (focus ~= nil and c.bag ~= focus) or (searching and info and Plain(info.isFiltered))
+    -- The game's item context (a spell waiting for an item, bank, ...):
+    -- items it does not accept are dimmed, as in the game's bags.
+    local mismatch = false
+    if ctxOn and info and ItemLocation then
+      local ok, r = pcall(ItemButtonUtil.GetItemContextMatchResultForItem, ItemLocation:CreateFromBagAndSlot(c.bag, c.slot))
+      mismatch = ok and r == ItemButtonUtil.ItemContextMatchResult.Mismatch
+    end
+    local dim = (focus ~= nil and c.bag ~= focus) or (searching and info and Plain(info.isFiltered)) or mismatch
     c:SetAlpha(dim and 0.2 or 1)
   end
   for _, b in ipairs(bagBtns) do
@@ -982,7 +1010,7 @@ local function HookGame()
 end
 
 local ev = CreateFrame("Frame")
-for _, e in ipairs({"PLAYER_ENTERING_WORLD", "BAG_UPDATE_DELAYED", "BAG_UPDATE_COOLDOWN", "ITEM_LOCK_CHANGED",
+for _, e in ipairs({"CURRENT_SPELL_CAST_CHANGED", "PLAYER_ENTERING_WORLD", "BAG_UPDATE_DELAYED", "BAG_UPDATE_COOLDOWN", "ITEM_LOCK_CHANGED",
     "PLAYER_MONEY", "INVENTORY_SEARCH_UPDATE", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "UNIT_PET",
     "BAG_CONTAINER_UPDATE"}) do
   pcall(ev.RegisterEvent, ev, e)
@@ -1041,4 +1069,12 @@ for lang, t in pairs({
 }) do
   PSS.Locale[lang] = PSS.Locale[lang] or {}
   PSS.Locale[lang].optOwnBags, PSS.Locale[lang].optOwnBagsHint = t[1], t[2]
+end
+
+-- The game announces item-context changes (bank, enchanting, ...) to its
+-- item buttons; ours repaint the same way.
+if EventRegistry and EventRegistry.RegisterCallback then
+  pcall(EventRegistry.RegisterCallback, EventRegistry, "ItemButton.UpdateItemContextMatching", function()
+    PSS:Soon("inv paint", function() if I:IsOpen() then I:Paint() end end, 0.05)
+  end, I)
 end

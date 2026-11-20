@@ -25,6 +25,25 @@ local function On()
   return P.on and PSS.Skin and PSS.Skin.active and not (PetSkillScoutDB and PetSkillScoutDB.plateExtras == false)
 end
 
+-- Is this unit a boss? The game's own flag (UnitIsBossMob, Forever API),
+-- world bosses, or a dungeon / raid boss from BossDB by NPC ID. Lives here and
+-- not in BossDB.lua, which tools/att/genbosses.py rewrites on every check.
+function PSS:IsBoss(unit)
+  if not unit then return false end
+  local yes = false
+  pcall(function() if UnitIsBossMob and UnitIsBossMob(unit) then yes = true end end)
+  if yes then return true end
+  pcall(function() if UnitClassification(unit) == "worldboss" then yes = true end end)
+  if yes then return true end
+  local id = Call(UnitCreatureID, unit)
+  if not id then
+    local guid = Call(UnitGUID, unit)
+    pcall(function() id = tonumber(select(6, strsplit("-", guid))) end)
+  end
+  pcall(function() if id and PSS.BossNPC and PSS.BossNPC[id] then yes = true end end)
+  return yes
+end
+
 local ours = setmetatable({}, {__mode = "k"}) -- unit frame -> our bar frame
 local unitOf = {}                              -- unit token -> unit frame
 
@@ -75,6 +94,26 @@ local function Build(uf)
   Spike(11):SetPoint("CENTER", f.box, "LEFT", -4, 0)
   Spike(9):SetPoint("CENTER", f, "TOP", 0, 2)
   Spike(9):SetPoint("CENTER", f, "BOTTOM", 0, -2)
+  -- Boss look: a blood-red glow around a bigger bar, a skull badge and two
+  -- long horns; pulses while the boss lives.
+  f.bossGlow = f:CreateTexture(nil, "BACKGROUND", nil, -4); f.bossGlow:SetTexture(FLAT)
+  f.bossGlow:SetPoint("TOPLEFT", -6, 6); f.bossGlow:SetPoint("BOTTOMRIGHT", 6, -6)
+  f.bossGlow:SetVertexColor(0.9, 0.05, 0.02, 0.45); f.bossGlow:Hide()
+  f.skull = f:CreateTexture(nil, "OVERLAY", nil, 7)
+  f.skull:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Skull"); f.skull:SetSize(22, 22)
+  f.skull:SetPoint("BOTTOM", f, "TOP", 0, 6); f.skull:Hide()
+  f.horns = {}
+  for i, side in ipairs({"LEFT", "RIGHT"}) do
+    local h = f:CreateTexture(nil, "OVERLAY", nil, 6); h:SetTexture(FLAT); h:SetSize(18, 5)
+    h:SetRotation(i == 1 and -0.6 or 0.6)
+    h:SetPoint("CENTER", f, "TOP" .. side, i == 1 and -6 or 6, 6)
+    h:SetVertexColor(0.85, 0.05, 0.02, 1); h:Hide(); f.horns[i] = h
+  end
+  if f.CreateAnimationGroup then
+    local ag = f.bossGlow:CreateAnimationGroup(); ag:SetLooping("BOUNCE")
+    local a1 = ag:CreateAnimation("Alpha"); a1:SetFromAlpha(1); a1:SetToAlpha(0.35); a1:SetDuration(0.7)
+    f.bossPulse = ag
+  end
   ours[uf] = f
   return f
 end
@@ -218,16 +257,24 @@ function P:SquareStyle(uf, unit)
   local boss = unit and PSS.IsBoss and PSS:IsBoss(unit)
   if boss then special = true end
   if special then
-    c = boss and {1, 0.35, 0.2, 1} or {1, 0.8, 0.25, 1}
+    c = boss and {0.95, 0.08, 0.04, 1} or {1, 0.8, 0.25, 1}
     w = (isSel or boss) and 3 or 2
   end
+  -- Boss: bigger red-framed bar, skull, horns and a pulsing glow.
+  f:SetSize(boss and W * 1.35 or W, boss and H + 6 or H)
+  f.bossGlow:SetShown(boss and true or false)
+  f.skull:SetShown(boss and true or false)
+  for _, h in ipairs(f.horns) do h:SetShown(boss and true or false) end
+  if f.bossPulse then if boss then f.bossPulse:Play() else f.bossPulse:Stop() end end
+  pcall(f.name.SetFont, f.name, FONT, boss and 11 or 9, "OUTLINE")
+  if boss then pcall(f.name.SetTextColor, f.name, 1, 0.82, 0.7) else pcall(f.name.SetTextColor, f.name, 1, 1, 1) end
   -- Gold points for every elite, rare and boss mob.
   local rareOnly = false
   pcall(function() rareOnly = cls == "rare" end)
   for _, sp in ipairs(f.spikes or {}) do
     sp.o:SetShown(special and true or false); sp.i:SetShown(special and true or false)
     if special then
-      sp.o:SetVertexColor(1, 0.8, 0.25, 1)
+      sp.o:SetVertexColor(boss and 0.95 or 1, boss and 0.08 or 0.8, boss and 0.04 or 0.25, 1)
       sp.i:SetVertexColor(0.08, 0.06, 0.03, 1)
     end
   end
