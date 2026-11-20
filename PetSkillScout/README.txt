@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.200
+- Data update 2026-11-20: quests, rewards, beasts and bosses from AllTheThings commit 6276795;
+  learned data from the game (8 quests, 1 vendor, 14 rare spots).
+- Quests: a reward whose stats the server has not sent yet no longer marks the quest as outgrown.
+- Theme: boss nameplates, addon buttons attached to the minimap (option to detach), item
+  targeting in bags (supply crates, enchants), light text in quest windows.
+
 3.7.114
 - Theme: game menu and other newer buttons lose the red button art and the red glow on hover.
 
