@@ -87,6 +87,7 @@ function RaidNotice_AddMessage(_, text) table.insert(MOCK.warnings, text) end
 SlashCmdList = {}
 unpack = unpack or table.unpack
 function hooksecurefunc() end
+function GetBindingAction() return "" end
 function issecretvalue() return false end
 function GetTime() return 1000 end
 function time() return 1700000000 end
