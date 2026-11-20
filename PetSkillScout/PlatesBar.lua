@@ -292,6 +292,20 @@ function P:SquareStyle(uf, unit)
   self:SquareHealth(uf, unit)
 end
 
+-- The game recolours its bar itself (tapped by someone else -> grey, on
+-- UNIT_FLAGS / threat updates): the colour follows at once onto our bar.
+if type(CompactUnitFrame_UpdateHealthColor) == "function" and hooksecurefunc then
+  hooksecurefunc("CompactUnitFrame_UpdateHealthColor", function(uf)
+    local f = uf and ours[uf]
+    local hb = f and f:IsShown() and (uf.healthBar or uf.HealthBar)
+    if not hb then return end
+    pcall(function()
+      local r, g, b = hb:GetStatusBarColor()
+      if r then f.bar:SetStatusBarColor(r, g, b) end
+    end)
+  end)
+end
+
 local ev = CreateFrame("Frame")
 for _, e in ipairs({"NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "PLAYER_TARGET_CHANGED", "UNIT_HEALTH",
     "UNIT_MAXHEALTH", "UNIT_FACTION", "UNIT_LEVEL", "UNIT_CLASSIFICATION_CHANGED"}) do pcall(ev.RegisterEvent, ev, e) end
