@@ -107,10 +107,20 @@ function GC:Compare(link, spec)
       if not old or sc < old then old, oldSt = sc, est end
     end
   end
+  -- Rings / trinkets: the change against each of the two equipped ones,
+  -- so the tooltip says which one it beats.
+  local each
+  if (equipLoc == "INVTYPE_FINGER" or equipLoc == "INVTYPE_TRINKET") and #slots == 2 then
+    each = {}
+    for _, inv in ipairs(slots) do
+      local _, elink, sc = Gr:Equipped(inv, spec)
+      each[#each + 1] = {link = elink, delta = new - (sc or 0)}
+    end
+  end
   local res = {
     delta = new - (old or 0), new = new, old = old or 0,
     parts = Gr:DiffParts(st, oldSt, isRanged and "ranged" or "other", 3),
-    canUse = canUse, reqLevel = reqLevel, tooLow = reqLevel > level, id = itemID,
+    canUse = canUse, reqLevel = reqLevel, tooLow = reqLevel > level, id = itemID, each = each,
   }
   cache[key] = res
   return res
@@ -149,6 +159,14 @@ local function OnItemTooltip(tt)
     local out = {}
     for _, p in ipairs(res.parts) do table.insert(out, (p.up and "|cff7ee0a3" or "|cffff7a7a") .. p.text .. "|r") end
     tt:AddLine(PSS:Safe(table.concat(out, "   ")))
+  end
+  if res.canUse and res.each then
+    for _, e in ipairs(res.each) do
+      local d = math.floor(e.delta + 0.5)
+      local col = d > 0 and "|cff7ee0a3" or d < 0 and "|cffff7a7a" or "|cffbbbbbb"
+      local what = e.link or ("|cff8a8a8a" .. (EMPTY or "-") .. "|r")
+      tt:AddLine(PSS:Safe("  " .. what .. "  " .. col .. string.format("%+d", d) .. "|r"))
+    end
   end
   tt:Show()
 end

@@ -551,7 +551,7 @@ function G:Diff(new, old, slot)
   for _, k in ipairs(DIFF_ORDER) do
     local d = (new[k] or 0) - (old[k] or 0)
     local pct = k == "crit" or k == "hit"
-    local min = pct and 0.05 or (k == "dps" and 0.1 or 0.5)
+    local min = pct and 0.05 or (k == "dps" and 0.1 or 0.999)
     if math.abs(d) >= min and not (k == "dps" and slot ~= "ranged" and #parts >= 2) then
       local label = L("stat_" .. k)
       if pct then
@@ -559,7 +559,7 @@ function G:Diff(new, old, slot)
       elseif k == "dps" then
         table.insert(parts, string.format("%+.1f %s", d, label))
       else
-        table.insert(parts, string.format("%+d %s", math.floor(d + (d > 0 and 0.5 or -0.5)), label))
+        table.insert(parts, string.format("%+d %s", d > 0 and math.floor(d + 0.001) or math.ceil(d - 0.001), label))
       end
       if #parts >= 4 then break end
     end
@@ -574,12 +574,13 @@ function G:DiffParts(new, old, slot, max)
   for _, k in ipairs(DIFF_ORDER) do
     local d = (new[k] or 0) - (old[k] or 0)
     local pct = k == "crit" or k == "hit"
-    local min = pct and 0.05 or (k == "dps" and 0.1 or 0.5)
+    local min = pct and 0.05 or (k == "dps" and 0.1 or 0.999)
     if math.abs(d) >= min and not (k == "armor" and #parts >= 2) then
       local label, text = L("stat_" .. k)
       if pct then text = string.format("%+.1f%% %s", d, label)
       elseif k == "dps" then text = string.format("%+.1f %s", d, label)
-      else text = string.format("%+d %s", math.floor(d + (d > 0 and 0.5 or -0.5)), label) end
+      -- Like the game's own comparison: the fraction is dropped (14.7 -> 14).
+      else text = string.format("%+d %s", d > 0 and math.floor(d + 0.001) or math.ceil(d - 0.001), label) end
       table.insert(parts, {text = text, up = d > 0})
       if #parts >= (max or 3) then break end
     end
