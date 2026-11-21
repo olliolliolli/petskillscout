@@ -148,6 +148,13 @@ local function Build(uf)
     local a1 = ag:CreateAnimation("Alpha"); a1:SetFromAlpha(1); a1:SetToAlpha(0.35); a1:SetDuration(0.7)
     f.bossPulse = ag
   end
+  -- Quest mob: the game's own quest icon of the target frame (TargetFrame.xml QuestIcon).
+  f.quest = f:CreateTexture(nil, "OVERLAY", nil, 7)
+  if not pcall(f.quest.SetAtlas, f.quest, "UI-HUD-UnitFrame-Target-PortraitOn-Boss-Quest") then
+    f.quest:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
+  end
+  f.quest:SetSize(H + 4, H + 4)
+  f.quest:Hide()
   ours[uf] = f
   return f
 end
@@ -322,6 +329,13 @@ function P:SquareStyle(uf, unit)
   local bgc = Col("slot")
   f.bg:SetVertexColor(bgc[1], bgc[2], bgc[3], 0.85); f.box.bg:SetVertexColor(bgc[1], bgc[2], bgc[3], 0.85)
   if not f.lvlColoured then f.lvl:SetTextColor(c[1], c[2], c[3]) end
+  -- Right of the bar: this mob is needed by a quest in your log (the game's
+  -- own check, C_QuestLog.UnitIsRelatedToActiveQuest).
+  if f.quest then
+    local q = unit and C_QuestLog and Plain(Call(C_QuestLog.UnitIsRelatedToActiveQuest, unit)) == true
+    f.quest:ClearAllPoints(); f.quest:SetPoint("LEFT", f, "RIGHT", w * 2 + 3, 0)
+    f.quest:SetShown(q and true or false)
+  end
   f:Show()
   self:SquareHealth(uf, unit)
 end
@@ -342,9 +356,11 @@ end
 
 -- Encounter start / end: restyle every plate (boss frame on / off).
 local encEv = CreateFrame("Frame")
-for _, e in ipairs({"ENCOUNTER_START", "ENCOUNTER_END", "PLAYER_ENTERING_WORLD"}) do pcall(encEv.RegisterEvent, encEv, e) end
+for _, e in ipairs({"ENCOUNTER_START", "ENCOUNTER_END", "PLAYER_ENTERING_WORLD", "QUEST_LOG_UPDATE"}) do pcall(encEv.RegisterEvent, encEv, e) end
 encEv:SetScript("OnEvent", function(_, event)
-  PSS.inEncounter = event == "ENCOUNTER_START"
+  -- Quest log changed (objective done, quest taken / handed in): the quest
+  -- icons are checked again.
+  if event ~= "QUEST_LOG_UPDATE" then PSS.inEncounter = event == "ENCOUNTER_START" end
   if not On() then return end
   for u, uf in pairs(unitOf) do pcall(P.SquareStyle, P, uf, u) end
 end)

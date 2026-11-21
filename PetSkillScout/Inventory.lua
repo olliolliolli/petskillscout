@@ -168,8 +168,9 @@ local function Build()
   win:SetScript("OnDragStart", function(self) if not InCombat() then self:StartMoving() end end)
   win:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
-    -- Saved only when moved at its own place, as a spot on the screen.
-    if not I.withPartner and PetSkillScoutDB then
+    -- Saved as a spot on the screen, also when moved beside a merchant or
+    -- bank: the window always opens where you put it.
+    if PetSkillScoutDB then
       local l, b = self:GetLeft(), self:GetBottom()
       if l and b then PetSkillScoutDB.invPos = {"BOTTOMLEFT", "BOTTOMLEFT", l, b} end
     end
@@ -545,9 +546,9 @@ function I:Open()
     return
   end
   MakeSecure()
-  -- Its own place each time it opens on its own (the spot beside a merchant
-  -- or bank is only for that visit).
-  if not self.withPartner then
+  -- Always your own place, also with a merchant, bank or auction house
+  -- open (it used to jump beside their window).
+  do
     self.placed = true
     win:ClearAllPoints()
     local p = DB().invPos
@@ -868,11 +869,7 @@ function I:Update()
       self:CloseGameBags()
       self.withPartner = true
       self:Open()
-      if win and not InCombat() then
-        win:ClearAllPoints(); win:SetPoint("TOPLEFT", pf, "TOPRIGHT", 12, 0)
-        self.byPartner = true
-        self:PlaceSecure()
-      end
+      if win and not InCombat() then self:PlaceSecure() end
     end
   end
   if self.partnerClosed then
