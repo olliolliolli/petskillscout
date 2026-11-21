@@ -599,6 +599,12 @@ SlashCmdList.PETSKILLSCOUT = function(msg)
                 PSS:Print("     children: " .. table.concat(kids, ", "):sub(1, 220))
             end
         end
+    elseif msg == "aim" then
+      -- Careful Aim as the gear comparison sees it.
+      local G = PSS.Gear
+      local pct = G and G.CarefulAimPct and G:CarefulAimPct() or 0
+      PSS:Print(string.format("Careful Aim: %d%% of Intellect -> attack power%s", pct,
+        pct == 0 and " (talent not found or not learned)" or ""))
     elseif msg == "inv diag" then
       local keys = {"PADDUP", "PADDDOWN", "PAD1", "PAD2", "PAD3", "PAD4"}
       local out = {}

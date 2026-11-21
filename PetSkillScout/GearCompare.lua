@@ -117,8 +117,17 @@ function GC:Compare(link, spec)
       each[#each + 1] = {link = elink, delta = new - (sc or 0)}
     end
   end
+  -- Already worn (in any of its slots): nothing to compare, like Pawn.
+  local worn = false
+  for _, inv in ipairs(slots) do
+    local eid = Gr:Equipped(inv, spec)
+    if eid and eid == itemID then worn = true end
+  end
+  local delta = new - (old or 0)
+  -- Pawn's rule: under 0.5 % of the equipped item's value counts as no change.
+  if (old or 0) > 0 and math.abs(delta) < (old or 0) * (Gr.MIN_UPGRADE or 0) then delta = 0 end
   local res = {
-    delta = new - (old or 0), new = new, old = old or 0,
+    delta = delta, new = new, old = old or 0, worn = worn,
     parts = Gr:DiffParts(st, oldSt, isRanged and "ranged" or "other", 3),
     canUse = canUse, reqLevel = reqLevel, tooLow = reqLevel > level, id = itemID, each = each,
   }
@@ -130,6 +139,7 @@ end
 function GC:Verdict(res)
   if not res then return nil end
   if not res.canUse then return "|cff8a8a8a" .. L("gcNotHunter") .. "|r" end
+  if res.worn then return "|cffbbbbbb" .. (CURRENTLY_EQUIPPED or L("gcSame")) .. "|r" end
   local d = math.floor(res.delta + 0.5)
   local spec = L("gearSpec" .. PSS.Gear:Spec())
   local text
@@ -155,12 +165,12 @@ local function OnItemTooltip(tt)
   if not res then return end
   tt.pssGearDone = true
   tt:AddLine(PSS:Safe("|cff70d6ffPetSkillScout|r  " .. GC:Verdict(res)))
-  if res.canUse and #res.parts > 0 then
+  if res.canUse and not res.worn and #res.parts > 0 then
     local out = {}
     for _, p in ipairs(res.parts) do table.insert(out, (p.up and "|cff7ee0a3" or "|cffff7a7a") .. p.text .. "|r") end
     tt:AddLine(PSS:Safe(table.concat(out, "   ")))
   end
-  if res.canUse and res.each then
+  if res.canUse and res.each and not res.worn then
     for _, e in ipairs(res.each) do
       local d = math.floor(e.delta + 0.5)
       local col = d > 0 and "|cff7ee0a3" or d < 0 and "|cffff7a7a" or "|cffbbbbbb"

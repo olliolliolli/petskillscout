@@ -24,11 +24,22 @@ local function L(k) return PSS:L(k) end
 
 -- Specs and weights (attack-power equivalents) -----------------------------
 G.SPECS = {"BM", "MM", "SV"}
+-- Like Pawn, an item's value is the sum of weight x amount over every stat
+-- it has; the weights are our own, in ranged attack power:
+-- * agi: 2 ranged AP plus the crit it gives; crit / hit / haste per 1 %.
+-- * int: 15 mana each, valued like mp5 over a fight (Careful Aim is added
+--   on top from your rank, see G:CarefulAimPct); spi: mostly out-of-combat
+--   regeneration; res: per point of any resistance.
 G.WEIGHTS = {
-  MM = {agi = 2.6, ap = 1.0, rap = 1.0, map = 0.1, crit = 28, hit = 22, int = 0.15, sta = 0.4, str = 0.1, armor = 0.01, mp5 = 1.5},
-  BM = {agi = 2.5, ap = 1.05, rap = 1.0, map = 0.1, crit = 24, hit = 22, int = 0.2, sta = 0.4, str = 0.1, armor = 0.01, mp5 = 2.0},
-  SV = {agi = 2.8, ap = 1.0, rap = 1.0, map = 0.25, crit = 26, hit = 22, int = 0.15, sta = 0.4, str = 0.15, armor = 0.01, mp5 = 1.5},
+  MM = {agi = 2.6, ap = 1.0, rap = 1.0, map = 0.1, crit = 28, hit = 22, haste = 16, int = 0.5, spi = 0.15, sta = 0.4,
+    str = 0.1, armor = 0.01, mp5 = 1.5, res = 0.05},
+  BM = {agi = 2.5, ap = 1.05, rap = 1.0, map = 0.1, crit = 24, hit = 22, haste = 15, int = 0.6, spi = 0.15, sta = 0.4,
+    str = 0.1, armor = 0.01, mp5 = 2.0, res = 0.05},
+  SV = {agi = 2.8, ap = 1.0, rap = 1.0, map = 0.25, crit = 26, hit = 22, haste = 15, int = 0.5, spi = 0.15, sta = 0.4,
+    str = 0.15, armor = 0.01, mp5 = 1.5, res = 0.05},
 }
+-- Pawn's rule: a change under 0.5 % of the equipped item's value is no change.
+G.MIN_UPGRADE = 0.005
 -- Hunters fight at range: melee weapon damage counts for little.
 G.RANGED_DPS, G.MELEE_DPS = 14, {MM = 1.2, BM = 1.2, SV = 2.0}
 
@@ -180,7 +191,7 @@ end
 local STAT_KEYS = {
   {"RANGED_ATTACK_POWER", "rap"}, {"ATTACK_POWER", "ap"}, {"AGILITY", "agi"}, {"STAMINA", "sta"},
   {"INTELLECT", "int"}, {"SPIRIT", "spi"}, {"STRENGTH", "str"}, {"DAMAGE_PER_SECOND", "dps"},
-  {"RESISTANCE0", "armor"}, {"MANA_REGENERATION", "mp5"}, {"POWER_REGEN0", "mp5"},
+  {"RESISTANCE0", "armor"}, {"RESISTANCE", "res"}, {"MANA_REGENERATION", "mp5"}, {"POWER_REGEN0", "mp5"},
 }
 -- Hit / crit in percent as the tooltip prints them ("Improves your chance to
 -- hit by 0.3%"). GetItemStats gives Forever's own unit (3 for 0.3 %), which
@@ -200,7 +211,8 @@ local function TooltipPercents(link)
       local n = tonumber(low:match("([%d%.]+)%s*%%"))
       if n then
         if low:find("critical") or low:find("крит") then out.crit = (out.crit or 0) + n
-        elseif low:find("to hit") or low:find("влуч") then out.hit = (out.hit or 0) + n end
+        elseif low:find("to hit") or low:find("влуч") then out.hit = (out.hit or 0) + n
+        elseif low:find("haste") or low:find("швидк") or low:find("attack speed") then out.haste = (out.haste or 0) + n end
       end
     end
   end
@@ -232,6 +244,8 @@ function RuntimeStatsRaw(link)
         st.crit = (st.crit or 0) + (v > 5 and v / 14 or v)
       elseif k:find("HIT") then
         st.hit = (st.hit or 0) + (v > 5 and v / 14 or v)
+      elseif k:find("HASTE") then
+        st.haste = (st.haste or 0) + (v > 5 and v / 14 or v)
       else
         for _, m in ipairs(STAT_KEYS) do
           if k:find(m[1]) then st[m[2]] = (st[m[2]] or 0) + v; break end
@@ -239,11 +253,12 @@ function RuntimeStatsRaw(link)
       end
     end
   end
-  if st.hit or st.crit then
+  if st.hit or st.crit or st.haste then
     local pct = TooltipPercents(link)
     if pct then
       if st.hit and pct.hit then st.hit = pct.hit end
       if st.crit and pct.crit then st.crit = pct.crit end
+      if st.haste and pct.haste then st.haste = pct.haste end
     end
   end
   return next(st) and st or nil
@@ -299,12 +314,62 @@ function G:Stats(id, link)
   return nil
 end
 
+-- Careful Aim (Forever hunter talent, Marksmanship): attack power from
+-- Intellect, 20 % per rank in the tooltip. The rank is read the way the
+-- game's talent frame does (C_ClassTalents.GetActiveConfigID -> C_Traits);
+-- the percent comes from the spell text when it can be read.
+local CAREFUL_AIM = {["careful aim"] = true, ["ретельне прицілювання"] = true}
+local aimPct
+function G:CarefulAimPct()
+  if aimPct ~= nil then return aimPct end
+  aimPct = 0
+  if not (C_ClassTalents and C_Traits and C_ClassTalents.GetActiveConfigID) then return 0 end
+  local configID = Plain(Call(C_ClassTalents.GetActiveConfigID))
+  local cfg = configID and Call(C_Traits.GetConfigInfo, configID)
+  for _, tree in ipairs(cfg and cfg.treeIDs or {}) do
+    for _, node in ipairs(Call(C_Traits.GetTreeNodes, tree) or {}) do
+      local ni = Call(C_Traits.GetNodeInfo, configID, node)
+      local rank = ni and Plain(ni.activeRank)
+      local entry = ni and ((ni.activeEntry and ni.activeEntry.entryID) or (ni.entryIDs and ni.entryIDs[1]))
+      local ei = entry and Call(C_Traits.GetEntryInfo, configID, entry)
+      local di = ei and ei.definitionID and Call(C_Traits.GetDefinitionInfo, ei.definitionID)
+      local spellID = di and Plain(di.spellID)
+      local name = spellID and Plain(Call(C_Spell and C_Spell.GetSpellName, spellID))
+      if type(name) == "string" and CAREFUL_AIM[name:lower()] then
+        if type(rank) == "number" and rank > 0 then
+          local per = 20
+          local desc = Plain(Call(C_Spell and C_Spell.GetSpellDescription, spellID))
+          local n = type(desc) == "string" and tonumber(desc:match("(%d+)%%"))
+          -- The text is the first rank's when the spell is shared by ranks.
+          if n and n > 0 and n <= 100 then per = n end
+          aimPct = math.min(per * rank, 100)
+          if n and n > 20 and n == 20 * rank then aimPct = n end
+        end
+        return aimPct
+      end
+    end
+  end
+  return aimPct
+end
+local aimEv = CreateFrame("Frame")
+for _, e in ipairs({"PLAYER_ENTERING_WORLD", "TRAIT_CONFIG_UPDATED", "PLAYER_TALENT_UPDATE",
+    "CHARACTER_POINTS_CHANGED", "ACTIVE_PLAYER_SPECIALIZATION_CHANGED"}) do pcall(aimEv.RegisterEvent, aimEv, e) end
+aimEv:SetScript("OnEvent", function()
+  aimPct = nil
+  if PSS.GearCompare and PSS.GearCompare.Reset then PSS.GearCompare:Reset() end
+end)
+
 function G:Score(st, slot, spec)
   if not st then return 0 end
   local w = self.WEIGHTS[spec or self:Spec()]
   local s = 0
   for k, v in pairs(st) do
     if w[k] then s = s + w[k] * v end
+  end
+  -- Intellect also gives ranged attack power with Careful Aim.
+  if st.int then
+    local pct = self:CarefulAimPct()
+    if pct > 0 then s = s + st.int * pct / 100 * (w.rap or 1) end
   end
   if st.dps then
     if slot == "ranged" then s = s + st.dps * self.RANGED_DPS
@@ -544,13 +609,13 @@ end
 
 -- Stat changes against the equipped item, most important first:
 -- "+5 agi · +2 sta · -3 int" (at most 4 entries).
-local DIFF_ORDER = {"dps", "agi", "ap", "rap", "crit", "hit", "sta", "int", "str", "spi", "mp5", "armor"}
+local DIFF_ORDER = {"dps", "agi", "ap", "rap", "crit", "hit", "haste", "sta", "int", "str", "spi", "mp5", "res", "armor"}
 function G:Diff(new, old, slot)
   new, old = new or {}, old or {}
   local parts = {}
   for _, k in ipairs(DIFF_ORDER) do
     local d = (new[k] or 0) - (old[k] or 0)
-    local pct = k == "crit" or k == "hit"
+    local pct = k == "crit" or k == "hit" or k == "haste"
     local min = pct and 0.05 or (k == "dps" and 0.1 or 0.999)
     if math.abs(d) >= min and not (k == "dps" and slot ~= "ranged" and #parts >= 2) then
       local label = L("stat_" .. k)
@@ -573,7 +638,7 @@ function G:DiffParts(new, old, slot, max)
   local parts = {}
   for _, k in ipairs(DIFF_ORDER) do
     local d = (new[k] or 0) - (old[k] or 0)
-    local pct = k == "crit" or k == "hit"
+    local pct = k == "crit" or k == "hit" or k == "haste"
     local min = pct and 0.05 or (k == "dps" and 0.1 or 0.999)
     if math.abs(d) >= min and not (k == "armor" and #parts >= 2) then
       local label, text = L("stat_" .. k)
