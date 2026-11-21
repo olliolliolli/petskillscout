@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet cards in chat. "Share" puts "[PetSkillScout: Wolfie] Wolf 60, Bite 8..."
 -- into your chat input; you send it yourself like any message. Other players
 -- with PetSkillScout see the bracket as a link: clicking it asks your client for
@@ -30,7 +31,7 @@ function P:OwnCard()
   for _, s in ipairs(pet.spells or {}) do
     if s.key and PSS.Abilities[s.key] then table.insert(skills, {key = s.key, rank = s.rank}) end
   end
-  local guid = UnitGUID and UnitGUID("pet")
+  local guid = UnitGUID and PSS.Plain(UnitGUID("pet"))
   local npc = pet.npcID
   if not npc and type(guid) == "string" then
     local _, _, _, _, _, id = strsplit("-", guid)
@@ -166,7 +167,7 @@ end
 if EventRegistry and EventRegistry.RegisterCallback then
   pcall(EventRegistry.RegisterCallback, EventRegistry, "SetItemRef", function(_, link) P:HandleLink(link) end, P)
 end
-if hooksecurefunc then pcall(hooksecurefunc, "SetItemRef", function(link) P:HandleLink(link) end) end
+if hooksecurefunc then pcall(PSS.HookSecure, "SetItemRef", function(link) P:HandleLink(link) end) end
 
 -- Whisper protocol ---------------------------------------------------------------
 local lastReply = {}
@@ -212,3 +213,5 @@ if PSS.Sync then
   PSS.Sync.handlers.C = OnCard
 end
 P.SkillsText = SkillsText
+watch.pssKey = "PetLink"
+PSS:Every(watch, 1)

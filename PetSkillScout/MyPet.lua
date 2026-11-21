@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Active hunter pet inspection. Uses the pet spellbook; never guesses missing ranks.
 local PSS = PetSkillScout
 PSS.MyPet = { spells = {} }
@@ -107,6 +108,30 @@ function M:Scan()
     seen[id]=spell
     table.insert(self.spells,spell)
   end
+  -- Forever has the modern spellbook API only (C_SpellBook, pet bank = 1);
+  -- the old globals GetSpellName / GetSpellBookItemName do not exist there,
+  -- so without this the pet's book was never read.
+  local CSB=C_SpellBook
+  if CSB and CSB.GetSpellBookItemName then
+    local bank=(Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet) or 1
+    local n=safe(CSB.HasPetSpells)
+    n=(type(n)=='number' and n>0) and math.min(n,200) or 40
+    for index=1,n do
+      local nm,sub=safe(CSB.GetSpellBookItemName,index,bank)
+      if type(nm)=='string' and nm~='' then
+        local rank=parseRank(sub)
+        local info=CSB.GetSpellBookItemInfo and safe(CSB.GetSpellBookItemInfo,index,bank)
+        local sid=type(info)=='table' and (info.spellID or info.actionID) or nil
+        local mapped=type(sid)=='number' and PET_SPELL_RANKS[sid] or nil
+        if mapped then nm=mapped.name; rank=mapped.rank or rank end
+        if not rank and type(sid)=='number' then
+          local _,s2=safe(GetSpellInfo,sid); rank=parseRank(s2)
+          if not rank and C_Spell and C_Spell.GetSpellSubtext then rank=parseRank(safe(C_Spell.GetSpellSubtext,sid)) end
+        end
+        addSpell(nm,nil,rank)
+      end
+    end
+  end
   local count=safe(HasPetSpells)
   local maxIndex=(type(count)=='number' and count>0) and math.min(count,200) or 100
   local misses=0
@@ -142,6 +167,9 @@ function M:Scan()
     end
   end
   table.sort(self.spells,function(a,b) return a.name < b.name end)
+  -- Every scan also records the pet's look, so a pet kept only a few
+  -- minutes still counts in the collection.
+  if PSS.Collection and PSS.Collection.OnPet then pcall(PSS.Collection.OnPet, PSS.Collection) end
 end
 function M:AvailableSkills()
   if not self.active then return {},nil end
@@ -162,19 +190,6 @@ function M:AvailableSkills()
     end
   end
   return available,estimatedFree
-end
-function M:NextRank(spell)
-  if not spell.key or not spell.rank then return nil end
-  local available={}
-  for rank in pairs((PSS.Ranks and PSS.Ranks[spell.key]) or {}) do available[tonumber(rank)]=true end
-  for _,b in ipairs(PSS.Beasts or {}) do
-    if b.ability==spell.key and tonumber(b.rank) then available[tonumber(b.rank)]=true end
-  end
-  local nextRank
-  for rank in pairs(available) do
-    if rank>spell.rank and (not nextRank or rank<nextRank) then nextRank=rank end
-  end
-  return nextRank
 end
 M.events=CreateFrame('Frame')
 for _,event in ipairs({'PLAYER_ENTERING_WORLD','UNIT_PET','PET_BAR_UPDATE','PET_UI_UPDATE','SPELLS_CHANGED','UNIT_LEVEL'}) do

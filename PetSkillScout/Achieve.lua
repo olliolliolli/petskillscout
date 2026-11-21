@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Hunter achievements and the score used for guild / realm rankings.
 -- Everything is computed from what the addon already records; unlocking an
 -- achievement only shows a message.
@@ -145,7 +146,10 @@ function A:Check()
       if value >= goal then
         done[def[1]] = Now()
         new = true
-        if not quiet then Toast(def) end
+        if not quiet then
+          Toast(def)
+          if PSS.Announce then pcall(PSS.Announce.Achievement, PSS.Announce, def[1]) end
+        end
       end
     end
   end
@@ -164,3 +168,5 @@ A.frame:SetScript("OnUpdate", function(_, elapsed)
   tick = 0
   pcall(A.Check, A)
 end)
+A.frame.pssKey = "Achieve"
+PSS:Every(A.frame, 5)

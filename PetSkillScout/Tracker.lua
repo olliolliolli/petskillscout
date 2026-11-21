@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 local PSS = PetSkillScout
 
 -- A rank filter of "All" (or nil) matches every rank of the selected ability.

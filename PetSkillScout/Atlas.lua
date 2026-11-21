@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Atlas of every tameable beast (AtlasData.lua): decoding, lookups and filters.
 local PSS = PetSkillScout
 PSS.Atlas = { list = {}, byNpc = {}, built = false }
@@ -98,6 +99,15 @@ function A:Build()
       self.byNpc[b.npcID] = rec
     end
   end
+  -- Beasts still without a position: ATT positions on their own zone map (PetDataATT.lua).
+  for _, rec in ipairs(self.list) do
+    local att = PSS.BeastPositionsATT and PSS.BeastPositionsATT[rec.npcID]
+    if att and not (rec.spawnPoints and #rec.spawnPoints > 0) then
+      rec.mapID, rec.spawnPoints = att.mapID, att.points
+      rec.x, rec.y = att.points[1][1], att.points[1][2]
+      rec.verifiedCoords, rec.source = true, "AllTheThings"
+    end
+  end
   table.sort(self.list, function(x, y)
     local lx, ly = x.minLevel or 99, y.minLevel or 99
     if lx ~= ly then return lx < ly end
@@ -131,14 +141,6 @@ function A:Filter(text, onlyFast, onlyRare, canTame)
   return out
 end
 
--- "attack 1.2s" (green when faster than the standard 2.0 s).
-function A:SpeedText(rec)
-  if not rec or not rec.speed then return "?" end
-  local text = string.format(PSS:L("atlasSpeed"), rec.speed)
-  if rec.fast then return "|cff7ee0a3" .. text .. "|r" end
-  if rec.speed > 2.0 then return "|cffff9a6a" .. text .. "|r" end
-  return text
-end
 
 function A:TeachesText(rec)
   if not (rec and rec.teaches) then return nil end

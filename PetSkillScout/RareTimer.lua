@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Rare respawn timers. When a rare dies (combat log or its corpse is seen) or is
 -- tamed, the time is stored; the next live sighting closes the interval. The
 -- intervals seen so far give the respawn window shown in the Rares tab. Kills
@@ -200,7 +201,7 @@ end
 
 -- Pet GUID "Pet-0-...-<npcID>-<uid>"; returns the creature ID.
 local function PetNpc()
-  local guid = UnitGUID and UnitGUID("pet")
+  local guid = UnitGUID and PSS.Plain(UnitGUID("pet"))
   if type(guid) ~= "string" then return nil, nil end
   local _, _, _, _, _, id = strsplit("-", guid)
   return tonumber(id), guid
@@ -223,7 +224,10 @@ local function OnPet()
     PSS:Print(string.format(L("timerCollected"), entry.name))
   end
   local now = GetTime and GetTime() or 0
-  if now - lastTame < 90 then T:MarkGone(entry, "tame") end
+  if now - lastTame < 90 then
+    T:MarkGone(entry, "tame")
+    if PSS.Announce then pcall(PSS.Announce.Rare, PSS.Announce, entry) end
+  end
   Refresh()
 end
 
@@ -257,3 +261,5 @@ T.frame:SetScript("OnUpdate", function(_, elapsed)
   tick = 0
   pcall(T.Tick, T)
 end)
+T.frame.pssKey = "RareTimer"
+PSS:Every(T.frame, 5)

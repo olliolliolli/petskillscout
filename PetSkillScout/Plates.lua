@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Nameplates in the interface theme (Settings > Interface > Nameplates).
 -- Blizzard's own nameplates are restyled, not replaced: flat health bar,
 -- thin theme border (accent colour on your target instead of the yellow
@@ -198,3 +199,158 @@ P.frame:SetScript("OnEvent", function(_, event, unit)
     pcall(P.UpdateTargets, P)
   end
 end)
+
+-- Stacked nameplates: in a crowd the plates sit one above another in a column
+-- instead of overlapping (the game's own setting, nameplateMotion 1). Set out
+-- of combat only; option "Stack nameplates" (default on).
+local stackEv = CreateFrame("Frame")
+for _, e in ipairs({"PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED"}) do pcall(stackEv.RegisterEvent, stackEv, e) end
+function PSS:ApplyPlateStacking()
+  if not (SetCVar and GetCVar) or (InCombatLockdown and InCombatLockdown()) then return end
+  if PSS.RevUILoaded and PSS:RevUILoaded() then return end
+  local want = not (PetSkillScoutDB and PetSkillScoutDB.plateStack == false)
+  local v = want and "1" or "0"
+  if GetCVar("nameplateMotion") ~= v then pcall(SetCVar, "nameplateMotion", v) end
+  -- This client (12.x) has no working nameplateMotion: stacking is the bit
+  -- field "nameplateStackingTypes", one bit per Enum.NamePlateStackType
+  -- (Blizzard_SettingsDefinitions_Frame/Nameplates.lua). Enemy plates only.
+  local ST = Enum and Enum.NamePlateStackType
+  if ST and ST.Enemy and C_CVar and C_CVar.GetCVar and C_CVar.GetCVar("nameplateStackingTypes")
+      and GetCVarBitfield and SetCVarBitfield then
+    if (GetCVarBitfield("nameplateStackingTypes", ST.Enemy) and true or false) ~= want then
+      pcall(SetCVarBitfield, "nameplateStackingTypes", ST.Enemy, want)
+    end
+  end
+  -- A little room between stacked plates, so the bars do not touch.
+  if want and GetCVar("nameplateOverlapV") and tonumber(GetCVar("nameplateOverlapV")) and tonumber(GetCVar("nameplateOverlapV")) > 1.0 then
+    pcall(SetCVar, "nameplateOverlapV", "1.0")
+  end
+end
+stackEv:SetScript("OnEvent", function() pcall(PSS.ApplyPlateStacking, PSS) end)
+
+-- Clearer plates: health % on the bar, your debuffs with time left above it,
+-- and a cast bar that says when a spell can be interrupted (bright orange bar,
+-- gold edge, "KICK!"); grey when it cannot be. Display only.
+local extra = setmetatable({}, {__mode = "k"})
+P.extra, P.plateUnit = extra, plateUnit
+local function Extra(uf, hb)
+  local e = extra[uf]
+  if e then return e end
+  e = {}
+  e.pct = hb:CreateFontString(nil, "OVERLAY") -- (unused: PlatesBar.lua shows %)
+  e.pct:Hide()
+  e.debuffs = {}
+  for i = 1, 5 do
+    local d = CreateFrame("Frame", nil, uf)
+    d:SetSize(18, 18)
+    d:SetPoint("BOTTOMLEFT", hb, "TOPLEFT", (i - 1) * 20, 18)
+    local bg = d:CreateTexture(nil, "BACKGROUND"); bg:SetTexture(FLAT); bg:SetAllPoints(); bg:SetVertexColor(0, 0, 0, 1)
+    d.icon = d:CreateTexture(nil, "ARTWORK"); d.icon:SetPoint("TOPLEFT", 1, -1); d.icon:SetPoint("BOTTOMRIGHT", -1, 1)
+    d.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    d.time = d:CreateFontString(nil, "OVERLAY"); Font(d.time, 9); d.time:SetPoint("BOTTOM", d, "BOTTOM", 0, -1)
+    d.count = d:CreateFontString(nil, "OVERLAY"); Font(d.count, 8); d.count:SetPoint("TOPRIGHT", d, "TOPRIGHT", 1, 1)
+    d:Hide()
+    e.debuffs[i] = d
+  end
+  extra[uf] = e
+  return e
+end
+
+function P:UpdateHealth(uf, unit)
+  local hb = F(uf, "healthBar") or F(uf, "HealthBar")
+  if not hb then return end
+  local e = Extra(uf, hb)
+  local hp, max = Plain(Call(UnitHealth, unit)), Plain(Call(UnitHealthMax, unit))
+  if type(hp) == "number" and type(max) == "number" and max > 0 then
+    e.pct:SetText(string.format("%d%%", math.floor(hp / max * 100 + 0.5)))
+  else
+    e.pct:SetText("")
+  end
+end
+
+function P:UpdateDebuffs(uf, unit)
+  local hb = F(uf, "healthBar") or F(uf, "HealthBar")
+  if not hb then return end
+  local e = Extra(uf, hb)
+  local shown = 0
+  local now = GetTime and GetTime() or 0
+  if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+    for i = 1, 40 do
+      local ok, a = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, "HARMFUL|PLAYER")
+      if not ok or type(a) ~= "table" then break end
+      local icon, exp, n = Plain(a.icon), Plain(a.expirationTime), Plain(a.applications)
+      if icon and shown < #e.debuffs then
+        shown = shown + 1
+        local d = e.debuffs[shown]
+        d.icon:SetTexture(icon)
+        local left = type(exp) == "number" and exp > 0 and exp - now or nil
+        d.time:SetText(left and (left >= 60 and string.format("%dm", math.floor(left / 60)) or string.format("%d", math.floor(left + 0.5))) or "")
+        d.count:SetText(type(n) == "number" and n > 1 and tostring(n) or "")
+        d:Show()
+      end
+    end
+  end
+  for i = shown + 1, #e.debuffs do e.debuffs[i]:Hide() end
+end
+
+function P:UpdateCast(uf, unit)
+  local cb = F(uf, "castBar") or F(uf, "CastBar")
+  if not cb or Forbidden(cb) then return end
+  local S = PSS.Skin
+  local name, _, _, _, _, _, _, notInt = Call(UnitCastingInfo, unit)
+  if not Plain(name) then name, _, _, _, _, _, notInt = Call(UnitChannelInfo, unit) end
+  local bd = S and S.BackdropOf and S:BackdropOf(cb)
+  if not cb.pssKick then
+    cb.pssKick = cb:CreateFontString(nil, "OVERLAY")
+    Font(cb.pssKick, 10)
+    cb.pssKick:SetPoint("LEFT", cb, "RIGHT", 4, 0)
+  end
+  if Plain(name) then
+    if Plain(notInt) == true then
+      pcall(cb.SetStatusBarColor, cb, 0.55, 0.55, 0.55)
+      if bd then EdgeColour(bd, Col("edge")) end
+      cb.pssKick:SetText("")
+    else
+      pcall(cb.SetStatusBarColor, cb, 1, 0.55, 0.15)
+      if bd then EdgeColour(bd, {1, 0.85, 0.2, 1}) end
+      cb.pssKick:SetTextColor(1, 0.85, 0.2)
+      cb.pssKick:SetText(PSS:L("plateKick"))
+    end
+  else
+    cb.pssKick:SetText("")
+  end
+end
+
+local function UF(unit)
+  local plate = PlateFor(unit)
+  local uf = plate and UnitFrameOf(plate)
+  if uf and not Forbidden(uf) then return uf end
+end
+
+local liveEv = CreateFrame("Frame")
+for _, e in ipairs({"UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_AURA", "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP",
+    "UNIT_SPELLCAST_CHANNEL_START", "UNIT_SPELLCAST_CHANNEL_STOP", "UNIT_SPELLCAST_INTERRUPTIBLE",
+    "UNIT_SPELLCAST_NOT_INTERRUPTIBLE", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED", "NAME_PLATE_UNIT_ADDED"}) do
+  pcall(liveEv.RegisterEvent, liveEv, e)
+end
+liveEv:SetScript("OnEvent", function(_, event, unit)
+  if not (P.on and type(unit) == "string" and unit:find("^nameplate")) then return end
+  if PetSkillScoutDB and PetSkillScoutDB.plateExtras == false then return end
+  local uf = UF(unit)
+  if not uf then return end
+  if event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH" then pcall(P.UpdateHealth, P, uf, unit)
+  elseif event == "UNIT_AURA" then pcall(P.UpdateDebuffs, P, uf, unit)
+  elseif event == "NAME_PLATE_UNIT_ADDED" then
+    pcall(P.UpdateHealth, P, uf, unit); pcall(P.UpdateDebuffs, P, uf, unit); pcall(P.UpdateCast, P, uf, unit)
+  else pcall(P.UpdateCast, P, uf, unit) end
+end)
+-- Debuff timers tick down once a second.
+local tickF = CreateFrame("Frame")
+tickF.pssKey = "Plates debuffs"
+tickF:SetScript("OnUpdate", function()
+  if not P.on or (PetSkillScoutDB and PetSkillScoutDB.plateExtras == false) then return end
+  for uf, unit in pairs(plateUnit) do
+    if extra[uf] and type(unit) == "string" then pcall(P.UpdateDebuffs, P, uf, unit) end
+  end
+end)
+PSS:Every(tickF, 1)

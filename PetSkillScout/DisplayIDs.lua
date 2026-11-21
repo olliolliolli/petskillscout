@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- NPC ID -> creature display ID for every beast in Database.lua and the rare catalogue.
 -- Source: AzerothCore world database (creature_template / creature_template_model, idx 0).
 -- Classic creatures keep these display IDs; Forever-specific model changes are not covered,
