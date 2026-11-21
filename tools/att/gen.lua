@@ -108,6 +108,22 @@ for _, id in ipairs(ids) do
         end
       end
     end
+    -- Since ATT f58fc19 common vendor goods given as rewards are a symlink:
+    -- sym = {{"select", "itemID", id, ...}}.
+    if type(rawget(n, "sym")) == "table" then
+      for _, cmd in ipairs(n.sym) do
+        if type(cmd) == "table" and cmd[1] == "select" and cmd[2] == "itemID" then
+          for k = 3, #cmd do
+            local v = cmd[k]
+            if type(v) == "number" then
+              local dup = false
+              for _, x in ipairs(items) do if x == v then dup = true end end
+              if not dup then items[#items + 1] = v end
+            end
+          end
+        end
+      end
+    end
     if #obj > 0 then f[#f + 1] = 'o="' .. table.concat(obj) .. '"' end
     if ox then f[#f + 1] = string.format("ox=%s,oy=%s,om=%d", num(ox[1]), num(ox[2]), ox[3]) end
     if #items > 0 then f[#f + 1] = "i=" .. arr(items) end
