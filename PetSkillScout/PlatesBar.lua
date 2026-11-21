@@ -16,6 +16,10 @@ local function Call(fn, ...)
   local r = {pcall(fn, ...)}
   if r[1] then return unpack(r, 2, 10) end
 end
+local function Plain(v)
+  if PSS.IsSecret and PSS.IsSecret(v) then return nil end
+  return v
+end
 local function Col(k)
   local S = PSS.Skin
   local c = S and S.Colour and S:Colour(k)
@@ -28,20 +32,50 @@ end
 -- Is this unit a boss? The game's own flag (UnitIsBossMob, Forever API),
 -- world bosses, or a dungeon / raid boss from BossDB by NPC ID. Lives here and
 -- not in BossDB.lua, which tools/att/genbosses.py rewrites on every check.
+-- In Forever dungeons a boss looks like trash to addons: no boss1..5 unit,
+-- name and GUID are secret, UnitClassification "elite", UnitIsBossMob false;
+-- only the level is readable (boss 47, trash 43-44). ENCOUNTER_START comes
+-- before the pull and ENCOUNTER_END after the fight (OneButtonRotation's
+-- bossLog, 2026-11-20). So during an encounter the boss is the hostile elite
+-- with the highest level among the plates.
+PSS.inEncounter = false
+local function Lvl(unit)
+  local v = Plain(Call(UnitLevel, unit))
+  return type(v) == "number" and v or nil
+end
+local function Classif(unit) return Plain(Call(UnitClassification, unit)) end
+local function EncounterTopLevel()
+  local top
+  for i = 1, 40 do
+    local u = "nameplate" .. i
+    if Call(UnitExists, u) and Plain(Call(UnitCanAttack, "player", u)) and Classif(u) == "elite" then
+      local l = Lvl(u)
+      if l and l > 0 and (not top or l > top) then top = l end
+    end
+  end
+  return top
+end
 function PSS:IsBoss(unit)
   if not unit then return false end
   local yes = false
   pcall(function() if UnitIsBossMob and UnitIsBossMob(unit) then yes = true end end)
   if yes then return true end
-  pcall(function() if UnitClassification(unit) == "worldboss" then yes = true end end)
-  if yes then return true end
+  local cls = Classif(unit)
+  if cls == "worldboss" then return true end
+  local lvl = Lvl(unit)
+  if lvl == -1 and Plain(Call(UnitCanAttack, "player", unit)) then return true end -- skull
   local id = Call(UnitCreatureID, unit)
   if not id then
     local guid = Call(UnitGUID, unit)
     pcall(function() id = tonumber(select(6, strsplit("-", guid))) end)
   end
   pcall(function() if id and PSS.BossNPC and PSS.BossNPC[id] then yes = true end end)
-  return yes
+  if yes then return true end
+  if self.inEncounter and cls == "elite" and lvl and lvl > 0 and Plain(Call(UnitCanAttack, "player", unit)) then
+    local top = EncounterTopLevel()
+    return top ~= nil and lvl >= top
+  end
+  return false
 end
 
 local ours = setmetatable({}, {__mode = "k"}) -- unit frame -> our bar frame
@@ -306,6 +340,15 @@ if type(CompactUnitFrame_UpdateHealthColor) == "function" and hooksecurefunc the
   end)
 end
 
+-- Encounter start / end: restyle every plate (boss frame on / off).
+local encEv = CreateFrame("Frame")
+for _, e in ipairs({"ENCOUNTER_START", "ENCOUNTER_END", "PLAYER_ENTERING_WORLD"}) do pcall(encEv.RegisterEvent, encEv, e) end
+encEv:SetScript("OnEvent", function(_, event)
+  PSS.inEncounter = event == "ENCOUNTER_START"
+  if not On() then return end
+  for u, uf in pairs(unitOf) do pcall(P.SquareStyle, P, uf, u) end
+end)
+
 local ev = CreateFrame("Frame")
 for _, e in ipairs({"NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "PLAYER_TARGET_CHANGED", "UNIT_HEALTH",
     "UNIT_MAXHEALTH", "UNIT_FACTION", "UNIT_LEVEL", "UNIT_CLASSIFICATION_CHANGED"}) do pcall(ev.RegisterEvent, ev, e) end
@@ -326,5 +369,9 @@ ev:SetScript("OnEvent", function(_, event, unit)
   local uf = plate and (plate.UnitFrame or plate)
   if not uf or (uf.IsForbidden and uf:IsForbidden()) then return end
   if event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH" then pcall(P.SquareHealth, P, uf, unit)
+  elseif event == "NAME_PLATE_UNIT_ADDED" and PSS.inEncounter then
+    -- A higher-level elite may have come into view: the boss frame can move.
+    pcall(P.SquareStyle, P, uf, unit)
+    for u, f in pairs(unitOf) do if f ~= uf then pcall(P.SquareStyle, P, f, u) end end
   else pcall(P.SquareStyle, P, uf, unit) end
 end)
