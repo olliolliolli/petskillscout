@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.203
+- Gear: Careful Aim counted from your talent rank (/pss aim shows it); haste and resistances counted;
+  changes under 0.5 % count as no change; an item you already wear is marked as equipped;
+  Intellect and Spirit valued for the mana they give.
+- Theme: quest icon on nameplates of mobs your quests need; bags keep their place.
+- Data update 2026-11-21: AllTheThings commit 61be486; learned data from the game.
+
 3.7.202
 - Data update 2026-11-21: AllTheThings commit f58fc19 (Soulforge / Five Thunders quests, Shen'dralas
   quests, mount choices of the riding quests; vendor goods given as rewards read again).
