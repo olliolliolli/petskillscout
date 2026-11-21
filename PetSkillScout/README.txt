@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.202
+- Data update 2026-11-21: AllTheThings commit f58fc19 (Soulforge / Five Thunders quests, Shen'dralas
+  quests, mount choices of the riding quests; vendor goods given as rewards read again).
+- Theme: bosses in Forever dungeons get the boss nameplate during the encounter.
+
 3.7.201
 - Gear: a ring or trinket is compared with each of the two equipped ones; stat differences drop
   the fraction like the game's own comparison.
