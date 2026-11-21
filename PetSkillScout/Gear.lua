@@ -24,7 +24,7 @@ local function L(k) return PSS:L(k) end
 
 -- Specs and weights (attack-power equivalents) -----------------------------
 G.SPECS = {"BM", "MM", "SV"}
--- Like Pawn, an item's value is the sum of weight x amount over every stat
+-- An item's value is the sum of weight x amount over every stat
 -- it has; the weights are our own, in ranged attack power:
 -- * agi: 2 ranged AP plus the crit it gives; crit / hit / haste per 1 %.
 -- * int: 15 mana each, valued like mp5 over a fight (Careful Aim is added
@@ -38,7 +38,7 @@ G.WEIGHTS = {
   SV = {agi = 2.8, ap = 1.0, rap = 1.0, map = 0.25, crit = 26, hit = 22, haste = 15, int = 0.5, spi = 0.15, sta = 0.4,
     str = 0.15, armor = 0.01, mp5 = 1.5, res = 0.05},
 }
--- Pawn's rule: a change under 0.5 % of the equipped item's value is no change.
+-- A change under 0.5 % of the equipped item's value is no change.
 G.MIN_UPGRADE = 0.005
 -- Hunters fight at range: melee weapon damage counts for little.
 G.RANGED_DPS, G.MELEE_DPS = 14, {MM = 1.2, BM = 1.2, SV = 2.0}

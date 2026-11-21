@@ -117,14 +117,14 @@ function GC:Compare(link, spec)
       each[#each + 1] = {link = elink, delta = new - (sc or 0)}
     end
   end
-  -- Already worn (in any of its slots): nothing to compare, like Pawn.
+  -- Already worn (in any of its slots): nothing to compare.
   local worn = false
   for _, inv in ipairs(slots) do
     local eid = Gr:Equipped(inv, spec)
     if eid and eid == itemID then worn = true end
   end
   local delta = new - (old or 0)
-  -- Pawn's rule: under 0.5 % of the equipped item's value counts as no change.
+  -- Under 0.5 % of the equipped item's value counts as no change.
   if (old or 0) > 0 and math.abs(delta) < (old or 0) * (Gr.MIN_UPGRADE or 0) then delta = 0 end
   local res = {
     delta = delta, new = new, old = old or 0, worn = worn,
@@ -146,7 +146,7 @@ function GC:Verdict(res)
   if d > 0 then text = string.format("|cff7ee0a3" .. L("gcUpgrade") .. "|r", d, spec)
   elseif d < 0 then text = string.format("|cffff7a7a" .. L("gcDowngrade") .. "|r", d, spec)
   else text = "|cffbbbbbb" .. L("gcSame") .. "|r" end
-  -- Like Pawn: the change in percent of the equipped item's value.
+  -- The change in percent of the equipped item's value.
   if d ~= 0 and (res.old or 0) > 1 then
     text = text .. string.format("  |cffbbbbbb%+d%%|r", math.floor(res.delta / res.old * 100 + (res.delta > 0 and 0.5 or -0.5)))
   end
