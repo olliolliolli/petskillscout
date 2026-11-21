@@ -336,14 +336,17 @@ function G:CarefulAimPct()
       local spellID = di and Plain(di.spellID)
       local name = spellID and Plain(Call(C_Spell and C_Spell.GetSpellName, spellID))
       if type(name) == "string" and CAREFUL_AIM[name:lower()] then
+        G.aimDiag = {rank = rank, maxRank = ni and Plain(ni.maxRanks), spellID = spellID,
+          desc = Plain(Call(C_Spell and C_Spell.GetSpellDescription, spellID))}
         if type(rank) == "number" and rank > 0 then
-          local per = 20
-          local desc = Plain(Call(C_Spell and C_Spell.GetSpellDescription, spellID))
+          -- The spell text holds the top rank's value (rank 1 / 5 read "100%",
+          -- the talent tooltip says 20 %): per rank = text / max rank.
+          local maxR = ni and Plain(ni.maxRanks)
+          local desc = G.aimDiag.desc
           local n = type(desc) == "string" and tonumber(desc:match("(%d+)%%"))
-          -- The text is the first rank's when the spell is shared by ranks.
-          if n and n > 0 and n <= 100 then per = n end
+          local per = 20
+          if n and type(maxR) == "number" and maxR > 0 and n <= 100 then per = n / maxR end
           aimPct = math.min(per * rank, 100)
-          if n and n > 20 and n == 20 * rank then aimPct = n end
         end
         return aimPct
       end
