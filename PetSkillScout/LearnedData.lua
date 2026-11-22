@@ -138,6 +138,7 @@ quests = {
   [97222] = {n = "Gatehouse Goods", g = 483, gn = nil, f = "A", m = 1453, x = 66.5, y = 73.6, i = {414}},
   [97236] = {n = "Fangzahn von Githyiss", g = 2082, gn = nil, f = "A", m = 1438, x = 57.8, y = 41.8, i = {}},
   [97282] = {n = "Elektrisierende Aussichten", g = 3293, gn = nil, f = "H", m = 1411, x = 46.4, y = 22.9, i = {281274, 287060}},
+  [97540] = {n = "L’oasis", g = 5955, gn = nil, f = "A", m = 1446, x = 66.5, y = 25.8, i = {}},
   [98247] = {n = "Shipping Label", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {}},
   [98423] = {n = "The Treaty of Understanding", g = nil, gn = nil, f = "A", m = nil, x = nil, y = nil, i = {}},
   [98459] = {n = "A Lack of Virtue", g = 254078, gn = nil, f = "A", m = 1424, x = 51.2, y = 66.5, i = {}},
