@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.204
+- Data update 2026-11-22: AllTheThings commit 5957922 (paladin Whisper chain, River Ends, Rapid
+  Escape; Betrayed 3/4 and 4/4 removed in Forever); learned data from the game.
+
 3.7.203
 - Gear: Careful Aim counted from your talent rank (/pss aim shows it); haste and resistances counted;
   changes under 0.5 % count as no change; an item you already wear is marked as equipped;
