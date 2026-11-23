@@ -76,6 +76,7 @@ QuestLearn.lua
 LearnedData.lua
 BossDB.lua
 Relay.lua
+Report.lua
 UI.lua
 Skin.lua
 Bags.lua
