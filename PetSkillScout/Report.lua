@@ -90,6 +90,6 @@ function PSS:Report()
   end
   f.code = code
   f.eb:SetText(code)
-  f:Show()
+  f:Show(); if f.Raise then f:Raise() end
   f.eb:SetFocus(); f.eb:HighlightText()
 end
