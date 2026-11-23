@@ -825,6 +825,16 @@ function UI:Create()
   end, {icon="Interface\\Icons\\INV_Misc_Gear_01", iconSize=22})
   self.gearButton:SetPoint("RIGHT", self.closeButton, "LEFT", -8, 0)
   SetTip(self.gearButton, function() return L("settings") end)
+  -- Report a problem: the game's bug icon (HelpFrame), in the header so it is
+  -- seen at once; opens the window with the report link and diagnostic code.
+  local rep = CreateFrame("Button", nil, header)
+  rep:SetSize(30, 30); rep:SetPoint("RIGHT", self.gearButton, "LEFT", -6, 0)
+  rep:SetNormalTexture("Interface\\HelpFrame\\HelpIcon-Bug")
+  rep:SetHighlightTexture("Interface\\HelpFrame\\HelpIcon-Bug-Red")
+  rep:SetScript("OnClick", function() if PSS.Report then PSS:Report() end end)
+  rep:SetScript("OnEnter", function(b) GameTooltip:SetOwner(b, "ANCHOR_BOTTOM"); GameTooltip:SetText(L("reportBtn")); GameTooltip:Show() end)
+  rep:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  self.reportButton = rep
   -- Network chip: hunters online, or a bright "Connect" when not connected.
   -- Joining a channel needs a secure click, so the chip opens the existing
   -- connect prompt right under itself (nothing protected lives in this window).
@@ -864,7 +874,7 @@ function UI:Create()
   -- Character chip (click: refresh position / zone).
   self.chip = CreateFrame("Button", nil, header)
   self.chip:SetHeight(26)
-  self.chip:SetPoint("RIGHT", self.gearButton, "LEFT", -10, 0)
+  self.chip:SetPoint("RIGHT", self.reportButton, "LEFT", -10, 0)
   self.netChip:SetPoint("RIGHT", self.chip, "LEFT", -6, 0)
   local chipBg = Solid(self.chip, "BACKGROUND", C.deep)
   chipBg:SetAllPoints(self.chip)
@@ -4505,18 +4515,6 @@ function UI:BuildSettings()
   end
   self.sVersion = Label(nav, "", 10, C.muted, 190, "LEFT", true)
   self.sVersion:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 14, 12)
-  -- Report a problem: the game's bug icon (HelpFrame), opens the window with
-  -- the report page link and the diagnostic code.
-  local rep = CreateFrame("Button", nil, nav)
-  rep:SetSize(24, 24); rep:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 10, 30)
-  rep:SetNormalTexture("Interface\\HelpFrame\\HelpIcon-Bug")
-  rep:SetHighlightTexture("Interface\\HelpFrame\\HelpIcon-Bug-Red")
-  rep:SetScript("OnClick", function() if PSS.Report then PSS:Report() end end)
-  rep:SetScript("OnEnter", function(b) GameTooltip:SetOwner(b, "ANCHOR_TOP"); GameTooltip:SetText(L("reportBtn")); GameTooltip:Show() end)
-  rep:SetScript("OnLeave", function() GameTooltip:Hide() end)
-  self.sReportLabel = Label(nav, "", 11, C.muted, 150, "LEFT", true)
-  self.sReportLabel:SetPoint("LEFT", rep, "RIGHT", 4, 0)
-  self.sReport = rep
 
   -- Rows (one container per section)
   local cw = BODY_W - 210 - 16 - 296
@@ -4659,7 +4657,6 @@ local PREVIEW_NPC = 1132 -- Timber (Dun Morogh): a rare wolf
 function UI:RefreshSettings()
   if not self.sNav then return end
   self.sTitle:SetText(L("settings"))
-  if self.sReportLabel then self.sReportLabel:SetText(L("reportBtn")) end
   self.sVersion:SetText("PetSkillScout " .. tostring(PSS.version) .. "  ·  " .. PSS:Credit(true) .. "  ·  /pss")
   local current
   for _, b in ipairs(self.sNav) do

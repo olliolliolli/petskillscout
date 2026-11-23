@@ -55,7 +55,8 @@ function PSS:Report()
   local f = _G.PetSkillScoutReport
   if not f then
     f = CreateFrame("Frame", "PetSkillScoutReport", UIParent, "BackdropTemplate")
-    f:SetSize(460, 190); f:SetPoint("CENTER"); f:SetFrameStrata("DIALOG"); f:SetToplevel(true)
+    f:SetSize(460, 190); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG"); f:SetToplevel(true)
+    f:SetClampedToScreen(true)
     if f.SetBackdrop then
       f:SetBackdrop({bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1})
       f:SetBackdropColor(0.05, 0.08, 0.07, 0.97); f:SetBackdropBorderColor(0.86, 0.7, 0.35, 1)
