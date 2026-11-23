@@ -31,9 +31,11 @@ function PSS:ReportText()
   local db = PetSkillScoutDB or {}
   local L = {}
   local function Add(s) L[#L + 1] = s end
-  local _, class = UnitClass("player")
-  Add(("v=%s lang=%s class=%s lvl=%s inst=%s"):format(Str(self.version), Str(GetLocale and GetLocale()),
-    Str(class), Str(UnitLevel("player")), Str((select(2, IsInInstance())))))
+  local function Get(fn, ...) if type(fn) ~= "function" then return nil end local r = {pcall(fn, ...)}; return r[1] and r[2], r[3] end
+  local _, class = Get(UnitClass, "player")
+  local _, inst = Get(IsInInstance)
+  Add(("v=%s lang=%s class=%s lvl=%s inst=%s"):format(Str(self.version), Str(Get(GetLocale)),
+    Str(class), Str((Get(UnitLevel, "player"))), Str(inst)))
   local opts = {}
   for _, k in ipairs({"skinGame", "ownBags", "bagsUI", "skinPlates", "plateExtras", "plateStack", "gearTooltip",
       "gearSpec", "language", "mmButtonsFree"}) do
@@ -83,7 +85,7 @@ function PSS:Report()
     local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     close:SetSize(90, 22); close:SetPoint("BOTTOMRIGHT", -12, 10); close:SetText(CLOSE or "Close")
     close:SetScript("OnClick", function() f:Hide() end)
-    tinsert(UISpecialFrames, "PetSkillScoutReport")
+    if UISpecialFrames then table.insert(UISpecialFrames, "PetSkillScoutReport") end
   end
   f.code = code
   f.eb:SetText(code)
