@@ -952,7 +952,10 @@ function UI:RefreshHeader()
   -- width out of the tabs' room too.
   local netW = self:RefreshNetChip() or 0
   local netRoom = netW > 0 and (netW + 6) or 0
-  local TAB_RIGHT = 1000 - 10 - 150 - netRoom
+  -- The report button (30 + 6) sits between the chip and the gear button:
+  -- the chip's right edge is at 1000 - 36.
+  local CHIP_RIGHT = 1000 - 36
+  local TAB_RIGHT = CHIP_RIGHT - 10 - 150 - netRoom
   local widths, x
   for size = 14, 10, -1 do
     widths, x = {}, 204
@@ -978,7 +981,7 @@ function UI:RefreshHeader()
   local p = PSS.player
   local where = p.zone or "?"
   if p.x and p.y then where = where .. string.format("  %.1f, %.1f", p.x * 100, p.y * 100) end
-  local room = math.max(120, 1000 - x - 10 - 24 - netRoom)
+  local room = math.max(120, CHIP_RIGHT - x - 10 - 24 - netRoom)
   self.chipText:SetWidth(0)
   self.chipText:SetText(string.format("%s %d  ·  %s", L("level"), math.floor(p.level or 1), where))
   if (self.chipText:GetStringWidth() or 0) > room and p.zone then

@@ -311,3 +311,36 @@ function M:Debug()
     end
   end
 end
+
+-- Beast Training: the hunter's own list of learned pet skills. In Forever it is
+-- the trainer window with C_Trainer.GetTrainerType() == Enum.TrainerType.Pet
+-- (Blizzard_TrainerUI.lua); every service in it is a skill rank the hunter
+-- knows, whatever the pet can learn ("available", "used" or "unavailable").
+-- Ranks are only ever raised in knownRanks (a filtered list just reads less).
+function M:ReadBeastTraining()
+  if not (C_Trainer and C_Trainer.GetTrainerType and Enum and Enum.TrainerType) then return 0 end
+  if PSS.Plain(safe(C_Trainer.GetTrainerType)) ~= Enum.TrainerType.Pet then return 0 end
+  local n = PSS.Plain(safe(GetNumTrainerServices)) or 0
+  local db = PetSkillScoutDB
+  if not db or n == 0 then return 0 end
+  db.knownRanks = db.knownRanks or {}
+  local added = 0
+  for i = 1, n do
+    -- Not safe(): it keeps 4 values and the rank text is the 5th.
+    local ok, name, _, _, _, sub = pcall(GetTrainerServiceInfo, i)
+    if not ok then name, sub = nil, nil end
+    name, sub = PSS.Plain(name), PSS.Plain(sub)
+    local key = type(name) == "string" and lookup(name)
+    local rank = parseRank(sub) or (key and 1)
+    if key and rank and rank > (tonumber(db.knownRanks[key]) or 0) then
+      db.knownRanks[key] = rank
+      added = added + 1
+    end
+  end
+  db.beastTrainingRead = time and time() or 0
+  if added > 0 and PSS.UI and PSS.UI.Refresh then pcall(PSS.UI.Refresh, PSS.UI) end
+  return added
+end
+local btEv = CreateFrame("Frame")
+for _, e in ipairs({"TRAINER_SHOW", "TRAINER_UPDATE"}) do pcall(btEv.RegisterEvent, btEv, e) end
+btEv:SetScript("OnEvent", function() pcall(M.ReadBeastTraining, M) end)

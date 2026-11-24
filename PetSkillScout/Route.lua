@@ -411,8 +411,12 @@ tf:SetScript("OnEvent", function()
   if IsTradeskillTrainer and PSS.Plain(IsTradeskillTrainer()) then return end
   local guid = PSS.Plain(UnitGUID and UnitGUID("npc"))
   local npc = type(guid) == "string" and tonumber(guid:match("%-(%d+)%-%x+$"))
-  local mapID, x, y = PSS.Nav and PSS.Nav:PlayerPos()
-  if not (npc and mapID) then return end
+  -- "PSS.Nav and PSS.Nav:PlayerPos()" kept only the first value (mapID):
+  -- x / y were always nil and the line below errored on every trainer.
+  local mapID, x, y
+  if PSS.Nav and PSS.Nav.PlayerPos then mapID, x, y = PSS.Nav:PlayerPos() end
+  x, y = PSS.Plain(x), PSS.Plain(y)
+  if not (npc and mapID and type(x) == "number" and type(y) == "number") then return end
   local name = PSS.Plain(UnitName and UnitName("npc"))
   local kind = "hunter"
   local tip = C_TooltipInfo and C_TooltipInfo.GetUnit and C_TooltipInfo.GetUnit("npc")
