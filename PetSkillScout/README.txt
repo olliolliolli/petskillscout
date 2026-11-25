@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.207
+- Nameplates: with "Stack nameplates" off the game's own stacking setting is never touched (it was
+  turned off after every load and fight).
+
 3.7.206
 - Report a problem button (bug icon) in the window header: report page link and a diagnostic code.
 - Learned pet skills and ranks are read from the Beast Training window.
