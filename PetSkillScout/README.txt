@@ -206,6 +206,13 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.206
+- Report a problem button (bug icon) in the window header: report page link and a diagnostic code.
+- Learned pet skills and ranks are read from the Beast Training window.
+- Gear: the where-to-get button opens the map with the game's own pin at the quest giver or vendor.
+- Fixed a Lua error when talking to a trainer.
+- Data update 2026-11-25: AllTheThings commit 0c78f3f; learned data from the game.
+
 3.7.205
 - Data update 2026-11-23: AllTheThings commit e9d81ff (class quests in the capitals, Emerald Circle,
   Goblin Lockpicks, Kum'isha reworked for Forever); learned data from the game (27 quests, 2 vendors,
