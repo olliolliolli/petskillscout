@@ -2,6 +2,8 @@
 dofile((arg[0]:match("(.*/)") or "") .. "load.lua")
 local PSS = PetSkillScout
 PetSkillScoutDB = {language = "en"}; PSS:InitializeDB()
+-- Off by default since 3.7.197 (changes to the game's UI are opt-in): on for this test.
+PetSkillScoutDB.announceOn = true; PetSkillScoutDB.announceRare = true; PetSkillScoutDB.announceRank = true; PetSkillScoutDB.announceMilestone = true;
 local fails, passes = 0, 0
 local function check(name, ok) if ok then passes = passes + 1 else fails = fails + 1; print("FAIL " .. name) end end
 local sent = {}

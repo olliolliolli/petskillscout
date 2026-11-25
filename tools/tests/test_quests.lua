@@ -11,6 +11,8 @@ local function keys(list) local t = {} for _, r in ipairs(list) do t[r.e and r.e
 local function reset()
   PetSkillScoutDB = {language = "en"}
   PSS:InitializeDB()
+  -- Off by default since 3.7.197 (changes to the game's UI are opt-in): on for this test.
+  PetSkillScoutDB.questAlert = true;
   MOCK.done, MOCK.inlog, MOCK.owned, MOCK.prints, MOCK.warnings, MOCK.equipped = {}, {}, {}, {}, {}, {}
   MOCK.level, MOCK.faction, MOCK.class, MOCK.combat = 30, "Alliance", "HUNTER", false
 end

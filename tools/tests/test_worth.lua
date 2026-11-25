@@ -14,6 +14,8 @@ C_QuestLog.GetQuestObjectives = function(id) return MOCK.objectives[id] end
 C_QuestLog.GetQuestTagInfo = function(id) return MOCK.tags[id] end
 local function reset()
   PetSkillScoutDB = {language = "en", questPins = true}; PSS:InitializeDB()
+  -- Off by default since 3.7.197 (changes to the game's UI are opt-in): on for this test.
+  PetSkillScoutDB.questMinimap = true; PetSkillScoutDB.questObjPins = true; PetSkillScoutDB.questWorth = true; PetSkillScoutDB.minimapPins = true;
   MOCK.done, MOCK.inlog, MOCK.owned, MOCK.prints, MOCK.equipped = {}, {}, {}, {}, {}
   MOCK.level, MOCK.faction, MOCK.class, MOCK.classID, MOCK.race = 12, "Alliance", "HUNTER", 3, 1
   MOCK.logXP, MOCK.objectives, MOCK.tags = {}, {}, {}
@@ -140,8 +142,14 @@ local Nav, MMp = PSS.Nav, PSS.Minimap
 local oldPos, oldNear = Nav.PlayerPos, Nav.Nearest
 Nav.PlayerPos = function() return 1432, 0.5, 0.5 end
 Nav.Nearest = function() return 20, 0, 20 end
+local clock = 1000
 local function minimapQuests()
+  -- The pin list is rebuilt at most every 2 s: let the mock clock move on.
+  clock = clock + 3
+  local oldTime = GetTime
+  GetTime = function() return clock end
   MMp:Refresh(); MMp._driver.pssTick(MMp._driver, 1)
+  GetTime = oldTime
   local n, purple = 0, false
   for _, p in ipairs(MMp._pins) do
     if p.shown and p.group then n = n + 1; if p.group.npc == 1187 then purple = p.group.best == "great" end end

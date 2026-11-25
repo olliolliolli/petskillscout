@@ -2,6 +2,8 @@ local dir = arg[1]
 dofile((arg[0]:match("(.*/)") or "") .. "load.lua")
 local PSS = PetSkillScout
 PetSkillScoutDB = {language = "en"}; PSS:InitializeDB()
+-- Off by default since 3.7.197 (changes to the game's UI are opt-in): on for this test.
+PetSkillScoutDB.spellBarAuto = true; PetSkillScoutDB.petBarAuto = true;
 MOCK.Fire("ADDON_LOADED", "PetSkillScout")
 MOCK.Fire("PLAYER_ENTERING_WORLD", true, false)
 MOCK.RunTimers()

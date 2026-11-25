@@ -86,7 +86,14 @@ ChatTypeInfo = {RAID_WARNING = {r = 1, g = 0.3, b = 0.1}}
 function RaidNotice_AddMessage(_, text) table.insert(MOCK.warnings, text) end
 SlashCmdList = {}
 unpack = unpack or table.unpack
-function hooksecurefunc() end
+-- Real post-hooks (table + method name, or a global function name), like the game.
+function hooksecurefunc(a, b, c)
+  local tbl, name, fn = a, b, c
+  if type(a) == "string" then tbl, name, fn = _G, a, b end
+  local orig = tbl and tbl[name]
+  if type(orig) ~= "function" or type(fn) ~= "function" then return end
+  tbl[name] = function(...) local r = {orig(...)}; fn(...); return unpack(r) end
+end
 function GetBindingAction() return "" end
 function issecretvalue() return false end
 function GetTime() return 1000 end
@@ -105,7 +112,12 @@ function GetMaxPlayerLevel() return 60 end
 function InCombatLockdown() return MOCK.combat end
 function IsShiftKeyDown() return false end
 function GetLocale() return "enUS" end
-function GetCVar() return "0" end
+-- Game settings: a store, and every write is logged (MOCK.cvarWrites).
+MOCK.cvars, MOCK.cvarWrites = {}, {}
+function GetCVar(k) local v = MOCK.cvars[k]; if v == nil then return "0" end return v end
+function SetCVar(k, v) MOCK.cvars[k] = tostring(v); MOCK.cvarWrites[#MOCK.cvarWrites + 1] = k .. "=" .. tostring(v) end
+function GetCVarBitfield(k, i) return (MOCK.cvars[k .. "#" .. i]) == "1" end
+function SetCVarBitfield(k, i, v) MOCK.cvars[k .. "#" .. i] = v and "1" or "0"; MOCK.cvarWrites[#MOCK.cvarWrites + 1] = k .. "#" .. i .. "=" .. tostring(v) end
 function GetCVarBool() return false end
 function GetInventoryItemLink(_, slot) return MOCK.equipped[slot] end
 function GetItemStats() return nil end
