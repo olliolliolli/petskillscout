@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.208
+- Nameplates (theme): raid target icons (skull, shield...) sit left of the level box, above the bar.
+
 3.7.207
 - Nameplates: with "Stack nameplates" off the game's own stacking setting is never touched (it was
   turned off after every load and fight).
