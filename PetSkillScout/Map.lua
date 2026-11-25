@@ -58,6 +58,23 @@ function PSS:OpenWorldMap(mapID)
   return true
 end
 
+-- The game's own map pin (user waypoint), the way the game sets one
+-- (Blizzard_PlunderstormPrematchUI.lua): shown on the world map and the
+-- minimap and tracked until you remove it yourself. x / y in percent.
+function PSS:SetMapPin(mapID, x, y, label)
+  if not (mapID and x and y and C_Map and C_Map.SetUserWaypoint and UiMapPoint) then return false end
+  if C_Map.CanSetUserWaypointOnMap then
+    local ok, can = pcall(C_Map.CanSetUserWaypointOnMap, mapID)
+    if ok and can == false then return false end
+  end
+  local ok = pcall(function()
+    C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, x / 100, y / 100))
+    if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then C_SuperTrack.SetSuperTrackedUserWaypoint(true) end
+  end)
+  if ok and label then PSS:Print(string.format(PSS:L("mapPinSet"), label)) end
+  return ok
+end
+
 function PSS.Map:Show(beast)
   if not beast then return end
   PSS.selected = beast

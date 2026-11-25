@@ -2161,13 +2161,13 @@ function UI:BuildGear()
       UI:UpdateGear()
     end, function(b) return b.tip or L("gearOther") end)
     row.alt:SetPoint("RIGHT", row, "RIGHT", -6, 0)
-    -- Where the reward quest starts: arrow to the quest giver + world map on its zone.
+    -- Where the reward quest starts / the vendor: world map on its zone with a pin.
     row.where = IconButton(row, "Interface\\Icons\\INV_Misc_Map_01", 22, function(b)
       if b.vendor then
         local v = b.vendor
-        local t = {name = b.vname or "?", mapID = v[4], points = {{v[2], v[3]}}}
-        if PSS.Nav then PSS.Nav:SetTarget(t) end
-        UI:OpenQuestMap(nil, v[4], t)
+        -- A map pin at the vendor that stays until you remove it (no arrow).
+        UI:OpenQuestMap(nil, v[4])
+        PSS:SetMapPin(v[4], v[2], v[3], b.vname or "?")
         return
       end
       local id, r = b.questID, b.quest
@@ -2177,9 +2177,9 @@ function UI:BuildGear()
       end
       local W = PSS.QuestWorth
       local giver = (W and W:NPCName(r.g)) or r.gn
-      local t = {name = giver or r.n, mapID = r.m, points = {{r.x, r.y}}}
-      if PSS.Nav then PSS.Nav:SetTarget(t) end
-      UI:OpenQuestMap(nil, r.m, t)
+      -- A map pin at the quest giver that stays until you remove it (no arrow).
+      UI:OpenQuestMap(nil, r.m)
+      PSS:SetMapPin(r.m, r.x, r.y, giver or r.n)
     end, function(b)
       if b.vendor then
         local v = b.vendor
