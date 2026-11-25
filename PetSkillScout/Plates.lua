@@ -202,15 +202,19 @@ end)
 
 -- Stacked nameplates: in a crowd the plates sit one above another in a column
 -- instead of overlapping (the game's own setting, nameplateMotion 1). Set out
--- of combat only; option "Stack nameplates" (default on).
+-- of combat only; option "Stack nameplates" (default off: then nothing is set).
 local stackEv = CreateFrame("Frame")
 for _, e in ipairs({"PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED"}) do pcall(stackEv.RegisterEvent, stackEv, e) end
 function PSS:ApplyPlateStacking()
   if not (SetCVar and GetCVar) or (InCombatLockdown and InCombatLockdown()) then return end
   if PSS.RevUILoaded and PSS:RevUILoaded() then return end
-  local want = not (PetSkillScoutDB and PetSkillScoutDB.plateStack == false)
-  local v = want and "1" or "0"
-  if GetCVar("nameplateMotion") ~= v then pcall(SetCVar, "nameplateMotion", v) end
+  -- Only when the option is on. Off (the default) the game's own stacking
+  -- setting is never touched: it used to be forced off after every load and
+  -- fight, overwriting what the player chose in the game's options.
+  if not (PetSkillScoutDB and PetSkillScoutDB.plateStack == true) then return end
+  local want = true
+  -- nameplateMotion is a legacy CVar on 12.x: only set when it still exists.
+  if GetCVar("nameplateMotion") ~= nil and GetCVar("nameplateMotion") ~= "1" then pcall(SetCVar, "nameplateMotion", "1") end
   -- This client (12.x) has no working nameplateMotion: stacking is the bit
   -- field "nameplateStackingTypes", one bit per Enum.NamePlateStackType
   -- (Blizzard_SettingsDefinitions_Frame/Nameplates.lua). Enemy plates only.
