@@ -337,7 +337,28 @@ function P:SquareStyle(uf, unit)
     f.quest:SetShown(q and true or false)
   end
   f:Show()
+  self:PlaceRaidIcon(uf)
   self:SquareHealth(uf, unit)
+end
+
+-- Raid target icon (skull, shield...): the game puts it left of its own bar
+-- (NamePlateUnitFrameMixin:UpdateAnchors, Blizzard_NamePlateUnitFrame.lua),
+-- which our wider bar covers. Moved left of our level box and lifted above our
+-- frame; done again after every UpdateAnchors of that plate.
+function P:PlaceRaidIcon(uf)
+  local f = ours[uf]
+  local rt = uf and uf.RaidTargetFrame
+  if not (f and rt and f:IsShown()) or (rt.IsForbidden and rt:IsForbidden()) then return end
+  pcall(function()
+    rt:ClearAllPoints()
+    rt:SetPoint("RIGHT", f.box, "LEFT", -4, 0)
+    if rt.SetFrameStrata then rt:SetFrameStrata(f:GetFrameStrata()) end
+    rt:SetFrameLevel(f:GetFrameLevel() + 10)
+  end)
+  if not uf.pssRaidHooked and uf.UpdateAnchors and hooksecurefunc then
+    uf.pssRaidHooked = true
+    pcall(hooksecurefunc, uf, "UpdateAnchors", function(frame) pcall(P.PlaceRaidIcon, P, frame) end)
+  end
 end
 
 -- The game recolours its bar itself (tapped by someone else -> grey, on
