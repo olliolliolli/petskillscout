@@ -206,6 +206,11 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.209
+- Rare alert window and sound are on by default for new players (saved choices kept).
+- Data update 2026-11-26: AllTheThings commit 0b14eb6 (Ghostfang Alpha in Mount Hyjal teaches
+  Bite 8 and Furious Howl 4); learned data from the game.
+
 3.7.208
 - Nameplates (theme): raid target icons (skull, shield...) sit left of the level box, above the bar.
 
