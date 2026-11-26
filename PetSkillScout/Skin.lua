@@ -330,6 +330,50 @@ local function WalkChildren(frame, depth)
   end
 end
 
+-- Classic art inside windows (item slots, name plates under items, money
+-- boxes, old input borders, parchment pages): found by its file or atlas at
+-- any depth, faded; slots and inputs get the theme's own square instead.
+-- Found by tools/revui/uisim.lua (every Forever window from the game's XML).
+local INNER_ART = {"ui-emptyslot", "ui-questitemnameframe", "ui-merchant-labelslots", "common\\moneyframe",
+  "ui-moneyframe-border", "common-input-border", "ui-classtrainer-horizontalbar", "ui-mailframebg",
+  "ui-questlog-empty", "tabardframeouterframe", "tabardframecustomizationframe", "dressingroom-sideframe",
+  "bluemenu-goldborder", "ui-character-skills-barborder", "ui-achievement-rightddlinset", "spellbook-skilllinetab",
+  "ui-guildbankframe-slots", "ui-guildbankframe-emblemborder", "ui-goldborder", "ui-itemsocketingframe-_tile",
+  "ui-merchant-botframe", "ui-achievement-statscomparisonbackground", "calendarbackground"}
+local function InnerArtKind(r)
+  local okA, atlas = pcall(r.GetAtlas, r)
+  local okT, file = pcall(r.GetTexture, r)
+  local n = (((okA and type(atlas) == "string") and atlas or "") .. " " .. ((okT and type(file) == "string") and file or "")):lower()
+  for _, k in ipairs(INNER_ART) do
+    if n:find(k, 1, true) then return k end
+  end
+end
+local function InnerArt(frame, depth)
+  if depth > 5 or type(frame) ~= "table" then return end
+  for _, r in ipairs(Regions(frame)) do
+    if IsTexture(r) then
+      local k = InnerArtKind(r)
+      if k then
+        Fade(r)
+        if k == "ui-emptyslot" then S:Backdrop(frame, "slot")
+        elseif k == "common-input-border" then S:Backdrop(frame, "input") end
+      end
+    end
+  end
+  for _, c in ipairs(Children(frame)) do InnerArt(c, depth + 1) end
+end
+S.InnerArt = InnerArt
+-- Once per window, again only when it got new child frames (lists filled in).
+local innerDone = setmetatable({}, {__mode = "k"})
+local function InnerArtOnce(frame)
+  local okN, n = pcall(frame.GetNumChildren, frame)
+  n = okN and n or 0
+  if innerDone[frame] == n then return end
+  innerDone[frame] = n
+  InnerArt(frame, 1)
+end
+function S.ResetInnerArt() for f in pairs(innerDone) do innerDone[f] = nil end end
+
 function S:Window(frame)
   if type(frame) ~= "table" or not frame.GetRegions then return end
   if InCombat() and Protected(frame) then return end
@@ -351,7 +395,7 @@ function S:Window(frame)
     end
   end
   if F(frame, "Inset") then SkinInset(F(frame, "Inset")) end
-  if name ~= "WorldMapFrame" then WalkChildren(frame, 1) end
+  if name ~= "WorldMapFrame" then WalkChildren(frame, 1); InnerArtOnce(frame) end
   if type(name) == "string" then
     for i = 1, 8 do SkinTextButton(_G[name .. "Tab" .. i]) end
   end
@@ -368,6 +412,12 @@ local WINDOWS = {
   "CollectionsJournal", "EncounterJournal", "AchievementFrame", "MacroFrame", "HelpFrame", "BattlefieldFrame",
   "PVPFrame", "ItemTextFrame", "TabardFrame", "GuildRegistrarFrame", "PetitionFrame",
   "ReadyCheckFrame", "RaidParentFrame", "ChannelFrame", "AddonList", "SettingsPanel", "TimeManagerFrame",
+  -- Forever windows the theme did not cover yet (tools/revui/uisim.lua).
+  "CalendarFrame", "ChatConfigFrame", "TokenFrame", "CurrencyTransferMenu", "DeathRecapFrame", "TaxiFrame",
+  "FlightMapFrame", "ProfessionsBookFrame", "ItemSocketingFrame", "QuestLogPopupDetailFrame", "GuildControlUI",
+  "CommunitiesGuildLogFrame", "CommunitiesGuildNewsFiltersFrame", "CommunitiesGuildTextEditFrame",
+  "PVPMatchResults", "PVPMatchScoreboard", "StackSplitFrame", "ColorPickerFrame", "GuildBankFrame",
+  "BlackMarketFrame", "ClickBindingFrame", "PlayerChoiceFrame", "ItemInteractionFrame", "ItemUpgradeFrame",
 }
 local TOOLTIPS = {"GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2", "EmbeddedItemTooltip",
   "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2", "WorldMapTooltip", "FriendsTooltip"}
@@ -1654,6 +1704,8 @@ local function Clear()
   HideTrackerLines()
   HidePOIMarks()
   Unfade()
+  -- Everything faded is shown again: the inner art pass must run again too.
+  if S.ResetInnerArt then S.ResetInnerArt() end
   for t in pairs(S.tinted or {}) do pcall(t.SetVertexColor, t, 1, 1, 1, 1); S.tinted[t] = nil end
   HideBackdrops()
   Uncrop()

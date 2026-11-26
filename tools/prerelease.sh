@@ -22,4 +22,10 @@ for t in tools/tests/test_*.lua; do
 done
 PYTHONIOENCODING=utf-8 python tools/revui/build.py ../revui > /dev/null
 run "revui sim" $LUA tools/revui/sim.lua ../revui/RevUI
+# Every window of the Forever UI (tree from the game's XML) under the theme.
+# The tree is rebuilt from ../ui-forever when it is newer than the data file.
+if [ ../ui-forever/version.txt -nt tools/revui/uitree_data.lua ]; then
+  python tools/revui/uitree.py ../ui-forever tools/revui/uitree_data.lua > /dev/null
+fi
+run "revui windows" $LUA tools/revui/uisim.lua ../revui/RevUI
 echo "suites with failures: $fails"

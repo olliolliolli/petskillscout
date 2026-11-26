@@ -6,7 +6,8 @@
 local PSS = PetSkillScout
 PSS.SkinText = {}
 local T = PSS.SkinText
-T.WINDOWS = {"GossipFrame", "QuestFrame", "ItemTextFrame", "PetitionFrame", "TabardFrame", "GuildRegistrarFrame"}
+T.WINDOWS = {"GossipFrame", "QuestFrame", "ItemTextFrame", "PetitionFrame", "TabardFrame", "GuildRegistrarFrame",
+  "SpellBookFrame", "BankFrame", "MailFrame", "OpenMailFrame", "ProfessionsBookFrame", "BlackMarketFrame"}
 T.LIGHT = {0.92, 0.89, 0.82}
 local changed = setmetatable({}, {__mode = "k"})
 
