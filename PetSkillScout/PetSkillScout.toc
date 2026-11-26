@@ -23,6 +23,7 @@ LocalePT.lua
 LocaleRU.lua
 Locale8.lua
 Locale9.lua
+Locale10.lua
 Database.lua
 PetDataATT.lua
 DisplayIDs.lua

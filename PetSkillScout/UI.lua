@@ -4278,6 +4278,49 @@ local function SkinApply()
   if PSS.Skin then PSS.Skin:Refresh() end
   if PSS.Layout then PSS.Layout:Apply() end
 end
+-- Sizes and positions (the same sliders as RevUI): chat size in pixels,
+-- minimap size, and a size for each movable part (DB.layoutScale, 50-200 %).
+local function ChatApply() if PSS.Layout and PSS.Layout.applied.chat then pcall(PSS.Layout.PlaceChat, PSS.Layout) end end
+local function MinimapApply()
+  local LY = PSS.Layout
+  if LY and LY.applied.minimap then pcall(LY.PlaceMinimap, LY); pcall(LY.RefreshMinimapButtons, LY); pcall(LY.SquareMinimapButtons, LY) end
+end
+local function ChatDefault(i) local LY = PSS.Layout; local w, h = 440, 290; if LY and LY.ChatSize then w, h = LY:ChatSize() end; return i == 1 and w or h end
+local SIZE_ROWS = {
+  {key="chatW", label="optChatW", hint="optChatWHint", kind="slider", min=300, max=900, step=10,
+    get=function() return tonumber(PetSkillScoutDB and PetSkillScoutDB.chatW) or ChatDefault(1) end, apply=ChatApply},
+  {key="chatH", label="optChatH", hint="optChatHHint", kind="slider", min=150, max=700, step=10,
+    get=function() return tonumber(PetSkillScoutDB and PetSkillScoutDB.chatH) or ChatDefault(2) end, apply=ChatApply},
+  {key="skinMinimapSize", label="optMinimapSize", hint="optMinimapSizeHint", kind="slider", min=120, max=320, step=2,
+    default=176, apply=MinimapApply},
+}
+for _, part in ipairs({"player", "target", "targettarget", "pet", "party", "bars", "chat", "info", "buttons", "shot"}) do
+  SIZE_ROWS[#SIZE_ROWS + 1] = {key="scale_" .. part, label="optPartScale", hint="optPartScaleHint", kind="slider",
+    min=50, max=200, step=5, unit="%",
+    labelFn=function() return string.format(PSS:L("optPartScale"), PSS:L("part_" .. part)) end,
+    get=function() local t = PetSkillScoutDB and PetSkillScoutDB.layoutScale; return math.floor((t and tonumber(t[part]) or 1) * 100 + 0.5) end,
+    set=function(v)
+      PetSkillScoutDB.layoutScale = PetSkillScoutDB.layoutScale or {}
+      PetSkillScoutDB.layoutScale[part] = v / 100
+      if PSS.Layout and PSS.Layout.ApplyScale then pcall(PSS.Layout.ApplyScale, PSS.Layout, part) end
+    end}
+end
+SIZE_ROWS[#SIZE_ROWS + 1] = {key="layoutResetPos", label="optResetPos", hint="optResetPosHint", kind="action", button="optResetPosBtn",
+  run=function()
+    local LY = PSS.Layout
+    if LY and LY.movables and not (InCombatLockdown and InCombatLockdown()) then
+      for k in pairs(LY.movables) do pcall(LY.ResetPosition, LY, k) end
+    end
+  end}
+SIZE_ROWS[#SIZE_ROWS + 1] = {key="layoutResetSizes", label="optResetSizes", hint="optResetSizesHint", kind="action", button="optResetSizesBtn",
+  run=function()
+    if not PetSkillScoutDB then return end
+    PetSkillScoutDB.layoutScale, PetSkillScoutDB.chatW, PetSkillScoutDB.chatH, PetSkillScoutDB.skinMinimapSize = nil, nil, nil, nil
+    if PSS.Layout and PSS.Layout.ApplyScales then pcall(PSS.Layout.ApplyScales, PSS.Layout) end
+    ChatApply(); MinimapApply()
+    UI:RefreshSettings()
+  end}
+
 local SETTINGS = {
   {id="general", title="setGeneral", sub="setGeneralSub", rows={
     {key="language", label="optLanguage", hint="optLanguageHint", kind="language"},
@@ -4298,9 +4341,6 @@ local SETTINGS = {
     {key="skinUnits", label="optSkinUnits", hint="optSkinUnitsHint", kind="toggle", default=true, apply=SkinApply},
     {key="skinBars", label="optSkinBars", hint="optSkinBarsHint", kind="toggle", default=true, apply=SkinApply},
     {key="skinChat", label="optSkinChat", hint="optSkinChatHint", kind="toggle", default=true, apply=SkinApply},
-    {key="skinChatSize", label="optChatSize", hint="optChatSizeHint", kind="choice", default="m",
-      options={{"s","sizeS"},{"m","sizeM"},{"l","sizeL"},{"xl","sizeXL"}},
-      apply=function() if PSS.Layout and PSS.Layout.applied.chat then PSS.Layout:PlaceChat() end end},
     {key="skinMinimap", label="optSkinMinimap", hint="optSkinMinimapHint", kind="toggle", default=true, apply=SkinApply},
     {key="cdmAbove", label="optCdmAbove", hint="optCdmAboveHint", kind="toggle", default=true,
       set=function(v) PetSkillScoutDB.cdmAbove = v; if v and PSS.Layout and PSS.Layout.PlaceCooldowns then PSS.Layout.PlaceCooldowns() end end},
@@ -4308,14 +4348,6 @@ local SETTINGS = {
       apply=function() if PSS.Layout and PSS.Layout.applied.minimap then PSS.Layout:SquareMinimapButtons() end end},
     {key="mmButtonsFree", label="optMmFree", hint="optMmFreeHint", kind="toggle", default=false,
       apply=function() if PSS.Layout and PSS.Layout.applied.minimap then PSS.Layout:SquareMinimapButtons() end end},
-    {key="skinMinimapSize", label="optMinimapSize", hint="optMinimapSizeHint", kind="choice", default=176,
-      options={{150,"sizeS"},{176,"sizeM"},{210,"sizeL"},{250,"sizeXL"}},
-      apply=function()
-        local LY = PSS.Layout
-        if LY and LY.applied.minimap then
-          LY:PlaceMinimap(); LY:RefreshMinimapButtons(); LY:SquareMinimapButtons()
-        end
-      end},
     {key="skinPlates", label="optSkinPlates", hint="optSkinPlatesHint", kind="toggle", default=true, apply=SkinApply},
     {key="plateExtras", label="optPlateExtras", hint="optPlateExtrasHint", kind="toggle", default=true},
     {key="plateStack", label="optPlateStack", hint="optPlateStackHint", kind="toggle", default=false,
@@ -4328,6 +4360,7 @@ local SETTINGS = {
     {key="skinReload", label="optSkinReload", hint="optSkinReloadHint", kind="action", button="skinReloadNow",
       run=function() if ReloadUI then ReloadUI() end end},
   }},
+  {id="sizes", title="setSizes", sub="setSizesSub", rows=SIZE_ROWS},
   {id="hunter", title="setHunter", sub="setHunterSub", rows={
     {key="shotTimer", label="optShotTimer", hint="optShotTimerHint", kind="toggle", default=false},
     {key="hawkTimer", label="optHawkTimer", hint="optHawkTimerHint", kind="toggle", default=false,
@@ -4565,6 +4598,22 @@ function UI:BuildSettings()
           b.value, b.key, b.minW = opt[1], opt[2], bw
           row.options[j] = b
         end
+      elseif def.kind == "slider" then
+        local sl = CreateFrame("Slider", nil, row, "OptionsSliderTemplate")
+        sl:SetWidth(220); sl:SetPoint("TOPRIGHT", row, "TOPRIGHT", -70, -14)
+        sl:SetMinMaxValues(def.min, def.max); sl:SetValueStep(def.step)
+        if sl.SetObeyStepOnDrag then sl:SetObeyStepOnDrag(true) end
+        for _, k in ipairs({"Low", "High", "Text"}) do local r = sl[k]; if r and r.SetText then r:SetText("") end end
+        row.value = Label(row, "", 12, C.cream, 50, "RIGHT", true)
+        row.value:SetPoint("TOPRIGHT", row, "TOPRIGHT", -14, -14)
+        sl:SetScript("OnValueChanged", function(_, v)
+          if row.busy then return end
+          v = math.floor(v / def.step + 0.5) * def.step
+          row.value:SetText(v .. (def.unit or ""))
+          if def.set then def.set(v) elseif PetSkillScoutDB then PetSkillScoutDB[def.key] = v end
+          if def.apply then def.apply() end
+        end)
+        row.slider = sl
       elseif def.kind == "action" then
         row.action = MakeButton(row, "", 150, 30, function() def.run() end, {size=12})
         row.action:SetPoint("RIGHT", row, "RIGHT", -14, 0)
@@ -4678,8 +4727,13 @@ function UI:RefreshSettings()
   end
   for _, row in ipairs(box.rows) do
     local def = row.def
-    row.label:SetText(L(def.label))
+    row.label:SetText(def.labelFn and def.labelFn() or L(def.label))
     row.hint:SetText(def.text and def.text() or L(def.hint))
+    if row.slider then
+      local v = tonumber(OptionValue(def)) or def.min
+      row.busy = true; row.slider:SetValue(v); row.busy = false
+      row.value:SetText(v .. (def.unit or ""))
+    end
     if row.action then row.action:SetText(L(def.button)) end
     local value = OptionValue(def)
     if row.switch then row.switch:Set(value and true or false) end

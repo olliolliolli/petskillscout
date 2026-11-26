@@ -196,5 +196,35 @@ try("rare alert default", function()
   PetSkillScoutDB = saved
 end)
 
+-- 9. Settings > Sizes and positions: sliders write what Layout reads --------------
+try("size sliders", function()
+  local UI = PSS.UI
+  SlashCmdList.PETSKILLSCOUT("")
+  UI:ShowView("settings")
+  UI.settingsSection = "sizes"
+  UI:RefreshSettings()
+  local box = UI.sSections and UI.sSections.sizes
+  ok(box and #box.rows >= 13, "sizes section has its rows")
+  local scaleRow, chatRow
+  for _, row in ipairs(box and box.rows or {}) do
+    if row.def.key == "scale_player" then scaleRow = row end
+    if row.def.key == "chatW" then chatRow = row end
+  end
+  ok(scaleRow and scaleRow.slider, "player size is a slider")
+  ok(scaleRow and scaleRow.label:GetText() == "Size: player frame", "slider label names the part (got " .. tostring(scaleRow and scaleRow.label:GetText()) .. ")")
+  scaleRow.slider.scripts.OnValueChanged(scaleRow.slider, 127)
+  ok(PetSkillScoutDB.layoutScale and math.abs(PetSkillScoutDB.layoutScale.player - 1.25) < 1e-6, "player size saved as 1.25")
+  chatRow.slider.scripts.OnValueChanged(chatRow.slider, 604)
+  ok(PetSkillScoutDB.chatW == 600, "chat width saved (step 10)")
+  local w = PSS.Layout:ChatSize()
+  ok(w == 600, "Layout uses the slider width")
+  for _, row in ipairs(box.rows) do if row.def.key == "layoutResetSizes" then row.def.run() end end
+  ok(PetSkillScoutDB.layoutScale == nil and PetSkillScoutDB.chatW == nil, "reset sizes clears them")
+  for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
+    local t = PSS.Locale[lang] or {}
+    ok(t.setSizes and t.part_shot and t.optResetSizesBtn, "sizes strings in " .. lang)
+  end
+end)
+
 print(string.format("passed %d, failed %d", pass, fail))
 if fail > 0 then os.exit(1) end
