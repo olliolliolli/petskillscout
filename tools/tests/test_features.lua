@@ -182,5 +182,19 @@ try("map pin", function()
   ok(PSS:SetMapPin(1, 1, 1) == false, "no pin where the map does not allow it")
 end)
 
+-- 8. Rare alert: window and sound on for a new player ---------------------------
+try("rare alert default", function()
+  local saved = PetSkillScoutDB
+  PetSkillScoutDB = {language = "en"}
+  PSS:InitializeDB()
+  ok(PetSkillScoutDB.rareAlertPopup ~= false, "new player: rare alert window on")
+  ok(PetSkillScoutDB.rareSound ~= false, "new player: rare sound on")
+  ok(PetSkillScoutDB.rareChat == false, "new player: rare chat line stays opt-in")
+  PetSkillScoutDB = {language = "en", rareAlertPopup = false}
+  PSS:InitializeDB()
+  ok(PetSkillScoutDB.rareAlertPopup == false, "a saved 'off' is kept")
+  PetSkillScoutDB = saved
+end)
+
 print(string.format("passed %d, failed %d", pass, fail))
 if fail > 0 then os.exit(1) end

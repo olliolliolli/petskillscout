@@ -4372,8 +4372,8 @@ local SETTINGS = {
   }},
   {id="alerts", title="setAlerts", sub="setAlertsSub", rows={
     {key="rareRadarEnabled", label="optRadar", hint="optRadarHint", kind="toggle", default=true},
-    {key="rareAlertPopup", label="rareAlertPopup", hint="optPopupHint", kind="toggle", default=false},
-    {key="rareSound", label="optSound", hint="optSoundHint", kind="toggle", default=false},
+    {key="rareAlertPopup", label="rareAlertPopup", hint="optPopupHint", kind="toggle", default=true},
+    {key="rareSound", label="optSound", hint="optSoundHint", kind="toggle", default=true},
     {key="rareChat", label="optChat", hint="optChatHint", kind="toggle", default=false},
     {key="syncEnabled", label="optSync", hint="optSyncHint", kind="toggle", default=true},
     {key="syncNotify", label="optSyncNotify", hint="optSyncNotifyHint", kind="choice", default="off",

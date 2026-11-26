@@ -292,8 +292,10 @@ function PSS:InitializeDB()
     -- (game settings, action bars, tooltips, map pins, alerts, chat posts)
     -- is off unless the player switches it on. Options the player set
     -- themselves keep their value.
+    -- 3.7.209: the rare alert (window + sound) is the addon's core and stays on
+    -- by default for new players; saved choices are kept.
     if not PetSkillScoutDB.defaultsOffV1 then
-        for _, k in ipairs({"plateStack", "spellBarAuto", "petBarAuto", "gearBagArrows", "gearTooltip", "gearQuest", "gearRolls", "shotTimer", "hawkTimer", "tooltip", "tooltipSkills", "tooltipSeen", "rareMapPins", "minimapPins", "questMinimap", "questObjPins", "questAlert", "questWorth", "rareAlertPopup", "rareSound", "rareChat", "rareTimerAlert", "announceOn", "announceRare", "announceRank", "announceMilestone", "petCareReminder", "guardSound", "showcaseShare"}) do
+        for _, k in ipairs({"plateStack", "spellBarAuto", "petBarAuto", "gearBagArrows", "gearTooltip", "gearQuest", "gearRolls", "shotTimer", "hawkTimer", "tooltip", "tooltipSkills", "tooltipSeen", "rareMapPins", "minimapPins", "questMinimap", "questObjPins", "questAlert", "questWorth", "rareChat", "rareTimerAlert", "announceOn", "announceRare", "announceRank", "announceMilestone", "petCareReminder", "guardSound", "showcaseShare"}) do
             if PetSkillScoutDB[k] == nil then PetSkillScoutDB[k] = false end
         end
         PetSkillScoutDB.defaultsOffV1 = true
