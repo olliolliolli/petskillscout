@@ -246,5 +246,18 @@ try("hawk timer move", function()
   ok((PSS.Locale.uk or {}).slot_hawk and (PSS.Locale.ru or {}).slot_hawk, "hawk label in the move frame")
 end)
 
+-- 11. Gossip quest titles written in black inside the text ---------------------
+try("gossip dark text codes", function()
+  local T = PSS.SkinText
+  local fs = CreateFrame("Frame")
+  fs:SetText("|cff000000Our Man in Theramore|r")
+  T.FixCodes(fs)
+  local t = fs:GetText()
+  ok(not t:find("|cff000000", 1, true) and t:find("Our Man in Theramore", 1, true), "black code replaced (got " .. t .. ")")
+  fs:SetText("|cffffd100Gold title|r")
+  T.FixCodes(fs)
+  ok(fs:GetText() == "|cffffd100Gold title|r", "light codes are kept")
+end)
+
 print(string.format("passed %d, failed %d", pass, fail))
 if fail > 0 then os.exit(1) end
