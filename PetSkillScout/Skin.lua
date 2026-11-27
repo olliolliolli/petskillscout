@@ -351,7 +351,8 @@ local INNER_ART = {"ui-emptyslot", "ui-questitemnameframe", "ui-merchant-labelsl
   "ui-questlog-empty", "tabardframeouterframe", "tabardframecustomizationframe", "dressingroom-sideframe",
   "bluemenu-goldborder", "ui-character-skills-barborder", "ui-achievement-rightddlinset", "spellbook-skilllinetab",
   "ui-guildbankframe-slots", "ui-guildbankframe-emblemborder", "ui-goldborder", "ui-itemsocketingframe-_tile",
-  "ui-merchant-botframe", "ui-achievement-statscomparisonbackground", "calendarbackground"}
+  "ui-merchant-botframe", "ui-achievement-statscomparisonbackground", "calendarbackground",
+  "guildframe\\guildframe"}
 local function InnerArtKind(r)
   local okA, atlas = pcall(r.GetAtlas, r)
   local okT, file = pcall(r.GetTexture, r)

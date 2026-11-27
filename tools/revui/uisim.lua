@@ -87,12 +87,38 @@ local function Build(def, parent, parentName)
   return o
 end
 
+-- Text the game writes with a colour inside it (gossip quest titles,
+-- NORMAL_QUEST_DISPLAY): black, as the client's strings have it.
+local DARK_TEXT = "|cff000000Our Man in Theramore|r"
+local function HasDarkCode(t)
+  if type(t) ~= "string" then return false end
+  for hex in t:gmatch("|c%x%x(%x%x%x%x%x%x)") do
+    local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+    if 0.3 * r + 0.59 * g + 0.11 * b < 0.32 * 255 then return true end
+  end
+  return false
+end
+local function FillDark(o)
+  for _, r in ipairs(o.regions or {}) do if r.kind == "FontString" then r.text = DARK_TEXT end end
+  for _, c in ipairs(o.children or {}) do FillDark(c) end
+end
+
 -- Build every window before RevUI loads (Blizzard UI is there first in the game).
 local windows = {}
 for name, w in pairs(UITREE) do
   if not only or only == name then
     local ok, o = pcall(Build, w.tree, UIParent, nil)
-    if ok then o.name, o._name = name, name; _G[name] = o; windows[name] = o else print("BUILD FAIL " .. name .. ": " .. tostring(o)) end
+    if ok then
+      o.name, o._name = name, name; _G[name] = o; windows[name] = o
+      -- Rows the game builds from Lua (scroll lists): made from their
+      -- templates, with dark-coded text in them.
+      for _, t in ipairs(UIRUNTIME and UIRUNTIME[name] or {}) do
+        local okR, row = pcall(Build, t, o, name)
+        if okR then
+          o.children[#o.children + 1] = row
+          if UIDARKCODES and UIDARKCODES[name] then FillDark(row) end
+        end
+      end else print("BUILD FAIL " .. name .. ": " .. tostring(o)) end
   end
 end
 
@@ -139,7 +165,7 @@ local ART = {"background", "border", "parchment", "ui-frame", "nineslice", "bg",
 -- Art meant to stay: state highlights, tabs, portraits, guild banners, talent
 -- animations, and plain textures the game fills in from Lua.
 local KEEP = {"highlight", "-tab", "portrait", "guildbanner", "talents-animations", "flipbook", "bookicon",
-  "trackingborder", "currentday"}
+  "trackingborder", "currentday", "onlinedivider", "raritytag"}
 local function IsArt(r)
   local n = ((r.atlas or "") .. " " .. (r.file or "")):lower()
   if not r.atlas and not r.file then return false end
@@ -167,7 +193,7 @@ for _, n in ipairs(names) do
   if has then
     Walk(w, 1, function(r, depth)
       if r.kind == "Texture" and not r.ours and depth <= 2 and IsArt(r) and r.alpha ~= 0 and (r.w or 0) >= 64 then art = art + 1 end
-      if r.kind == "FontString" and not r.ours and r.color and (r.color[1] + r.color[2] + r.color[3]) < 1.2 then dark = dark + 1 end
+      if r.kind == "FontString" and not r.ours and ((r.color and (r.color[1] + r.color[2] + r.color[3]) < 1.2) or HasDarkCode(r.text)) then dark = dark + 1 end
     end)
   end
   rows[#rows + 1] = string.format("%-34s %-6s art left %-3d dark text %-3d %s", n, has and "themed" or "-", art, dark, UITREE[n].addon)
@@ -181,8 +207,8 @@ if only and windows[only] then
     if r.kind == "Texture" and not r.ours and depth <= 2 and IsArt(r) and r.alpha ~= 0 and (r.w or 0) >= 64 then
       print(string.format("  ART  %s  layer=%s atlas=%s file=%s %sx%s", Path(r), tostring(r.layer), tostring(r.atlas), tostring(r.file), tostring(r.w), tostring(r.h)))
     end
-    if r.kind == "FontString" and not r.ours and r.color and (r.color[1] + r.color[2] + r.color[3]) < 1.2 then
-      print(string.format("  DARK %s  font=%s", Path(r), tostring(r.font)))
+    if r.kind == "FontString" and not r.ours and ((r.color and (r.color[1] + r.color[2] + r.color[3]) < 1.2) or HasDarkCode(r.text)) then
+      print(string.format("  DARK %s  font=%s text=%s", Path(r), tostring(r.font), tostring(r.text)))
     end
   end)
 end

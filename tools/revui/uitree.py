@@ -21,6 +21,8 @@ EXTRA = ["StaticPopup1", "StackSplitFrame", "ColorPickerFrame", "BankFrame", "Pe
          "WorldMapFrame", "QuestLogDetailFrame", "ProfessionsFrame", "PlayerSpellsFrame"]
 
 def strip(tag): return tag.replace(NS, "")
+# Any frame-like tag (UIThemeContainerFrame, ...), not only the listed ones.
+def is_frame(tag): return tag in FRAME_TAGS or tag.endswith("Frame") or tag.endswith("Button")
 
 allowed = {}
 for d in os.listdir(ADDONS):
@@ -47,7 +49,7 @@ for d, ok in allowed.items():
                 if not name: continue
                 if el.get("virtual") == "true":
                     templates.setdefault(name, el)
-                elif tag in FRAME_TAGS:
+                elif is_frame(tag):
                     named.setdefault(name, (el, d))
 
 panels = set()
@@ -69,6 +71,22 @@ for d, ok in allowed.items():
             src = open(os.path.join(root, f), encoding="utf-8", errors="ignore").read()
             for k in re.findall(r"SetTaxiMap\(\s*self\.(\w+)\s*\)", src):
                 content.setdefault(f[:-4], set()).add(k)
+
+# Rows the game builds from Lua at run time (scroll lists, recycled buttons):
+# templates named in the window's own Lua files (<Base>*.lua, Base = window
+# name without "Frame"), e.g. GossipTitleAvailableQuestButtonTemplate.
+runtime, darkcodes = {}, set()
+for n in wanted:
+    el, addon = named[n]
+    base = n[:-5] if n.endswith("Frame") else n
+    for root, _, files in os.walk(os.path.join(ADDONS, addon)):
+        for f in files:
+            if not (f.endswith(".lua") and f.startswith(base)): continue
+            src = open(os.path.join(root, f), encoding="utf-8", errors="ignore").read()
+            for t in re.findall(r'"([A-Za-z0-9_]+Template)"', src):
+                if t in templates: runtime.setdefault(n, set()).add(t)
+            # The window writes text with a colour inside it (black quest titles).
+            if re.search(r"_QUEST_DISPLAY|\|c[fF]{2}000000", src): darkcodes.add(n)
 
 def lua_str(s): return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -110,7 +128,7 @@ def node(el, depth, seen):
                             "layer": lv, "font": r.get("inherits"), "text": r.get("text")})
         elif ct == "Frames":
             for f in c:
-                if strip(f.tag) in FRAME_TAGS:
+                if is_frame(strip(f.tag)):
                     out["children"].append(node(f, depth + 1, seen))
     return out
 
@@ -137,6 +155,11 @@ with open(OUT, "w", encoding="utf-8") as fh:
         el, addon = named[n]
         fh.write("[%s] = {addon=%s, tree=%s},\n" % (lua_str(n), lua_str(addon), emit(node(el, 0, set()), "  ")))
     fh.write("}\n")
+    fh.write("UIRUNTIME = {\n")
+    for w, ts in sorted(runtime.items()):
+        fh.write("  [%s] = {%s},\n" % (lua_str(w), ",\n    ".join(emit(node(templates[t], 1, {t}), "    ") for t in sorted(ts))))
+    fh.write("}\n")
+    fh.write("UIDARKCODES = {" + ", ".join("[%s] = true" % lua_str(w) for w in sorted(darkcodes)) + "}\n")
     fh.write("UICONTENT = {\n")
     for w, keys in sorted(content.items()):
         fh.write("  [%s] = {%s},\n" % (lua_str(w), ",".join(lua_str(k) for k in sorted(keys))))
