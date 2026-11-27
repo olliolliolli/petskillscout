@@ -58,6 +58,18 @@ for root, _, files in os.walk(ADDONS):
             for n in re.findall(r'UIPanelWindows\["([A-Za-z0-9_]+)"\]', s): panels.add(n)
 wanted = sorted(n for n in panels | set(EXTRA) if n in named)
 
+# Content the game draws from Lua into a window's own texture (not decoration):
+# SetTaxiMap(self.X) in <Window>.lua -> CONTENT[Window] = {X}.
+content = {}
+for d, ok in allowed.items():
+    if not ok: continue
+    for root, _, files in os.walk(os.path.join(ADDONS, d)):
+        for f in files:
+            if not f.endswith(".lua") or f[:-4] not in wanted: continue
+            src = open(os.path.join(root, f), encoding="utf-8", errors="ignore").read()
+            for k in re.findall(r"SetTaxiMap\(\s*self\.(\w+)\s*\)", src):
+                content.setdefault(f[:-4], set()).add(k)
+
 def lua_str(s): return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 def size_of(el):
@@ -110,6 +122,7 @@ def emit(n, ind):
     for k in ("w", "h"):
         if n.get(k): parts.append("%s=%g" % (k, n[k]))
     if n.get("inherits"): parts.append("inherits={" + ",".join(lua_str(i) for i in n["inherits"]) + "}")
+    if any("MapCanvas" in i for i in n.get("inherits", [])): parts.append("mapcanvas=true")
     s = "{" + ", ".join(parts)
     if n.get("regions"):
         s += ",\n" + p + "regions={" + ",\n".join(emit(r, p) for r in n["regions"]) + "}"
@@ -123,5 +136,9 @@ with open(OUT, "w", encoding="utf-8") as fh:
     for n in wanted:
         el, addon = named[n]
         fh.write("[%s] = {addon=%s, tree=%s},\n" % (lua_str(n), lua_str(addon), emit(node(el, 0, set()), "  ")))
+    fh.write("}\n")
+    fh.write("UICONTENT = {\n")
+    for w, keys in sorted(content.items()):
+        fh.write("  [%s] = {%s},\n" % (lua_str(w), ",".join(lua_str(k) for k in sorted(keys))))
     fh.write("}\n")
 print("windows:", len(wanted), "templates:", len(templates))

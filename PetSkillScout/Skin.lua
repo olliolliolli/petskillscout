@@ -229,8 +229,20 @@ end
 local function G(name) local v = _G[name]; return type(v) == "table" and v or nil end
 
 -- Icons stay; portraits are faded like the rest of the art (ElvUI look).
+-- Textures the game draws content into (not decoration): the flight map is
+-- drawn into the window's inset background (SetTaxiMap(self.InsetBg),
+-- TaxiFrame.lua). Never faded.
+local CONTENT = {TaxiFrame = {"InsetBg"}}
+-- Map windows: the map is a canvas of child frames; only the frame's own art
+-- is themed, nothing inside.
+local MAPS = {WorldMapFrame = true, FlightMapFrame = true}
+S.CONTENT, S.MAPS = CONTENT, MAPS
 local function SkipSet(frame)
   local s = {}
+  local fname = frame.GetName and frame:GetName()
+  for _, k in ipairs(CONTENT[fname] or {}) do
+    if type(F(frame, k)) == "table" then s[F(frame, k)] = true end
+  end
   for _, k in ipairs({"icon", "Icon", "IconTexture"}) do
     if type(F(frame, k)) == "table" then s[F(frame, k)] = true end
   end
@@ -382,7 +394,7 @@ function S:Window(frame)
   if F(frame, "NineSlice") then Fade(F(frame, "NineSlice")) end
   if F(frame, "Border") and F(frame, "Border") ~= frame then Fade(F(frame, "Border")) end
   for _, k in ipairs({"Bg", "Background", "TitleBg", "TopTileStreaks", "BackgroundTexture"}) do
-    if F(frame, k) then Fade(F(frame, k)) end
+    if F(frame, k) and not skip[F(frame, k)] then Fade(F(frame, k)) end
   end
   for _, r in ipairs(Regions(frame)) do
     if IsTexture(r) and not skip[r] then
@@ -395,7 +407,7 @@ function S:Window(frame)
     end
   end
   if F(frame, "Inset") then SkinInset(F(frame, "Inset")) end
-  if name ~= "WorldMapFrame" then WalkChildren(frame, 1); InnerArtOnce(frame) end
+  if not MAPS[name] then WalkChildren(frame, 1); InnerArtOnce(frame) end
   if type(name) == "string" then
     for i = 1, 8 do SkinTextButton(_G[name .. "Tab" .. i]) end
   end

@@ -71,6 +71,7 @@ local function Build(def, parent, parentName)
     (def.type == "CheckButton" or def.type == "Button" or def.type == "ItemButton" or def.type == "DropdownButton") and "Button"
     or def.type)
   o.parent, o.layer, o.atlas, o.file, o.w, o.h, o.font = parent, def.layer, def.atlas, def.file, def.w, def.h, def.font
+  o.mapcanvas = def.mapcanvas
   if IsDarkFont(def.font) then o.color = {0.18, 0.12, 0.06} end -- as the game sets it
   local name = def.name and def.name:gsub("%$parent", parentName or "")
   if name and name ~= "" then o.name, o._name = name, name; _G[name] = o end
@@ -185,6 +186,31 @@ if only and windows[only] then
     end
   end)
 end
+-- Content must stay: textures the game draws into (UICONTENT, from its Lua)
+-- and every map canvas with all it holds.
+local hiddenContent = {}
+for wname, keys in pairs(UICONTENT or {}) do
+  local w = windows[wname]
+  for _, k in ipairs(keys) do
+    local t = w and rawget(w, k)
+    if t and t.alpha == 0 then hiddenContent[#hiddenContent + 1] = wname .. "." .. k end
+  end
+end
+local function CanvasHidden(o, path, inCanvas)
+  -- Portraits in window borders are faded on purpose (theme style).
+  if tostring(rawget(o, "_name") or o.key or ""):find("Portrait") then return end
+  inCanvas = inCanvas or o.mapcanvas
+  if inCanvas and o.alpha == 0 and not o.ours then hiddenContent[#hiddenContent + 1] = path end
+  for _, r in ipairs(o.regions or {}) do
+    if inCanvas and not r.ours and r.alpha == 0 and not tostring(r.key or rawget(r, "_name") or ""):find("Portrait") then hiddenContent[#hiddenContent + 1] = path .. "." .. tostring(r.key or rawget(r, "_name") or "texture") end
+  end
+  for _, c in ipairs(o.children or {}) do
+    if not c.ours then CanvasHidden(c, path .. "." .. tostring(c.key or rawget(c, "_name") or c.kind), inCanvas) end
+  end
+end
+for wname, w in pairs(windows) do CanvasHidden(w, wname, false) end
+for _, h in ipairs(hiddenContent) do print("HIDDEN CONTENT " .. h) end
+if #hiddenContent > 0 then errs[#errs + 1] = #hiddenContent .. " content textures hidden by the theme" end
 local issues = 0
 for _, r in ipairs(rows) do
   local a2, d2 = r:match("art left (%d+)%s+dark text (%d+)")
