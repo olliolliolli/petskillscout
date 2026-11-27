@@ -206,6 +206,10 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.211
+- Hawk timer: moved with /pss move like the other frames (plain drag while unlocked); Shift-drag
+  still works any time.
+
 3.7.210
 - Settings: new section Sizes and positions (chat width/height, minimap size, size of each part,
   reset buttons).
