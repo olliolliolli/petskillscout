@@ -102,6 +102,12 @@ end
 local function Place()
   if not frame then return end
   local pos = DB().hawkPos
+  -- Moved with /pss move: the layout keeps it where it was put.
+  local LY = PSS.Layout
+  if LY and LY.Saved and LY:Saved("hawk") then
+    if LY.ApplyPosition then pcall(LY.ApplyPosition, LY, "hawk") end
+    return
+  end
   frame:ClearAllPoints()
   local cdm = _G.EssentialCooldownViewer
   if pos and pos.x then
@@ -127,7 +133,10 @@ local function Build()
   frame:SetMovable(true)
   frame:EnableMouse(true)
   frame:RegisterForDrag("LeftButton")
-  frame:SetScript("OnDragStart", function(self) if IsShiftKeyDown() then self:StartMoving() end end)
+  -- Shift-drag any time; plain drag while frames are unlocked (/pss move).
+  frame:SetScript("OnDragStart", function(self)
+    if IsShiftKeyDown() or (PSS.Layout and PSS.Layout.unlocked) then self:StartMoving() end
+  end)
   frame:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
     local x, y = self:GetCenter()
@@ -138,6 +147,8 @@ local function Build()
     b:SetPoint("LEFT", frame, "LEFT", (i - 1) * (SIZE + GAP), 0)
     bars[i] = b
   end
+  -- One of the frames /pss move unlocks (with or without the theme).
+  if PSS.Layout and PSS.Layout.Movable then pcall(PSS.Layout.Movable, PSS.Layout, "hawk", frame, "slot_hawk") end
   Place()
 end
 

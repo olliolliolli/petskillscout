@@ -226,5 +226,25 @@ try("size sliders", function()
   end
 end)
 
+-- 10. Hawk timer moves with /pss move (report "Can't Move Frames") -------------
+try("hawk timer move", function()
+  PetSkillScoutDB.hawkTimer = true
+  local H = PSS.HawkTimer
+  pcall(H.Update, H)
+  local f = _G.PetSkillScoutHawkTimer
+  ok(f ~= nil, "hawk timer frame built")
+  ok(PSS.Layout.movables.hawk and PSS.Layout.movables.hawk.frame == f, "hawk timer is one of the /pss move frames")
+  local moved = false
+  getmetatable(f).m_StartMoving = function() moved = true end
+  PSS.Layout.unlocked = false
+  f.scripts.OnDragStart(f)
+  ok(not moved, "locked: plain drag does not move it")
+  PSS.Layout.unlocked = true
+  f.scripts.OnDragStart(f)
+  ok(moved, "unlocked: plain drag moves it")
+  PSS.Layout.unlocked = false
+  ok((PSS.Locale.uk or {}).slot_hawk and (PSS.Locale.ru or {}).slot_hawk, "hawk label in the move frame")
+end)
+
 print(string.format("passed %d, failed %d", pass, fail))
 if fail > 0 then os.exit(1) end
