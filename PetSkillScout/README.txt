@@ -206,6 +206,14 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.210
+- Settings: new section Sizes and positions (chat width/height, minimap size, size of each part,
+  reset buttons).
+- Theme: 24 more game windows themed; classic art inside windows (item slots, money boxes, old input
+  boxes, parchment) replaced; dark text lightened in the spellbook, bank, mail, profession book and
+  black market; the flight map is no longer hidden.
+- Data update 2026-11-27: AllTheThings commit dcdee66; learned data from the game.
+
 3.7.209
 - Rare alert window and sound are on by default for new players (saved choices kept).
 - Data update 2026-11-26: AllTheThings commit 0b14eb6 (Ghostfang Alpha in Mount Hyjal teaches
