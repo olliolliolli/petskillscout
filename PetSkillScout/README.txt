@@ -206,6 +206,9 @@ SUPPORT THE AUTHOR
 If you enjoy PetSkillScout: https://buymeacoffee.com/darthrev1
 
 CHANGELOG
+3.7.213
+- Data update 2026-11-28: AllTheThings commit 14e61d4; learned data from the game.
+
 3.7.212
 - Theme: quest titles written in black inside gossip and quest windows are light now.
 - Data update 2026-11-27: AllTheThings commit 789b0fe; learned data from the game.
