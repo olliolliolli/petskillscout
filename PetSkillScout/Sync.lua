@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Hidden addon messages between PetSkillScout users: guild, group and the realm
 -- network (a hidden chat channel every PetSkillScout user joins). Nothing here
 -- writes to visible chat; received data is only stored and displayed.
@@ -31,21 +32,43 @@ S.Register = Register
 -- Sending with a small token bucket so bursts never hit the server throttle.
 local queue, tokens, lastRefill = {}, 8, nil
 local function RawSend(msg, dist, target)
+  if dist == "WHISPER" and PSS.Net and PSS.Net.NoteWhisper and type(target) == "string" then PSS.Net:NoteWhisper(target) end
   local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
-  if type(fn) == "function" then pcall(fn, PREFIX, msg, dist, target) end
+  if type(fn) == "function" then S:NoteSent(msg); pcall(fn, PREFIX, msg, dist, target) end
 end
 local function Refill()
   local now = Now()
   if lastRefill then tokens = math.min(8, tokens + (now - lastRefill)) end
   lastRefill = now
 end
+-- WoW Forever accepts addon messages in chat channels but never delivers
+-- them, and channel text from addons is only allowed during a key press
+-- (/pss netdiag). The realm network therefore whispers each member of the
+-- network channel (Net.lua keeps the list); the token bucket below paces it.
+-- Nothing is sent from inside a dungeon or raid: the client can block addon
+-- messages there, and the queue would then be blocked about once a second.
+-- Receiving is not affected; the records go out again later (relay).
+local function InInstance()
+  if type(IsInInstance) ~= "function" then return false end
+  local ok, inside = pcall(IsInInstance)
+  if not ok or (PSS.IsSecret and PSS.IsSecret(inside)) then return false end
+  return inside == true or inside == 1
+end
+S.InInstance = InInstance
 function S:Send(msg, dist, target)
-  if type(msg) ~= "string" or #msg > 250 or not Register() then return end
+  if type(msg) ~= "string" or #msg > 250 or InInstance() then return end
+  if dist == "CHANNEL" then
+    local N = PSS.Net
+    if not (N and N.Members) then return end
+    for _, m in ipairs(N:Members(msg:match("^(%a)"))) do self:Send(msg, "WHISPER", m.target) end
+    return
+  end
+  if not Register() then return end
   Refill()
   if tokens >= 1 and #queue == 0 then
     tokens = tokens - 1
     RawSend(msg, dist, target)
-  elseif #queue < 40 then
+  elseif #queue < 120 then
     table.insert(queue, {msg, dist, target})
   end
 end
@@ -68,9 +91,10 @@ end
 S.Channels = Channels
 
 function S:SendAll(msg, net)
-  if type(msg) ~= "string" or #msg > 250 then return false end
+  if type(msg) ~= "string" or #msg > 250 or InInstance() then return false end
   local channels = Channels(net)
   for _, c in ipairs(channels) do self:Send(msg, c[1], c[2]) end
+  if #channels > 0 and PSS.NetFeed then pcall(PSS.NetFeed.OnSent, PSS.NetFeed, msg) end
   return #channels > 0
 end
 local function SendAll(msg) return S:SendAll(msg, true) end
@@ -149,7 +173,7 @@ function S:Text(entry)
 end
 
 local function Notify(entry, rec, dist)
-  local mode = PetSkillScoutDB and PetSkillScoutDB.syncNotify or "wanted"
+  local mode = PetSkillScoutDB and PetSkillScoutDB.syncNotify or "off"
   if mode == "off" then return end
   -- The realm network is busy: only wanted rares are announced from it.
   if dist == "CHANNEL" then mode = "wanted" end
@@ -179,16 +203,51 @@ local function Flooding(who)
   return r.n > 30
 end
 
+-- Is this sender you? Your own messages come back from the guild and the
+-- network channel, and the name there can be longer than UnitName("player")
+-- ("First Last", "Name-Realm"). A message you sent a moment ago, coming back
+-- under a name that starts with yours, is you - and that name is remembered.
+local sentAt = {}
+function S:NoteSent(msg) sentAt[msg] = Now() end
+local function Squash(s) return (tostring(s or ""):gsub("[%s%-]", ""):lower()) end
+function S:MyNames()
+  local d = PetSkillScoutDB
+  d.myNetNames = d.myNetNames or {}
+  return d.myNetNames
+end
+function S:IsMe(who, msg)
+  local me = UnitName and UnitName("player")
+  if not me then return false end
+  if who == me or self:MyNames()[who] then return true end
+  local hit = false
+  local full = GetUnitName and GetUnitName("player", true)
+  if type(full) == "string" and Squash(full) == Squash(who) then hit = true end
+  local t = msg and sentAt[msg]
+  if t and Now() - t < 60 and Squash(who):sub(1, #Squash(me)) == Squash(me) then hit = true end
+  if not hit then return false end
+  self:MyNames()[who] = true
+  -- Drop the "second you" saved by older versions.
+  local peers = PetSkillScoutDB.peers
+  if peers then peers[who] = nil; peers[(who:gsub("%s", ""))] = nil end
+  return true
+end
+
+
 function S:Receive(msg, channel, sender)
   if not (PetSkillScoutDB and Enabled()) or type(msg) ~= "string" or #msg > 250 or type(sender) ~= "string" then return end
-  local who = Ambiguate and Ambiguate(sender, "short") or sender:match("^[^-]+") or sender
-  who = (who:gsub("[^%w\128-\255]", "")):sub(1, 24)
-  local me = UnitName and UnitName("player")
-  if who == "" or who == me then return end
+  local who = Ambiguate and Ambiguate(sender, "short") or sender
+  who = who:match("^[^-]+") or who -- "Name-Realm" -> "Name"
+  -- Forever names are "First Last": keep the space, drop anything odd.
+  who = (who:gsub("[^%w\128-\255 ]", ""):gsub("^%s+", ""):gsub("%s+$", "")):sub(1, 32)
+  if who == "" or S:IsMe(who, msg) then return end
   if Flooding(who) then return end
   local parts = {strsplit(SEP, msg)}
+  -- No chat escape codes or control characters from other players.
+  for i = 1, #parts do parts[i] = parts[i]:gsub("[|%c]", "") end
   local kind = parts[1]
   if PSS.Net and PSS.Net.Seen then PSS.Net:Seen(who, channel) end
+  if channel == "WHISPER" and PSS.Net and PSS.Net.AddMember then PSS.Net:AddMember(who, sender); PSS.Net:Confirm(who) end
+  if PSS.NetFeed then pcall(PSS.NetFeed.OnMessage, PSS.NetFeed, parts, who) end
   local handler = self.handlers[kind]
   if handler then
     pcall(handler, parts, who, channel, sender)
@@ -228,13 +287,95 @@ end
 
 S.frame = CreateFrame("Frame")
 pcall(S.frame.RegisterEvent, S.frame, "CHAT_MSG_ADDON")
+pcall(S.frame.RegisterEvent, S.frame, "CHAT_MSG_ADDON_LOGGED")
+pcall(S.frame.RegisterEvent, S.frame, "CHAT_MSG_CHANNEL")
 pcall(S.frame.RegisterEvent, S.frame, "PLAYER_LOGIN")
-S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
+-- Diagnostics (/pss netdiag) ------------------------------------------------
+-- Every incoming message of our prefix is counted by distribution (also our
+-- own echoes), so the saved file shows whether the realm channel delivers.
+local diag
+local function CountRaw(channel)
+  local d = PetSkillScoutDB
+  if not d then return end
+  d.netRaw = d.netRaw or {}
+  local k = tostring(channel or "?")
+  d.netRaw[k] = (d.netRaw[k] or 0) + 1
+end
+local function ResultName(r)
+  if type(r) == "number" and Enum and type(Enum.SendAddonMessageResult) == "table" then
+    for name, v in pairs(Enum.SendAddonMessageResult) do if v == r then return name .. " (" .. r .. ")" end end
+  end
+  return tostring(r)
+end
+function S:Diag()
+  local P = function(t) PSS:Print("netdiag: " .. t) end
+  local isReg = C_ChatInfo and C_ChatInfo.IsAddonMessagePrefixRegistered
+  P("prefix " .. PREFIX .. " registered=" .. tostring(Register()) ..
+    (isReg and (" / client=" .. tostring(select(2, pcall(isReg, PREFIX)))) or ""))
+  local id = PSS.Net and PSS.Net:ChannelIDRaw()
+  P("channel " .. (PSS.Net and PSS.Net.CHANNEL or "?") .. " id=" .. tostring(id) ..
+    " network on=" .. tostring(PSS.Net and PSS.Net.Enabled and PSS.Net.Enabled()))
+  local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
+  if type(fn) ~= "function" then P("SendAddonMessage missing") return end
+  local nonce = tostring(math.random(100000, 999999))
+  diag = {nonce = nonce, t = Now(), got = {}}
+  local dists = {}
+  if id then dists[#dists + 1] = {"CHANNEL", id} end
+  if IsInGuild and IsInGuild() then dists[#dists + 1] = {"GUILD"} end
+  if IsInGroup and IsInGroup() then dists[#dists + 1] = {"PARTY"} end
+  -- Whisper to yourself by the full name (Forever names are "First Last").
+  local full = GetUnitName and GetUnitName("player", true) or (UnitName and UnitName("player"))
+  dists[#dists + 1] = {"WHISPER", full}
+  for _, d in ipairs(dists) do
+    local ok, r = pcall(fn, PREFIX, "D" .. SEP .. nonce, d[1], d[2])
+    P(string.format("send %s -> %s", d[1] .. (d[1] == "WHISPER" and (" " .. tostring(d[2])) or ""), ok and ResultName(r) or ("error " .. tostring(r))))
+  end
+  -- Logged variant of the addon message (some servers only relay that one).
+  local logged = C_ChatInfo and C_ChatInfo.SendAddonMessageLogged
+  if id and type(logged) == "function" then
+    local ok, r = pcall(logged, PREFIX, "D" .. SEP .. nonce .. SEP .. "L", "CHANNEL", id)
+    P("send CHANNEL logged -> " .. (ok and ResultName(r) or ("error " .. tostring(r))))
+  end
+  -- Plain chat text in the channel (hidden from chat by the addon's filter).
+  local say = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+  if id and type(say) == "function" then
+    local ok, r = pcall(say, "PSS" .. SEP .. "D" .. SEP .. nonce, "CHANNEL", nil, id)
+    P("send CHANNEL text -> " .. (ok and ("called " .. tostring(r)) or ("error " .. tostring(r))))
+  end
+  local raw = {}
+  for k, v in pairs(PetSkillScoutDB and PetSkillScoutDB.netRaw or {}) do raw[#raw + 1] = k .. "=" .. v end
+  P("received so far by type: " .. (#raw > 0 and table.concat(raw, ", ") or "none"))
+  local function report()
+    local got = {}
+    for k in pairs(diag.got) do got[#got + 1] = k end
+    table.sort(got)
+    P("echo back after 6 s: " .. (#got > 0 and table.concat(got, ", ") or "NONE") ..
+      (id and not diag.got.CHANNEL and "  -> the realm channel does not deliver addon messages" or ""))
+  end
+  if C_Timer and C_Timer.After then C_Timer.After(6, report) end
+end
+
+S.frame:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender, ...)
   if event == "PLAYER_LOGIN" then Register() return end
-  if prefix == PREFIX then S:Receive(msg, channel, sender) end
+  if event == "CHAT_MSG_CHANNEL" then
+    -- Only the /pss netdiag text test (sent from the slash command).
+    if diag and prefix == "PSS" .. SEP .. "D" .. SEP .. diag.nonce then diag.got["CHANNEL text"] = true end
+    return
+  end
+  if prefix ~= PREFIX then return end
+  pcall(CountRaw, channel)
+  if type(msg) == "string" and msg:sub(1, 2) == "D" .. SEP then
+    if diag and msg:sub(3, 2 + #diag.nonce) == diag.nonce then
+      diag.got[tostring(channel) .. (msg:find(SEP .. "L$") and " logged" or "")] = true
+    end
+    return
+  end
+  S:Receive(msg, channel, sender)
 end)
 S.frame:SetScript("OnUpdate", function()
   if #queue == 0 then return end
+  -- Entered an instance with messages still waiting: drop them.
+  if InInstance() then for i = #queue, 1, -1 do queue[i] = nil end return end
   Refill()
   while tokens >= 1 and #queue > 0 do
     local m = table.remove(queue, 1)
@@ -243,3 +384,5 @@ S.frame:SetScript("OnUpdate", function()
   end
 end)
 Register()
+S.frame.pssKey = "Sync queue"
+PSS:Every(S.frame, 0.2)

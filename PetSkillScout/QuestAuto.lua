@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Quest ratings where you meet quests, and optional auto-accept.
 -- * NPC dialogs (gossip and greeting lists): the "!" of quests worth doing
 --   turns purple, quests not worth the time turn grey with a short mark.
@@ -65,7 +66,52 @@ local function Skip()
   return QA:Mode() == "off" or (IsShiftKeyDown and IsShiftKeyDown()) or false
 end
 
+-- Every quest an NPC offers you is remembered as available (map pins).
+-- When an NPC has a single quest for you, the game opens it directly (no
+-- list): that quest is the only one offered. The list windows set this time.
+QA.listAt = -1e9
+function QA:NoteSingle(id)
+  local W = PSS.QuestWorth
+  if not (W and W.NotOffered and id) then return end
+  if Now() - self.listAt < 3 then return end -- opened from a list
+  local guid = Plain(Call(UnitGUID, "npc"))
+  if type(guid) ~= "string" or not guid:find("^Creature") then return end
+  local npc = tonumber((select(6, strsplit("-", guid))))
+  if npc then W:NotOffered(npc, {[id] = true}) end
+end
+
+function QA:NoteOffered()
+  self.listAt = Now()
+  local W = PSS.QuestWorth
+  if not (W and W.Offered) then return end
+  local npc
+  local guid = Plain(Call(UnitGUID, "npc"))
+  if type(guid) == "string" then npc = tonumber((select(6, strsplit("-", guid)))) end
+  local offered = {}
+  local G = C_GossipInfo
+  if G and G.GetAvailableQuests then
+    for _, q in ipairs(Call(G.GetAvailableQuests) or {}) do
+      local id = tonumber(Plain(q.questID))
+      if id then offered[id] = true; W:Offered(id, npc) end
+    end
+    -- Active quests (in your log) count as offered too.
+    for _, q in ipairs((G.GetActiveQuests and Call(G.GetActiveQuests)) or {}) do
+      local id = tonumber(Plain(q.questID))
+      if id then offered[id] = true end
+    end
+  end
+  local n = tonumber(Plain(Call(GetNumAvailableQuests))) or 0
+  for i = 1, n do
+    local id = tonumber(Plain(select(5, Call(GetAvailableQuestInfo, i))))
+    if id then offered[id] = true; W:Offered(id, npc) end
+  end
+  -- Only when the window's quest list could be read at all.
+  local readable = (G and G.GetAvailableQuests) or type(GetNumAvailableQuests) == "function"
+  if npc and readable and W.NotOffered then W:NotOffered(npc, offered) end
+end
+
 function QA:OnGossip()
+  pcall(self.NoteOffered, self)
   if Skip() then return end
   local G = C_GossipInfo
   if not (G and G.GetAvailableQuests and G.SelectAvailableQuest) then return end
@@ -79,6 +125,7 @@ function QA:OnGossip()
 end
 
 function QA:OnGreeting()
+  pcall(self.NoteOffered, self)
   if Skip() then return end
   local n = tonumber(Plain(Call(GetNumAvailableQuests))) or 0
   for i = 1, n do
@@ -93,6 +140,11 @@ end
 
 function QA:OnDetail()
   local id = tonumber(Plain(Call(GetQuestID)))
+  if id and PSS.QuestWorth and PSS.QuestWorth.Offered then
+    local guid = Plain(Call(UnitGUID, "npc"))
+    pcall(PSS.QuestWorth.Offered, PSS.QuestWorth, id, type(guid) == "string" and tonumber((select(6, strsplit("-", guid)))) or nil)
+  end
+  if id then pcall(self.NoteSingle, self, id) end
   self:ShowRating(id)
   if Skip() or not id then return end
   if Plain(Call(QuestGetAutoAccept)) then return end
@@ -100,6 +152,52 @@ function QA:OnDetail()
     Call(AcceptQuest)
     return true
   end
+end
+
+-- Auto turn-in (own option, off by default) ----------------------------------
+-- Finished quests are handed in at the NPC. When the quest offers a choice of
+-- rewards the window stays open: the reward is always picked by the player.
+-- Hold Shift at the NPC to skip.
+function QA:TurnInOn() return DB().questTurnIn == true end
+local function SkipTurnIn() return not QA:TurnInOn() or (IsShiftKeyDown and IsShiftKeyDown()) or false end
+
+function QA:TurnInGossip()
+  if SkipTurnIn() then return end
+  local G = C_GossipInfo
+  if not (G and G.GetActiveQuests and G.SelectActiveQuest) then return end
+  for _, q in ipairs(Call(G.GetActiveQuests) or {}) do
+    local id = Plain(q.questID)
+    if id and Plain(q.isComplete) and Try("t" .. id) then
+      Call(G.SelectActiveQuest, id)
+      return id
+    end
+  end
+end
+
+function QA:TurnInGreeting()
+  if SkipTurnIn() then return end
+  local n = tonumber(Plain(Call(GetNumActiveQuests))) or 0
+  for i = 1, n do
+    local _, complete = Call(GetActiveTitle, i)
+    local id = Plain(Call(GetActiveQuestID, i))
+    if Plain(complete) and Try("t" .. tostring(id or i)) then
+      Call(SelectActiveQuest, i)
+      return id or true
+    end
+  end
+end
+
+function QA:OnProgress()
+  if SkipTurnIn() then return end
+  if Plain(Call(IsQuestCompletable)) then Call(CompleteQuest); return true end
+end
+
+function QA:OnComplete()
+  if SkipTurnIn() then return end
+  local choices = tonumber(Plain(Call(GetNumQuestChoices))) or 0
+  if choices > 1 then return end -- you choose the reward
+  Call(GetQuestReward, choices == 1 and 1 or nil)
+  return true
 end
 
 -- Rating line under the quest window ----------------------------------------
@@ -250,9 +348,9 @@ local function Hook(owner, name, fn)
   local key = tostring(owner) .. name
   if hooked[key] then return end
   if owner == _G then
-    if type(_G[name]) == "function" then hooksecurefunc(name, fn); hooked[key] = true end
+    if type(_G[name]) == "function" then PSS.HookSecure(name, fn); hooked[key] = true end
   elseif owner and type(owner[name]) == "function" then
-    hooksecurefunc(owner, name, fn); hooked[key] = true
+    PSS.HookSecure(owner, name, fn); hooked[key] = true
   end
 end
 
@@ -263,7 +361,7 @@ function QA:HookUI()
   Hook(_G, "QuestLogQuests_Update", function() pcall(QA.MarkLog, QA) end)
   Hook(_G, "QuestLog_Update", function() pcall(QA.MarkLog, QA) end)
   if QuestFrame and QuestFrame.HookScript and not hooked.questHide then
-    QuestFrame:HookScript("OnHide", function() if QA.line then QA.line:Hide() end end)
+    PSS.HookScript(QuestFrame, "OnHide", function() if QA.line then QA.line:Hide() end end)
     hooked.questHide = true
   end
 end
@@ -274,7 +372,8 @@ end
 
 local ev = CreateFrame("Frame")
 QA.frame = ev
-for _, e in ipairs({"PLAYER_LOGIN", "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL", "QUEST_LOG_UPDATE"}) do
+for _, e in ipairs({"PLAYER_LOGIN", "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL", "QUEST_LOG_UPDATE",
+    "QUEST_PROGRESS", "QUEST_COMPLETE"}) do
   pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event)
@@ -283,10 +382,14 @@ ev:SetScript("OnEvent", function(_, event)
   elseif event == "GOSSIP_SHOW" then
     QA:HookUI()
     After(function() pcall(QA.MarkGossip, QA) end)
-    QA:OnGossip()
+    if not QA:TurnInGossip() then QA:OnGossip() end
   elseif event == "QUEST_GREETING" then
     After(function() pcall(QA.MarkGreeting, QA) end)
-    QA:OnGreeting()
+    if not QA:TurnInGreeting() then QA:OnGreeting() end
+  elseif event == "QUEST_PROGRESS" then
+    QA:OnProgress()
+  elseif event == "QUEST_COMPLETE" then
+    QA:OnComplete()
   elseif event == "QUEST_DETAIL" then
     QA:OnDetail()
   elseif event == "QUEST_LOG_UPDATE" then

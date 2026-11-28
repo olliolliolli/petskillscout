@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- "Is this an upgrade for me?" for any item link, plus the places that use
 -- it: the item tooltip line, quest rewards, group loot rolls and the arrows
 -- on bag items. Scores come from PSS.Gear (spec weights, live Forever stats).
@@ -106,10 +107,29 @@ function GC:Compare(link, spec)
       if not old or sc < old then old, oldSt = sc, est end
     end
   end
+  -- Rings / trinkets: the change against each of the two equipped ones,
+  -- so the tooltip says which one it beats.
+  local each
+  if (equipLoc == "INVTYPE_FINGER" or equipLoc == "INVTYPE_TRINKET") and #slots == 2 then
+    each = {}
+    for _, inv in ipairs(slots) do
+      local _, elink, sc = Gr:Equipped(inv, spec)
+      each[#each + 1] = {link = elink, delta = new - (sc or 0)}
+    end
+  end
+  -- Already worn (in any of its slots): nothing to compare.
+  local worn = false
+  for _, inv in ipairs(slots) do
+    local eid = Gr:Equipped(inv, spec)
+    if eid and eid == itemID then worn = true end
+  end
+  local delta = new - (old or 0)
+  -- Under 0.5 % of the equipped item's value counts as no change.
+  if (old or 0) > 0 and math.abs(delta) < (old or 0) * (Gr.MIN_UPGRADE or 0) then delta = 0 end
   local res = {
-    delta = new - (old or 0), new = new, old = old or 0,
+    delta = delta, new = new, old = old or 0, worn = worn,
     parts = Gr:DiffParts(st, oldSt, isRanged and "ranged" or "other", 3),
-    canUse = canUse, reqLevel = reqLevel, tooLow = reqLevel > level, id = itemID,
+    canUse = canUse, reqLevel = reqLevel, tooLow = reqLevel > level, id = itemID, each = each,
   }
   cache[key] = res
   return res
@@ -119,12 +139,17 @@ end
 function GC:Verdict(res)
   if not res then return nil end
   if not res.canUse then return "|cff8a8a8a" .. L("gcNotHunter") .. "|r" end
+  if res.worn then return "|cffbbbbbb" .. (CURRENTLY_EQUIPPED or L("gcSame")) .. "|r" end
   local d = math.floor(res.delta + 0.5)
   local spec = L("gearSpec" .. PSS.Gear:Spec())
   local text
   if d > 0 then text = string.format("|cff7ee0a3" .. L("gcUpgrade") .. "|r", d, spec)
   elseif d < 0 then text = string.format("|cffff7a7a" .. L("gcDowngrade") .. "|r", d, spec)
   else text = "|cffbbbbbb" .. L("gcSame") .. "|r" end
+  -- The change in percent of the equipped item's value.
+  if d ~= 0 and (res.old or 0) > 1 then
+    text = text .. string.format("  |cffbbbbbb%+d%%|r", math.floor(res.delta / res.old * 100 + (res.delta > 0 and 0.5 or -0.5)))
+  end
   if res.tooLow then text = text .. "  |cffffcc55" .. string.format(L("gcFromLevel"), res.reqLevel) .. "|r" end
   return text
 end
@@ -140,28 +165,36 @@ local function OnItemTooltip(tt)
   if not res then return end
   tt.pssGearDone = true
   tt:AddLine(PSS:Safe("|cff70d6ffPetSkillScout|r  " .. GC:Verdict(res)))
-  if res.canUse and #res.parts > 0 then
+  if res.canUse and not res.worn and #res.parts > 0 then
     local out = {}
     for _, p in ipairs(res.parts) do table.insert(out, (p.up and "|cff7ee0a3" or "|cffff7a7a") .. p.text .. "|r") end
     tt:AddLine(PSS:Safe(table.concat(out, "   ")))
+  end
+  if res.canUse and res.each and not res.worn then
+    for _, e in ipairs(res.each) do
+      local d = math.floor(e.delta + 0.5)
+      local col = d > 0 and "|cff7ee0a3" or d < 0 and "|cffff7a7a" or "|cffbbbbbb"
+      local what = e.link or ("|cff8a8a8a" .. (EMPTY or "-") .. "|r")
+      tt:AddLine(PSS:Safe("  " .. what .. "  " .. col .. string.format("%+d", d) .. "|r"))
+    end
   end
   tt:Show()
 end
 GC.OnItemTooltip = OnItemTooltip
 
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
-  pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, function(tt)
+  pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, PSS:Timed("item tooltip (gear)", function(tt)
     if tt == GameTooltip or tt == ItemRefTooltip then pcall(OnItemTooltip, tt) end
-  end)
+  end))
 else
   for _, tt in ipairs({GameTooltip, ItemRefTooltip}) do
-    if tt and tt.HookScript then pcall(tt.HookScript, tt, "OnTooltipSetItem", function(t) pcall(OnItemTooltip, t) end) end
+    if tt and tt.HookScript then pcall(PSS.HookScript, tt, "OnTooltipSetItem", function(t) pcall(OnItemTooltip, t) end) end
   end
 end
 for _, tt in ipairs({GameTooltip, ItemRefTooltip}) do
   if tt and tt.HookScript then
-    pcall(tt.HookScript, tt, "OnTooltipCleared", function(t) t.pssGearDone = nil end)
-    pcall(tt.HookScript, tt, "OnHide", function(t) t.pssGearDone = nil end)
+    pcall(PSS.HookScript, tt, "OnTooltipCleared", function(t) t.pssGearDone = nil end)
+    pcall(PSS.HookScript, tt, "OnHide", function(t) t.pssGearDone = nil end)
   end
 end
 
@@ -396,19 +429,19 @@ local function HookAll()
   if hooked or not hooksecurefunc then return end
   hooked = true
   if type(QuestInfo_Display) == "function" then
-    hooksecurefunc("QuestInfo_Display", function() pcall(GC.MarkQuestRewards, GC) end)
+    PSS.HookSecure("QuestInfo_Display", function() pcall(GC.MarkQuestRewards, GC) end)
   end
   if type(GroupLootFrame_OpenNewFrame) == "function" then
-    hooksecurefunc("GroupLootFrame_OpenNewFrame", function() pcall(GC.MarkRolls, GC) end)
+    PSS.HookSecure("GroupLootFrame_OpenNewFrame", function() pcall(GC.MarkRolls, GC) end)
   end
   if type(ContainerFrame_Update) == "function" then
-    hooksecurefunc("ContainerFrame_Update", function(f) pcall(GC.MarkContainer, GC, f) end)
+    PSS.HookSecure("ContainerFrame_Update", function(f) PSS:Soon(f, function() GC:MarkContainer(f) end) end)
   end
   local frames = {G("ContainerFrameCombinedBags")}
   for i = 1, 13 do frames[#frames + 1] = G("ContainerFrame" .. i) end
   for _, f in pairs(frames) do
     if f and type(f.UpdateItems) == "function" then
-      pcall(hooksecurefunc, f, "UpdateItems", function(self) pcall(GC.MarkContainer, GC, self) end)
+      pcall(PSS.HookSecure, f, "UpdateItems", function(self) PSS:Soon(self, function() GC:MarkContainer(self) end) end)
     end
   end
 end
@@ -444,3 +477,5 @@ if PSS.Gear then
   PSS.Gear.SetSpec = function(self, s) set(self, s); GC:Reset(); pending = 0.1 end
 end
 GC.HookAll = HookAll
+GC.frame.pssKey = "GearCompare"
+PSS:Every(GC.frame, 0.1)

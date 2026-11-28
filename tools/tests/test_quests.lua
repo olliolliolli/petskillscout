@@ -11,6 +11,8 @@ local function keys(list) local t = {} for _, r in ipairs(list) do t[r.e and r.e
 local function reset()
   PetSkillScoutDB = {language = "en"}
   PSS:InitializeDB()
+  -- Off by default since 3.7.197 (changes to the game's UI are opt-in): on for this test.
+  PetSkillScoutDB.questAlert = true;
   MOCK.done, MOCK.inlog, MOCK.owned, MOCK.prints, MOCK.warnings, MOCK.equipped = {}, {}, {}, {}, {}, {}
   MOCK.level, MOCK.faction, MOCK.class, MOCK.combat = 30, "Alliance", "HUNTER", false
 end
@@ -178,7 +180,7 @@ MOCK.prints = {}
 UI:OpenQuestMap(Q:Get("daryl"))
 ok(MOCK.prints[1] and MOCK.prints[1]:find("combat"), "no map in combat")
 -- Header: tabs fit in every language.
-for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es"}) do
+for _, lang in ipairs({"en", "uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
   PetSkillScoutDB.language = lang
   UI:RefreshHeader()
   local last = UI.tabs[#UI.tabs]
@@ -199,7 +201,7 @@ local en = PSS.Locale.en
 local nkeys = 0
 local src = io.open(dir .. "/Locale6.lua"):read("*a")
 for k in src:gmatch("\n    ([%w_]+) = ") do end
-for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es"}) do
+for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es", "pt", "ru"}) do
   for k in pairs(en) do
     if k:match("^q") or k == "tabQuests" or k:match("^optQuest") then
       local v = PSS.Locale[lang][k]
@@ -213,6 +215,13 @@ for _, lang in ipairs({"uk", "pl", "de", "fr", "it", "es"}) do
   end
 end
 ok(nkeys > 40, "locale keys checked " .. nkeys)
+
+-- Chain start: Big Game Hunter (208) points to Welcome to the Jungle (583).
+reset()
+MOCK.level = 30
+ok(Q:FirstStep(208) == 583, "first step of Big Game Hunter (" .. tostring(Q:FirstStep(208)) .. ")")
+local tg = Q:Target(Q:Get("nesingwary"))
+ok(tg and tg.quest == 583 and tg.mapID == 1434, "arrow to the chain start")
 
 print(string.format("passed %d, failed %d", pass, fail))
 os.exit(fail == 0 and 0 or 1)

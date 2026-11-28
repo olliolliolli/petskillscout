@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Ammo: arrows / bullets left, warnings when running low or entering a dungeon
 -- with too few, and the nearest place to buy more. Ammo vendors are learned when
 -- the player opens a merchant that sells ammo (and shared with guild / group
@@ -340,3 +341,5 @@ A.frame:SetScript("OnEvent", function(self, event, unit)
   if not self:IsShown() then delay = 1 end
   self:Show()
 end)
+A.frame.pssKey = "Ammo"
+PSS:Every(A.frame, 0.2)

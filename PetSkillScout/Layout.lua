@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- ElvUI-style interface layout (part of the game skin, Settings > Interface).
 -- Builds new pieces instead of only recolouring Blizzard ones:
 --   * unit frames: player, target, target of target, pet (flat bars, class /
@@ -24,6 +25,7 @@ local hider = CreateFrame("Frame")
 hider:Hide()
 LY.hider = hider
 LY.applied = {}
+LY.strips = {}
 
 local function L(k) return PSS:L(k) end
 local function G(n) local v = _G[n]; return type(v) == "table" and v or nil end
@@ -226,8 +228,8 @@ local function UpdateHealth(f)
   if Plain(Call(UnitIsDeadOrGhost, u)) then
     text = DEAD or "Dead"
   elseif pc and pm then
-    text = Short(pc)
-    if pm > 0 and pc < pm and f.big then text = text .. "  |cffbbbbbb" .. math.floor(pc / pm * 100 + 0.5) .. "%|r" end
+    -- Big frames: current / max health.
+    text = f.big and pm > 0 and (Short(pc) .. " / " .. Short(pm)) or Short(pc)
   elseif cur ~= nil and AbbreviateNumbers then
     text = Call(AbbreviateNumbers, cur)
   end
@@ -244,8 +246,16 @@ local function UpdatePower(f)
   if cur ~= nil then pcall(f.pp.SetValue, f.pp, cur) end
   f.pp:SetStatusBarColor(PowerColour(u))
   if f.ppText then
-    local pc = Plain(cur)
-    pcall(f.ppText.SetText, f.ppText, pc and pc > 0 and Short(pc) or "")
+    -- Current / max mana (rage, energy...); hidden values in combat are
+    -- written as the game abbreviates them.
+    local pc, pm = Plain(cur), Plain(max)
+    local text = ""
+    if pc and pm then
+      if pm > 0 then text = Short(pc) .. " / " .. Short(pm) end
+    elseif cur ~= nil and AbbreviateNumbers then
+      text = Call(AbbreviateNumbers, cur) or ""
+    end
+    pcall(f.ppText.SetText, f.ppText, text)
   end
 end
 
@@ -259,10 +269,12 @@ local function UpdateName(f)
     local lvl = Plain(Call(UnitLevel, u))
     local cls = Plain(Call(UnitClassification, u))
     local s = (type(lvl) == "number" and lvl > 0) and tostring(lvl) or "??"
-    f.level:SetText(s .. (cls and CLASSIF[cls] or ""))
+    local boss = PSS.IsBoss and PSS:IsBoss(u)
+    f.level:SetText(s .. ((boss and " B") or (cls and CLASSIF[cls]) or ""))
     local c = GetQuestDifficultyColor and type(lvl) == "number" and lvl > 0 and Call(GetQuestDifficultyColor, lvl)
     if c and c.r then f.level:SetTextColor(c.r, c.g, c.b) else f.level:SetTextColor(1, 0.82, 0) end
   end
+  if LY.UpdateRole then LY.UpdateRole(f) end
   if f.badge then
     local b = LY:Badge(u)
     f.badge:SetText(b or "")
@@ -353,6 +365,7 @@ local function MakeUnit(unit, w, h, ph, big)
     f.name:SetPoint("RIGHT", f.hp, "RIGHT", -70, 0)
     if f.pp then
       f.ppText = Text(f.pp, 9, "RIGHT")
+      f.ppText:SetDrawLayer("OVERLAY", 7)
       f.ppText:SetTextColor(0.9, 0.9, 0.9)
       f.ppText:SetPoint("RIGHT", f.pp, "RIGHT", -3, 0)
     end
@@ -360,7 +373,7 @@ local function MakeUnit(unit, w, h, ph, big)
   f:SetScript("OnEnter", UnitOnEnter)
   f:SetScript("OnLeave", function() GameTooltip:Hide() end)
   if unit ~= "player" and RegisterUnitWatch then RegisterUnitWatch(f) end
-  f:HookScript("OnShow", function(self) UpdateUnit(self); UpdatePortrait(self) end)
+  PSS.HookScript(f, "OnShow", function(self) UpdateUnit(self); UpdatePortrait(self) end)
   -- Visible colours from the first frame on (before any event arrives).
   local r, g, b = HealthColour(unit)
   f.hp:SetStatusBarColor(r, g, b)
@@ -426,12 +439,53 @@ local function BuildUnits()
 end
 
 -- Party frames: four flat frames stacked on the left, class coloured.
+-- Role marks on party frames: shield = tank, sword = damage, green cross = healer
+-- (drawn with two bars). Shown only when a role is set.
+LY.ROLES = {
+  TANK = {icon = "Interface/Icons/INV_Shield_06"},
+  DAMAGER = {icon = "Interface/Icons/INV_Sword_04"},
+  HEALER = {cross = true},
+}
+function LY.RoleOf(value) return LY.ROLES[value] end
+local function UpdateRole(f)
+  if not f.role then return end
+  local r = LY.RoleOf(Plain(Call(UnitGroupRolesAssigned, f.unit)))
+  f.role:SetShown(r ~= nil)
+  f.roleIcon:SetShown(r ~= nil and r.icon ~= nil)
+  f.roleV:SetShown(r ~= nil and r.cross == true)
+  f.roleH:SetShown(r ~= nil and r.cross == true)
+  f.name:SetPoint("LEFT", f.hp, "LEFT", r and 21 or 4, 0)
+  if r and r.icon then f.roleIcon:SetTexture(r.icon) end
+end
+LY.UpdateRole = UpdateRole
+
 local function BuildParty()
   local holder = CreateFrame("Frame", "PetSkillScoutPartyHolder", UIParent)
   holder:SetSize(170, 4 * 36 - 6)
   holder:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 24, -220)
   for i = 1, 4 do
     local f = MakeUnit("party" .. i, 170, 30, 6, false)
+    -- Inside the bar: the left screen edge belongs to the game's raid manager tab.
+    f.role = f.hp:CreateTexture(nil, "OVERLAY", nil, 1)
+    f.role:SetSize(16, 16)
+    f.role:SetPoint("LEFT", f.hp, "LEFT", 2, 0)
+    f.role:SetTexture("Interface/Buttons/WHITE8X8")
+    f.role:SetVertexColor(0, 0, 0, 0.75)
+    f.roleIcon = f.hp:CreateTexture(nil, "OVERLAY", nil, 2)
+    f.roleIcon:SetPoint("TOPLEFT", f.role, "TOPLEFT", 1, -1)
+    f.roleIcon:SetPoint("BOTTOMRIGHT", f.role, "BOTTOMRIGHT", -1, 1)
+    f.roleIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    f.roleV = f.hp:CreateTexture(nil, "OVERLAY", nil, 2)
+    f.roleV:SetTexture("Interface/Buttons/WHITE8X8")
+    f.roleV:SetVertexColor(0.3, 0.95, 0.35, 1)
+    f.roleV:SetSize(4, 12)
+    f.roleV:SetPoint("CENTER", f.role, "CENTER")
+    f.roleH = f.hp:CreateTexture(nil, "OVERLAY", nil, 2)
+    f.roleH:SetTexture("Interface/Buttons/WHITE8X8")
+    f.roleH:SetVertexColor(0.3, 0.95, 0.35, 1)
+    f.roleH:SetSize(12, 4)
+    f.roleH:SetPoint("CENTER", f.role, "CENTER")
+    f.role:Hide(); f.roleIcon:Hide(); f.roleV:Hide(); f.roleH:Hide()
     f:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, -(i - 1) * 36)
   end
   LY:Movable("party", holder, "slot_party")
@@ -443,11 +497,11 @@ end
 
 local unitEvents = CreateFrame("Frame")
 LY.unitEvents = unitEvents
-local UNIT_EVENTS = {"UNIT_HEALTH", "UNIT_HEALTH_FREQUENT", "UNIT_MAXHEALTH", "UNIT_POWER_UPDATE", "UNIT_POWER_FREQUENT",
+local UNIT_EVENTS = {"UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_POWER_UPDATE",
   "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER", "UNIT_NAME_UPDATE", "UNIT_LEVEL", "UNIT_FACTION", "UNIT_HAPPINESS",
   "PLAYER_TARGET_CHANGED", "UNIT_PET", "UNIT_TARGET", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED",
   "PLAYER_UPDATE_RESTING", "PLAYER_ENTERING_WORLD", "UNIT_CLASSIFICATION_CHANGED", "UNIT_MODEL_CHANGED",
-  "GROUP_ROSTER_UPDATE", "PARTY_MEMBERS_CHANGED", "UNIT_CONNECTION",
+  "GROUP_ROSTER_UPDATE", "PARTY_MEMBERS_CHANGED", "UNIT_CONNECTION", "PLAYER_ROLES_ASSIGNED", "ROLE_CHANGED_INFORM",
   "UNIT_PORTRAIT_UPDATE"}
 
 local function StartUnitEvents()
@@ -457,11 +511,13 @@ local function StartUnitEvents()
       if units[u] then UpdatePortrait(units[u]) end
     elseif event == "PLAYER_TARGET_CHANGED" then
       UpdateUnit(units.target); UpdateUnit(units.targettarget); UpdatePortrait(units.target)
-    elseif event == "UNIT_PET" or event == "UNIT_HAPPINESS" then
+    elseif event == "UNIT_PET" then
       UpdateUnit(units.pet)
+    elseif event == "UNIT_HAPPINESS" then
+      PSS:Soon("unit pet", function() pcall(UpdateUnit, units.pet) end, 0.2)
     elseif event == "UNIT_TARGET" then
       if u == "target" then UpdateUnit(units.targettarget) end
-    elseif event:find("^PLAYER_") or event == "GROUP_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" then
+    elseif event:find("^PLAYER_") or event == "GROUP_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" or event == "ROLE_CHANGED_INFORM" then
       for _, f in pairs(units) do UpdateUnit(f) end
     elseif type(u) == "string" and units[u] then
       local f = units[u]
@@ -480,11 +536,13 @@ local function StartUnitEvents()
     if units.targettarget and units.targettarget:IsShown() then pcall(UpdateUnit, units.targettarget) end
     -- Safety net: some health/power changes have no event on this client.
     slow = slow + 1
-    if slow >= 3 then
+    if slow >= 10 then
       slow = 0
       for _, f in pairs(units) do pcall(UpdateUnit, f) end
     end
   end)
+  unitEvents.pssKey = "unit frames"
+  PSS:Every(unitEvents, 0.3)
   -- The layout is built on PLAYER_ENTERING_WORLD, after that event fired:
   -- draw everything once now.
   for _, f in pairs(units) do pcall(UpdateUnit, f); pcall(UpdatePortrait, f) end
@@ -528,12 +586,77 @@ function LY:LayoutBars()
   local row = 0
   for _, def in ipairs(BAR_ROWS) do
     if Shown(def[2]) then
-      for i = 1, 12 do PlaceButton(G(def[1] .. i), BTN, barHolder, (i - 1) * (BTN + GAP), row * (BTN + GAP)) end
+      for i = 1, 12 do
+        local b = G(def[1] .. i)
+        PlaceButton(b, BTN, barHolder, (i - 1) * (BTN + GAP), row * (BTN + GAP))
+        -- Some buttons of bars 2/3 sit at frame level 3 (others ~52): a frame
+        -- nearby then covers them. All on the main buttons' layer.
+        local ref = G("ActionButton1")
+        if b and ref and b ~= ref then
+          pcall(b.SetFrameStrata, b, Plain(Call(ref.GetFrameStrata, ref)) or "MEDIUM")
+          local lv = Plain(Call(ref.GetFrameLevel, ref))
+          if lv then pcall(b.SetFrameLevel, b, lv) end
+        end
+      end
       row = row + 1
     end
   end
+  -- Bars 4 and 5 (Blizzard's right and left side bars): squares of 4 x 3
+  -- beside the main block, bar 5 on the left, bar 4 on the right.
+  local sideGap = 10
+  local sideW = 4 * BTN + 3 * GAP
+  -- Same layer as the main bar buttons (the side bars sit lower by default,
+  -- so a theme frame nearby could catch the mouse and drops failed), and
+  -- empty slots kept visible like on the main bars so spells can be dropped.
+  local ref = G("ActionButton1")
+  local strata = ref and Plain(Call(ref.GetFrameStrata, ref)) or "MEDIUM"
+  local level = ref and Plain(Call(ref.GetFrameLevel, ref)) or 5
+  local function Side(prefix, frame, x0)
+    if not Shown(frame) then return false end
+    local f = G(frame)
+    if f then pcall(f.SetAlpha, f, 1); pcall(f.SetFrameStrata, f, strata) end
+    for i = 1, 12 do
+      local b = G(prefix .. i)
+      local col, r = (i - 1) % 4, math.floor((i - 1) / 4)
+      PlaceButton(b, BTN, barHolder, x0 + col * (BTN + GAP), (2 - r) * (BTN + GAP))
+      if b then
+        pcall(b.SetFrameStrata, b, strata)
+        pcall(b.SetFrameLevel, b, level + 2)
+        pcall(b.EnableMouse, b, true)
+        local main = ref and Plain(Call(ref.GetAttribute, ref, "showgrid"))
+        local mine = Plain(Call(b.GetAttribute, b, "showgrid"))
+        if type(main) == "number" and (type(mine) ~= "number" or mine < main) then pcall(b.SetAttribute, b, "showgrid", main) end
+        if b.ShowGrid and type(main) == "number" and main > 0 then pcall(b.ShowGrid, b, main) end
+      end
+    end
+    return true
+  end
+  LY.SideDiag = function()
+    for _, n in ipairs({"ActionButton1", "MultiBarBottomRightButton12", "MultiBarLeftButton1", "MultiBarRightButton1"}) do
+      local b = G(n)
+      if not b then PSS:Print(n .. ": missing") else
+        local p = b:GetParent()
+        PSS:Print(string.format("%s: shown %s visible %s alpha %.2f strata %s level %s mouse %s grid %s action %s parent %s/%s",
+          n, tostring(b:IsShown()), tostring(b:IsVisible()), Plain(b:GetEffectiveAlpha()) or -1, tostring(b:GetFrameStrata()),
+          tostring(b:GetFrameLevel()), tostring(b:IsMouseEnabled()), tostring(Plain(Call(b.GetAttribute, b, "showgrid"))),
+          tostring(Plain(Call(b.GetAttribute, b, "action"))), tostring(p and p:GetName()), tostring(p and p:IsShown())))
+      end
+    end
+  end
+  self.leftSide = Side("MultiBarLeftButton", "MultiBarLeft", -(sideW + sideGap))
+  self.rightSide = Side("MultiBarRightButton", "MultiBarRight", width + sideGap)
+  if self.pageNote then
+    self.pageNote:ClearAllPoints()
+    self.pageNote:SetPoint("BOTTOMRIGHT", barHolder, "BOTTOMLEFT", self.leftSide and -(sideW + sideGap + 6) or -6, 2)
+  end
+  -- Broken / damaged gear figure: between the chat (left) and the bars.
+  LY.durX = -((self.leftSide and (sideW + sideGap) or 0) + 14)
+  if LY.PlaceDurability then LY.PlaceDurability() end
   local top = row * (BTN + GAP) + 4
   local small = 30
+  -- The game's Cooldown Manager right above the bars (pet bar included).
+  LY.cdmY = top + small + 12
+  if LY.PlaceCooldowns then pcall(LY.PlaceCooldowns) end
   -- Stance buttons on the left; the pet bar centred (right aligned when a
   -- stance bar is also there).
   local stance = G("StanceButton1") or G("ShapeshiftButton1")
@@ -549,6 +672,162 @@ function LY:LayoutBars()
   self.barTop = top + small
 end
 
+function LY.PageText(page)
+  if type(page) ~= "number" or page <= 1 then return nil end
+  return string.format(L("barPage"), page)
+end
+
+-- Cooldown Manager (Essential, Utility, buff icons) stacked above the bars.
+-- Off in the options: Edit Mode places them. Not in combat.
+local cdmBusy = false
+-- Icons of a group in ONE centred row of equal squares (the game wraps them
+-- by its own column count, and a 2-row group next to 1-row groups looked
+-- untidy). Order: the game's layout order, else top-to-bottom, left-to-right.
+local CDM_SIZE = {EssentialCooldownViewer = 40, UtilityCooldownViewer = 32, BuffIconCooldownViewer = 32}
+local CDM_GAP = 4
+local function RowOf(v, size)
+  local items = {}
+  -- Every icon of the group, shown or not: a fixed place per icon, so the
+  -- row does not shift each time an icon shows or hides (it jumped on every
+  -- cast). Icons get their place by the game's layout order.
+  for _, c in ipairs({v:GetChildren()}) do
+    local okW, w = pcall(c.GetWidth, c)
+    local li = rawget(c, "layoutIndex")
+    if okW and type(w) == "number" and w > 4 and (type(li) == "number" or c:IsShown()) then items[#items + 1] = c end
+  end
+  if #items == 0 then return end
+  table.sort(items, function(a, b)
+    local la, lb = rawget(a, "layoutIndex"), rawget(b, "layoutIndex")
+    if type(la) == "number" and type(lb) == "number" and la ~= lb then return la < lb end
+    local ta, tb = a:GetTop() or 0, b:GetTop() or 0
+    if math.abs(ta - tb) > 2 then return ta > tb end
+    return (a:GetLeft() or 0) < (b:GetLeft() or 0)
+  end)
+  local width = #items * size + (#items - 1) * CDM_GAP
+  v.pssRowW, v.pssRowH = width, size
+  pcall(v.SetSize, v, width, size)
+  for i, c in ipairs(items) do
+    c.pssSlotX, c.pssSlotSize, c.pssViewer = (i - 1) * (size + CDM_GAP), size, v
+    pcall(c.SetSize, c, size, size)
+    pcall(c.ClearAllPoints, c)
+    pcall(c.SetPoint, c, "LEFT", v, "LEFT", c.pssSlotX, 0)
+    -- Whatever path the game uses to place an icon (there are several, and
+    -- some ran after our pass: the icons jumped), it is put back at once.
+    if not c.pssSlotHooked and hooksecurefunc then
+      c.pssSlotHooked = true
+      local busy = false
+      pcall(PSS.HookSecure, c, "SetPoint", function(self)
+        if busy or not self.pssSlotX or (PetSkillScoutDB and PetSkillScoutDB.cdmAbove == false) then return end
+        busy = true
+        pcall(self.ClearAllPoints, self)
+        pcall(self.SetPoint, self, "LEFT", self.pssViewer, "LEFT", self.pssSlotX, 0)
+        busy = false
+      end)
+      pcall(PSS.HookSecure, c, "SetSize", function(self, w, h)
+        if busy or not self.pssSlotSize or (w == self.pssSlotSize and h == self.pssSlotSize) then return end
+        busy = true
+        pcall(self.SetSize, self, self.pssSlotSize, self.pssSlotSize)
+        busy = false
+      end)
+    end
+  end
+  if not v.pssSizeHooked and hooksecurefunc then
+    v.pssSizeHooked = true
+    local vbusy = false
+    pcall(PSS.HookSecure, v, "SetSize", function(self, w, h)
+      if vbusy or not self.pssRowW or (w == self.pssRowW and h == self.pssRowH) then return end
+      vbusy = true
+      pcall(self.SetSize, self, self.pssRowW, self.pssRowH)
+      vbusy = false
+    end)
+  end
+end
+
+function LY.PlaceCooldowns()
+  if not barHolder or cdmBusy or (PetSkillScoutDB and PetSkillScoutDB.cdmAbove == false) then return end
+  -- The viewers are not protected frames, so this also runs in combat (the
+  -- game re-lays them out when a cooldown starts or a buff appears).
+  local v0 = G("EssentialCooldownViewer")
+  if v0 and v0.IsProtected and v0:IsProtected() and InCombatLockdown and InCombatLockdown() then return end
+  cdmBusy = true
+  local prev
+  for _, n in ipairs({"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer"}) do
+    local v = G(n)
+    if v then
+      pcall(RowOf, v, CDM_SIZE[n] or 36)
+      -- All rows centred on the bars. The hawk squares sit left of the main
+      -- row: that row moves right by half their width, so the whole stack
+      -- (hawks + main icons, utility, buffs) is centred as one block.
+      local hx = 0
+      local hawk = PSS.HawkTimer
+      if not prev and hawk and hawk.Width and not (PetSkillScoutDB and PetSkillScoutDB.hawkPos)
+          and hawk:Enabled() and PetSkillScoutDB and PetSkillScoutDB.hawkSpell then
+        hx = math.floor(hawk:Width() / 2)
+      end
+      v.pssAnchor = prev and {"BOTTOM", barHolder, "BOTTOM", 0, 0} or {"BOTTOM", barHolder, "BOTTOM", hx, (PSS.GamepadTheme and PSS.GamepadTheme.active and not (G("ActionButton1") and G("ActionButton1"):IsVisible()) and PSS.GamepadTheme.CDM_Y) or LY.cdmY or 120}
+      if prev then
+        -- Directly above the previous row, centred on the bars (not on the
+        -- previous row, which may be shifted for the hawks).
+        local py = (prev.pssAnchor and prev.pssAnchor[5] or 0) + (prev.pssRowH or prev:GetHeight() or 32) + 6
+        v.pssAnchor = {"BOTTOM", barHolder, "BOTTOM", 0, py}
+      end
+      pcall(v.ClearAllPoints, v)
+      pcall(v.SetPoint, v, unpack(v.pssAnchor))
+      prev = v
+      LY.cdmTopY = (v.pssAnchor[5] or 0) + (v.pssRowH or v:GetHeight() or 32)
+      -- (Their alpha is left alone: Glowing Bars hides the icons on purpose
+      -- with SetAlpha(0) when set to, and fighting it made them blink.)
+      -- Above the bars' own panel (it covered them on the same layer).
+      pcall(v.SetFrameStrata, v, "MEDIUM")
+      pcall(v.SetFrameLevel, v, (barHolder:GetFrameLevel() or 1) + 20)
+      if not v.pssCdmHooked and hooksecurefunc then
+        v.pssCdmHooked = true
+        -- The game puts the group back where Edit Mode had it (combat start,
+        -- layout updates): back on our place in the same moment, no delay
+        -- (a 0.1 s delay showed the whole stack jumping).
+        local vbusy = false
+        pcall(PSS.HookSecure, v, "SetPoint", function(self)
+          if vbusy or cdmBusy or not self.pssAnchor or (PetSkillScoutDB and PetSkillScoutDB.cdmAbove == false) then return end
+          vbusy = true
+          pcall(self.ClearAllPoints, self)
+          pcall(self.SetPoint, self, unpack(self.pssAnchor))
+          vbusy = false
+        end)
+        pcall(PSS.HookScript, v, "OnShow", function() PSS:Soon("cdm-place", LY.PlaceCooldowns, 0.1) end)
+        -- The game lays the icons out again (cooldown added, layout change).
+        -- Right away, in the same frame (a delay showed the game's own layout
+        -- for a moment: the icons jumped back and forth).
+        for _, m in ipairs({"RefreshLayout", "Layout"}) do
+          if type(v[m]) == "function" then
+            pcall(PSS.HookSecure, v, m, function(self) if not cdmBusy then cdmBusy = true; pcall(RowOf, self, CDM_SIZE[self:GetName() or ""] or 36); cdmBusy = false end end)
+          end
+        end
+      end
+    end
+  end
+  cdmBusy = false
+end
+
+local durBusy = false
+function LY.PlaceDurability()
+  local d = G("DurabilityFrame")
+  if type(d) ~= "table" or not barHolder or durBusy then return end
+  if InCombatLockdown and InCombatLockdown() then return end
+  durBusy = true
+  pcall(d.ClearAllPoints, d)
+  pcall(d.SetPoint, d, "BOTTOMRIGHT", barHolder, "BOTTOMLEFT", LY.durX or -14, 18)
+  durBusy = false
+  if not d.pssHooked and hooksecurefunc then
+    d.pssHooked = true
+    -- The game puts it back beside the minimap on its own layout passes.
+    -- Deferred, never inside the game's own layout pass of the right-side
+    -- container (doing it there tainted it: blocked SetPoint in combat).
+    pcall(PSS.HookSecure, d, "SetPoint", function()
+      if not durBusy and C_Timer then C_Timer.After(0, function() if not (InCombatLockdown and InCombatLockdown()) then LY.PlaceDurability() end end) end
+    end)
+  end
+end
+
 local function BuildBars()
   barHolder = CreateFrame("Frame", "PetSkillScoutBarHolder", UIParent)
   LY.barHolderFrame = barHolder
@@ -556,32 +835,84 @@ local function BuildBars()
   -- Blizzard bar extras that would sit on top of the new layout.
   for _, n in ipairs({"ActionBarUpButton", "ActionBarDownButton", "MainMenuBarPageNumber", "MainMenuExpBar",
     "ReputationWatchBar", "MainMenuBarMaxLevelBar", "MainMenuBarPerformanceBarFrame", "MainMenuBarLeftEndCap",
-    "MainMenuBarRightEndCap", "StatusTrackingBarManager", "MainStatusTrackingBarContainer",
-    "SecondaryStatusTrackingBarContainer"}) do
+    "MainMenuBarRightEndCap"}) do
     Park(G(n))
   end
+  -- Modern main bar: page arrows live in MainActionBar.ActionBarPageNumber.
+  -- Invisible under the theme but still clickable (switched bar 1 to another
+  -- page when the spell beside them was clicked): no mouse, no alpha.
+  for _, bn in ipairs({"MainActionBar", "MainMenuBar"}) do
+    local bar = G(bn)
+    local pn = type(bar) == "table" and rawget(bar, "ActionBarPageNumber")
+    if type(pn) == "table" then
+      for _, k in ipairs({"UpButton", "DownButton"}) do
+        local btn = rawget(pn, k)
+        if type(btn) == "table" then
+          pcall(btn.EnableMouse, btn, false)
+          pcall(btn.SetAlpha, btn, 0)
+          if btn.HookScript and not btn.pssOff then
+            btn.pssOff = true
+            pcall(btn.HookScript, btn, "OnShow", function(self) pcall(self.EnableMouse, self, false); self:SetAlpha(0) end)
+          end
+        end
+      end
+      pcall(pn.SetAlpha, pn, 0)
+    end
+  end
+  -- These stay with their parent: Edit Mode calls into it, and a parked bar
+  -- gave "attempt to call a nil value". Only made invisible.
+  for _, n in ipairs({"StatusTrackingBarManager", "MainStatusTrackingBarContainer",
+    "SecondaryStatusTrackingBarContainer"}) do
+    local f = G(n)
+    if f then
+      pcall(f.SetAlpha, f, 0)
+      pcall(f.EnableMouse, f, false)
+      if f.HookScript then pcall(f.HookScript, f, "OnShow", function(self) self:SetAlpha(0) end) end
+    end
+  end
   LY:LayoutBars()
+  -- The theme hides the page arrows: a small note shows a page other than 1.
+  local note = Text(barHolder, 12, "RIGHT")
+  note:SetPoint("BOTTOMRIGHT", barHolder, "BOTTOMLEFT", LY.leftSide and -(4 * BTN + 3 * GAP + 16) or -6, 2)
+  LY.pageNote = note
+  note:SetTextColor(1, 0.82, 0.2)
+  local function pageNote()
+    local page = Plain(Call(GetActionBarPage))
+    local text = LY.PageText(page)
+    note:SetText(text or "")
+    note:SetShown(text ~= nil)
+  end
+  local pages = CreateFrame("Frame")
+  for _, e in ipairs({"ACTIONBAR_PAGE_CHANGED", "PLAYER_ENTERING_WORLD"}) do pcall(pages.RegisterEvent, pages, e) end
+  pages:SetScript("OnEvent", pageNote)
+  pageNote()
   -- Blizzard re-arranges bars when one is toggled; follow it out of combat.
-  local function relayout()
+  local function relayoutNow()
     if InCombat() then LY.pendingLayout = true; return end
     pcall(LY.LayoutBars, LY); PlaceCastBar(); pcall(LY.PlaceMenus, LY); pcall(LY.PlaceMinimap, LY)
     if PSS.Auras and PSS.Auras.on then pcall(PSS.Auras.Place, PSS.Auras) end
   end
+  local function relayout() PSS:Soon("relayout", relayoutNow) end
   -- Modern bars lay their buttons out themselves (edit mode); redo ours after.
   for _, n in ipairs({"MainMenuBar", "MainActionBar", "MultiBarBottomLeft", "MultiBarBottomRight",
-    "PetActionBar", "StanceBar"}) do
+    "MultiBarRight", "MultiBarLeft", "PetActionBar", "StanceBar"}) do
     local f = G(n)
-    if f and type(f.UpdateGridLayout) == "function" then hooksecurefunc(f, "UpdateGridLayout", relayout) end
+    if f and type(f.UpdateGridLayout) == "function" then PSS.HookSecure(f, "UpdateGridLayout", relayout) end
+  end
+  -- Bars 4 / 5 turned on or off in the options: re-arrange the squares.
+  for _, n in ipairs({"MultiBarRight", "MultiBarLeft"}) do
+    local f = G(n)
+    if f and f.HookScript then
+      pcall(PSS.HookScript, f, "OnShow", relayout)
+      pcall(PSS.HookScript, f, "OnHide", relayout)
+    end
   end
   if EventRegistry and EventRegistry.RegisterCallback then
     pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Exit", relayout, LY)
   end
   for _, fn in ipairs({"MultiActionBar_Update", "UIParent_ManageFramePositions", "MainMenuBar_UpdateArt"}) do
     if type(_G[fn]) == "function" then
-      hooksecurefunc(fn, function()
-        if InCombat() then LY.pendingLayout = true; return end
-        pcall(LY.LayoutBars, LY); PlaceCastBar(); pcall(LY.PlaceMenus, LY)
-      end)
+      PSS.HookSecure(fn, relayout)
     end
   end
 end
@@ -637,7 +968,9 @@ local CHAT_SIZES = {s = {380, 230}, m = {440, 290}, l = {520, 350}, xl = {620, 4
 LY.CHAT_SIZES = CHAT_SIZES
 function LY:ChatSize()
   local v = CHAT_SIZES[DB().skinChatSize or "m"] or CHAT_SIZES.m
-  return v[1], v[2]
+  -- Exact sizes from the sliders win over the preset.
+  local w, h = tonumber(DB().chatW), tonumber(DB().chatH)
+  return (w and w >= 300 and w <= 900) and w or v[1], (h and h >= 150 and h <= 700) and h or v[2]
 end
 
 local function Hex(c) return string.format("%02x%02x%02x", c[1] * 255, c[2] * 255, c[3] * 255) end
@@ -692,6 +1025,9 @@ function LY:UpdateInfo()
   d[2].text:SetText(Label("fps", math.floor(fps + 0.5)) .. "  " .. Label("ms", ms))
   d[3].text:SetText(Money(Call(GetMoney)))
   -- right: ammo, bags, durability, pet
+  self.infoSlow = (self.infoSlow or 0) - 1
+  if self.infoSlow > 0 then return end
+  self.infoSlow = 5 -- bags, ammo, durability and pet mood change slowly
   local ammo = PSS.Ammo and PSS.Ammo:Count()
   d[4].text:SetText(Label(L("dtAmmo"), ammo and tostring(ammo) or "-"))
   local free, total = FreeSlots()
@@ -745,18 +1081,34 @@ local function BuildChat()
     tick = 0
     pcall(LY.UpdateInfo, LY)
   end)
+  leftPanel.pssKey = "info bar"
+  PSS:Every(leftPanel, 1)
   LY:PlaceChat()
 end
 
 -- Old chat side buttons (menu bubble, voice, channels, quick join) and the
 -- scroll bars go; the mouse wheel still scrolls, Shift-wheel jumps.
 local CHAT_PARK = {"ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
-  "ChatFrameToggleVoiceMuteButton", "QuickJoinToastButton", "FriendsMicroButton", "ChatAlertFrame",
-  "GeneralDockManagerOverflowButton"}
+  "ChatFrameToggleVoiceMuteButton", "QuickJoinToastButton", "FriendsMicroButton", "ChatAlertFrame"}
 
 local function ParkChatButtons()
   for _, n in ipairs(CHAT_PARK) do Park(G(n)) end
-  for i = 1, (NUM_CHAT_WINDOWS or 10) do
+  -- The tab overflow button stays a child of the dock: the game reads the dock's
+  -- tab list through its parent (FCFDockOverflowButton_UpdatePulseState), and
+  -- moving it away gave "bad argument to pairs". Only made invisible.
+  local over = G("GeneralDockManagerOverflowButton")
+  if over then
+    if over.GetParent and over:GetParent() ~= G("GeneralDockManager") then
+      pcall(over.SetParent, over, G("GeneralDockManager"))
+    end
+    pcall(over.SetAlpha, over, 0)
+    pcall(over.EnableMouse, over, false)
+    if over.HookScript and not over.pssHidden then
+      over.pssHidden = true
+      pcall(over.HookScript, over, "OnShow", function(f) f:SetAlpha(0) end)
+    end
+  end
+  for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local p = "ChatFrame" .. i
     local cf = G(p)
     Park(G(p .. "ButtonFrame"))
@@ -795,10 +1147,30 @@ function LY:StyleTabs()
   local S = PSS.Skin
   if not (S and S.active) then return end
   local acc, muted = Col("accent"), {0.65, 0.68, 0.75}
-  for i = 1, (NUM_CHAT_WINDOWS or 10) do
+  for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local tab = G("ChatFrame" .. i .. "Tab")
     if tab then
       local selected = TabSelected(tab, i)
+      -- Gamepad mode makes the tabs taller (32): they stuck out of the 24 high
+      -- dock and the window edge cut them. Kept at the dock's height.
+      if not tab.pssHeightHooked and hooksecurefunc then
+        tab.pssHeightHooked = true
+        local hb = false
+        pcall(PSS.HookSecure, tab, "SetHeight", function(self, h)
+          if hb or h == 24 then return end
+          hb = true; pcall(self.SetHeight, self, 24); hb = false
+        end)
+      end
+      pcall(tab.SetHeight, tab, 24)
+      -- The game's own tab art (taller in gamepad mode, the selected tab's
+      -- even more) made the row uneven: only our backdrop is drawn.
+      for _, k in ipairs({"Left", "Middle", "Right", "ActiveLeft", "ActiveMiddle", "ActiveRight",
+          "HighlightLeft", "HighlightMiddle", "HighlightRight", "SelectedLeft", "SelectedMiddle", "SelectedRight"}) do
+        local t = rawget(tab, k) or G((tab:GetName() or "") .. k)
+        if t and t.SetAlpha then pcall(t.SetAlpha, t, 0) end
+      end
+      local p1, r1, p2, x1, y1 = tab:GetPoint(1)
+      if i > 1 and p1 and y1 and y1 ~= 0 then pcall(tab.SetPoint, tab, p1, r1, p2, x1, 0) end
       S:Backdrop(tab, selected and "button" or "panel", {1, -3, -1, 1})
       if not tab.pssLine then
         tab.pssLine = tab:CreateTexture(nil, "OVERLAY")
@@ -814,37 +1186,284 @@ function LY:StyleTabs()
       if type(fs) == "table" and fs.SetTextColor then
         pcall(fs.SetFont, fs, FONT, 11, "")
         if selected then fs:SetTextColor(acc[1], acc[2], acc[3]) else fs:SetTextColor(muted[1], muted[2], muted[3]) end
+        -- The text must fit (gamepad mode sized the tabs for another font).
+        pcall(fs.SetWidth, fs, 0); pcall(fs.SetWordWrap, fs, false)
+        -- Text in the middle of the tab (gamepad mode lays it out for a 32 high
+        -- tab: in our 24 high one it sat at the top edge).
+        pcall(fs.ClearAllPoints, fs); pcall(fs.SetPoint, fs, "CENTER", tab, "CENTER", 0, -1)
+        local okW, tw = pcall(fs.GetStringWidth, fs)
+        if okW and type(tw) == "number" and tw > 0 and (tab:GetWidth() or 0) < tw + 24 then
+          pcall(tab.SetWidth, tab, tw + 24)
+        end
       end
       if not tabsVisible[tab] and hooksecurefunc then
         tabsVisible[tab] = true
-        pcall(hooksecurefunc, tab, "SetAlpha", KeepVisible)
+        pcall(PSS.HookSecure, tab, "SetAlpha", KeepVisible)
       end
       tabBusy = true; pcall(tab.SetAlpha, tab, 1); tabBusy = false
     end
   end
+  -- The dock's tabs come in two groups (FCFDock_UpdateTabs): fixed ones
+  -- (General, Combat Log) sit on the dock's bottom edge, the others are
+  -- centred in its scroll area. That area was taller than the 24 high dock
+  -- (31, gamepad sizes), so those tabs stood higher than General and the row
+  -- jumped when tabs were switched. The scroll area and its child get the
+  -- dock's height, so both groups line up.
+  local dock = G("GeneralDockManager")
+  local sf = dock and (rawget(dock, "scrollFrame") or G("GeneralDockManagerScrollFrame"))
+  local child = sf and (sf.GetScrollChild and sf:GetScrollChild() or G("GeneralDockManagerScrollFrameChild"))
+  local h = dock and dock:GetHeight()
+  if sf and h and h > 0 then
+    if math.abs((sf:GetHeight() or 0) - h) > 0.5 then pcall(sf.SetHeight, sf, h) end
+    if child and math.abs((child:GetHeight() or 0) - h) > 0.5 then pcall(child.SetHeight, child, h) end
+  end
+  -- General back on the dock's bottom edge (an older fix moved it up).
+  local first = G("ChatFrame1Tab")
+  local p1, r1, p2, x1, y1 = first and first:GetPoint(1)
+  if p1 == "BOTTOMLEFT" and y1 and y1 ~= 0 then pcall(first.SetPoint, first, p1, r1, p2, x1, 0) end
 end
 
-local function PlaceDock()
+local PlaceDock
+function PlaceDock()
   local dock = G("GeneralDockManager")
   if not (dock and leftPanel) or InCombat() then return end
+  -- Leave the dock alone while a tab is dragged, and when it is already in
+  -- place: re-anchoring it in the middle of the game's own tab layout (for
+  -- example when tabs are swapped) left the tabs on top of each other.
+  if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then
+    PSS:Soon("chattabs-later", PlaceDock, 0.5)
+    return
+  end
+  -- Gamepad mode: the game draws the LB glyph at the left of the tabs; the
+  -- tabs start a bit to the right of it.
+  local gx = (PSS.GamepadTheme and PSS.GamepadTheme.active) and 0 or 0
+  local p, rel, rp, x, y = dock:GetPoint(1)
+  if dock:GetNumPoints() == 2 and p == "BOTTOMLEFT" and rel == leftPanel and rp == "TOPLEFT" and x == gx and y == 2 then return end
   pcall(dock.ClearAllPoints, dock)
-  pcall(dock.SetPoint, dock, "BOTTOMLEFT", leftPanel, "TOPLEFT", 0, 2)
+  pcall(dock.SetPoint, dock, "BOTTOMLEFT", leftPanel, "TOPLEFT", gx, 2)
   pcall(dock.SetPoint, dock, "BOTTOMRIGHT", leftPanel, "TOPRIGHT", 0, 2)
   pcall(dock.SetHeight, dock, 24)
 end
 
+-- Gamepad mode: the game's LB / RB hints (GeneralDockManager.LeftTabHint /
+-- RightTabHint, FloatingChatFrame.xml) sit on the dock over the first and
+-- last tabs. They go just outside the dock, left and right of the tabs.
+local function PlaceTabHints()
+  local dock = G("GeneralDockManager")
+  if not dock then return end
+  for key, pt in pairs({LeftTabHint = {"BOTTOMRIGHT", "BOTTOMLEFT", -2}, RightTabHint = {"BOTTOMLEFT", "BOTTOMRIGHT", 2}}) do
+    local h = rawget(dock, key)
+    if h and h.SetPoint then
+      local function Put()
+        h.pssBusy = true
+        pcall(h.ClearAllPoints, h)
+        pcall(h.SetPoint, h, pt[1], dock, pt[2], pt[3], 3)
+        h.pssBusy = false
+      end
+      if not h.pssHooked and hooksecurefunc then
+        h.pssHooked = true
+        pcall(PSS.HookSecure, h, "SetPoint", function(self) if not self.pssBusy then Put() end end)
+      end
+      Put()
+    end
+  end
+end
+LY.PlaceChatDock = function() PlaceDock(); pcall(PlaceTabHints) end
+
+-- A tab dragged out of the dock becomes a loose window on top of the panel
+-- (its text then overlaps the main chat). With the theme every window stays
+-- in the dock: after a drag, loose windows are docked back (order kept as the
+-- player dropped them) and the panel is re-fitted.
+local PlaceCombatTab
+local function RedockLoose()
+  if InCombat() or not LY.applied.chat then return end
+  if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then
+    PSS:Soon("chat-redock", RedockLoose, 0.3)
+    return
+  end
+  local dock = G("GENERAL_CHAT_DOCK") or G("GeneralDockManager")
+  for i = 2, tonumber(NUM_CHAT_WINDOWS) or 10 do
+    local cf = G("ChatFrame" .. i)
+    local tab = G("ChatFrame" .. i .. "Tab")
+    local shown = (cf and cf.IsShown and cf:IsShown()) or (tab and tab.IsShown and tab:IsShown())
+    if cf and shown and not cf.isDocked and type(FCF_DockFrame) == "function" then
+      local n = dock and type(dock.DOCKED_CHAT_FRAMES) == "table" and #dock.DOCKED_CHAT_FRAMES or i
+      pcall(FCF_DockFrame, cf, n + 1, true)
+    end
+  end
+  PlaceDock()
+  pcall(LY.FitChatFrame, LY)
+  pcall(LY.StyleTabs, LY)
+  pcall(PlaceCombatTab)
+end
+LY.RedockLoose = RedockLoose
+
+-- Right edge of the tab strip: Hunter Network, then Combat Log in the corner.
+-- They are kept last in the dock (so no other tab is chained to them) and
+-- anchored from the dock's right edge.
+local combatBusy = false
+local function PlaceTabsNow()
+  if combatBusy or InCombat() or not LY.applied.chat then return end
+  if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then return end
+  local dock = G("GeneralDockManager")
+  if not dock then return end
+  local right = {}
+  -- Only while the option is on: otherwise a closed window was docked back.
+  local net = PSS.NetChat and PSS.NetChat:Enabled() and PSS.NetChat:Frame() or nil
+  -- Our network window may have been left as a loose window (its tab then
+  -- floats over the chat): put it into the dock first.
+  if net and not net.isDocked and net ~= G("ChatFrame2") and type(FCF_DockFrame) == "function" then
+    local n = type(dock.DOCKED_CHAT_FRAMES) == "table" and #dock.DOCKED_CHAT_FRAMES or 1
+    combatBusy = true
+    pcall(FCF_DockFrame, net, n + 1, false)
+    combatBusy = false
+  end
+  if net and net.isDocked and net ~= G("ChatFrame2") then right[#right + 1] = net end
+  local combat = G("ChatFrame2")
+  if combat and combat.isDocked then right[#right + 1] = combat end
+  if #right == 0 then return end
+  combatBusy = true
+  local list = type(dock.DOCKED_CHAT_FRAMES) == "table" and dock.DOCKED_CHAT_FRAMES
+  -- Each tab is anchored to the dock itself (not to the next tab): the tabs
+  -- live in the dock's scroll strip, and a tab-to-tab anchor could leave a tab
+  -- floating over the chat.
+  local x = 0
+  for k = #right, 1, -1 do
+    local tab = G(right[k]:GetName() .. "Tab")
+    if tab then
+      -- Docked tabs live in the dock's clipped scroll strip; out at the right
+      -- edge they were cut off (invisible). Parent them to the dock itself.
+      if tab.GetParent and tab:GetParent() ~= dock then pcall(tab.SetParent, tab, dock) end
+      if tab.SetFrameLevel and dock.GetFrameLevel then pcall(tab.SetFrameLevel, tab, dock:GetFrameLevel() + 5) end
+      if tab.Show then pcall(tab.Show, tab) end
+      if tab.SetAlpha then pcall(tab.SetAlpha, tab, 1) end
+      pcall(tab.ClearAllPoints, tab)
+      pcall(tab.SetPoint, tab, "BOTTOMRIGHT", dock, "BOTTOMRIGHT", -x, 0)
+      local w = tab.GetWidth and tab:GetWidth() or 0
+      if not w or w < 20 then w = 90 end
+      x = x + w + 2
+    end
+  end
+  -- Your own windows: a row right after General, placed here too, because the
+  -- game's scroll strip lost tabs next to the two tabs moved out of it.
+  if list then
+    local isRight = {}
+    for _, f in ipairs(right) do isRight[f] = true end
+    local first = list[1]
+    local firstTab = first and G(first:GetName() .. "Tab")
+    local lx = (firstTab and firstTab.GetWidth and firstTab:GetWidth() or 60) + 2
+    for i = 2, #list do
+      local f = list[i]
+      local tab = f and not isRight[f] and f.GetName and G(f:GetName() .. "Tab")
+      if tab then
+        if tab.GetParent and tab:GetParent() ~= dock then pcall(tab.SetParent, tab, dock) end
+        if tab.SetFrameLevel and dock.GetFrameLevel then pcall(tab.SetFrameLevel, tab, dock:GetFrameLevel() + 5) end
+        if tab.Show then pcall(tab.Show, tab) end
+        if tab.SetAlpha then pcall(tab.SetAlpha, tab, 1) end
+        pcall(tab.ClearAllPoints, tab)
+        pcall(tab.SetPoint, tab, "BOTTOMLEFT", dock, "BOTTOMLEFT", lx, 0)
+        local w = tab.GetWidth and tab:GetWidth() or 0
+        if not w or w < 20 then w = 70 end
+        lx = lx + w + 2
+      end
+    end
+  end
+  combatBusy = false
+end
+PlaceCombatTab = function()
+  local ok, err = pcall(PlaceTabsNow)
+  if not ok then combatBusy = false; LY.tabError = tostring(err) end
+end
+LY.PlaceCombatTab = PlaceCombatTab
+
+-- The game puts all tabs back in a row now and then (for example in combat,
+-- when we may not move them): a slow check brings the right-hand tabs back.
+local tabWatch = CreateFrame("Frame")
+tabWatch:SetScript("OnUpdate", function()
+  local tab = G("ChatFrame2Tab")
+  if not (tab and LY.applied and LY.applied.chat) then return end
+  local ok, point = pcall(tab.GetPoint, tab, 1)
+  if ok and point ~= "BOTTOMRIGHT" then pcall(PlaceCombatTab) end
+end)
+tabWatch.pssKey = "chat tabs"
+PSS:Every(tabWatch, 2)
+
 local chatHooked = false
+local syncBusy = false
 local function HookChat()
   if chatHooked or not hooksecurefunc then return end
   chatHooked = true
+  for _, fn in ipairs({"FCFDock_UpdateTabs", "FCF_DockUpdate"}) do
+    -- Placing the tab makes the game re-dock, which called us again in a
+    -- loop (5 ms/s): only act when the tab is really out of place, once.
+    if type(_G[fn]) == "function" then PSS.HookSecure(fn, function()
+      local tab = G("ChatFrame2Tab")
+      local ok, point = pcall(tab and tab.GetPoint or function() end, tab, 1)
+      -- Right away, in the same frame: done a moment later, the game's own
+      -- order (Combat Log beside General) flashed on every tab switch.
+      -- Every time (not only when Combat Log is out of place): the game also
+      -- puts the other tabs back into its scroll strip, 4 px off from our row,
+      -- and the later pass moved them back - a visible twitch.
+      local _ = ok and point
+      if not syncBusy then
+        syncBusy = true
+        pcall(LY.StyleTabs, LY); pcall(PlaceCombatTab)
+        syncBusy = false
+      end
+    end) end
+  end
+  for _, fn in ipairs({"FCF_StopDragging", "FCF_UnDockFrame", "FCF_OpenNewWindow"}) do
+    if type(_G[fn]) == "function" then
+      PSS.HookSecure(fn, function() PSS:Soon("chat-redock", RedockLoose, 0.2) end)
+    end
+  end
   for _, fn in ipairs({"FCF_DockUpdate", "FCFTab_UpdateColors", "FCF_Tab_OnClick", "FCF_OpenNewWindow",
     "FCF_Close", "FCFDock_SelectWindow", "FCF_SelectDockFrame"}) do
     if type(_G[fn]) == "function" then
-      hooksecurefunc(fn, function()
-        if fn == "FCF_DockUpdate" then PlaceDock() end
-        pcall(LY.StyleTabs, LY)
+      PSS.HookSecure(fn, function()
+        PSS:Soon("chattabs", function()
+          if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then return end -- dragging a tab
+          PlaceDock(); pcall(LY.StyleTabs, LY); pcall(PlaceCombatTab)
+        end)
       end)
     end
+  end
+end
+
+-- Chat text inside the top box (info 22 + input 24 + two gaps below it).
+local fitting = false
+function LY:FitChatFrame()
+  local cf = G("ChatFrame1")
+  if not (cf and leftPanel and self.applied.chat) or fitting then return end
+  if InCombat() then self.pendingLayout = true; return end
+  local w, h = self:ChatSize()
+  fitting = true
+  pcall(cf.ClearAllPoints, cf)
+  pcall(cf.SetPoint, cf, "BOTTOMLEFT", leftPanel.box or leftPanel, "BOTTOMLEFT", 8, 6)
+  pcall(cf.SetSize, cf, w - 16, h - 54 - 12)
+  if cf.SetClampRectInsets then pcall(cf.SetClampRectInsets, cf, 0, 0, 0, 0) end
+  fitting = false
+end
+
+-- The game (Edit Mode, saved chat window size) can put its own size back
+-- later, and the text then runs above the panel. Re-fit after any change.
+local chatSizeHooked = false
+function LY:HookChatFrameSize(cf)
+  if chatSizeHooked or not hooksecurefunc then return end
+  chatSizeHooked = true
+  local function again()
+    if fitting then return end
+    PSS:Soon("chatfit", function()
+      -- A tab is being dragged: the game moves the window itself; fit after.
+      if IsMouseButtonDown and IsMouseButtonDown("LeftButton") then
+        PSS:Soon("chatfit-later", function() LY:FitChatFrame() end, 0.5)
+        return
+      end
+      LY:FitChatFrame()
+    end, 0.05)
+  end
+  for _, m in ipairs({"SetSize", "SetHeight", "SetWidth", "SetPoint"}) do
+    if type(cf[m]) == "function" then pcall(PSS.HookSecure, cf, m, again) end
   end
 end
 
@@ -859,18 +1478,17 @@ function LY:PlaceChat()
       pcall(leftPanel.row.SetWidth, leftPanel.row, w)
       for i = 1, 3 do if dts[i] then pcall(ReflowDT, dts[i]) end end
     end
-    -- Chat text inside the top box (info 22 + input 24 + two gaps below it).
-    pcall(cf.ClearAllPoints, cf)
-    pcall(cf.SetPoint, cf, "BOTTOMLEFT", leftPanel.box or leftPanel, "BOTTOMLEFT", 8, 6)
-    pcall(cf.SetSize, cf, w - 16, h - 54 - 12)
-    if cf.SetClampRectInsets then pcall(cf.SetClampRectInsets, cf, 0, 0, 0, 0) end
+    self:FitChatFrame()
     if FCF_SavePositionAndDimensions then pcall(FCF_SavePositionAndDimensions, cf) end
+    self:HookChatFrameSize(cf)
   end
   ParkChatButtons()
   PlaceDock()
   HookChat()
   pcall(self.StyleTabs, self)
-  for i = 1, (NUM_CHAT_WINDOWS or 10) do
+  pcall(PlaceCombatTab)
+  PSS:Soon("chat-redock", RedockLoose, 1)
+  for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local eb = G("ChatFrame" .. i .. "EditBox")
     if eb then
       -- Inside the input box between the chat and the info row.
@@ -922,10 +1540,10 @@ function LY:HookEditBox(eb)
   end
   local function update() pcall(LY.UpdateEditBoxes, LY) end
   for _, sc in ipairs({"OnShow", "OnHide", "OnEditFocusGained", "OnEditFocusLost"}) do
-    pcall(eb.HookScript, eb, sc, update)
+    pcall(PSS.HookScript, eb, sc, update)
   end
   if hooksecurefunc then
-    pcall(hooksecurefunc, eb, "SetAlpha", function(_, a)
+    pcall(PSS.HookSecure, eb, "SetAlpha", function(_, a)
       if ebBusy then return end
       local want = Typing(eb) and 1 or 0
       if a ~= want then ebBusy = true; pcall(eb.SetAlpha, eb, want); ebBusy = false end
@@ -937,15 +1555,58 @@ end
 -- Micro menu and bag buttons above the right info bar.
 -- Bags right above the info bar, micro menu above the bags (both right
 -- aligned), so they never overlap each other or the bar.
+-- The game moves the bag row / micro menu back to its own spot after some
+-- events (level up, new spells, Edit Mode). Their SetPoint is watched: when
+-- someone else moves them, ours is put back (after combat if needed).
+local placingMenus, menusHooked = false, false
+local function MenusMoved()
+  if placingMenus or not LY.applied.chat then return end
+  if InCombat() then LY.pendingMenus = true return end
+  PSS:Soon("place-menus", function() LY:PlaceMenus() end, 0.2)
+end
+local function HookMenus()
+  if menusHooked then return end
+  menusHooked = true
+  for _, n in ipairs({"BagsBar", "MicroMenuContainer"}) do
+    local f = G(n)
+    if f then
+      for _, m in ipairs({"SetPoint", "ClearAllPoints", "SetPointBase"}) do
+        if type(f[m]) == "function" then pcall(PSS.HookSecure, f, m, MenusMoved) end
+      end
+    end
+  end
+end
+
 function LY:PlaceMenus()
-  if not rightBar or InCombat() then return end
+  if not rightBar then return end
+  if InCombat() then self.pendingMenus = true return end
+  HookMenus()
+  placingMenus = true
+  local ok, err = pcall(self.DoPlaceMenus, self)
+  placingMenus = false
+  if not ok then self.menuError = tostring(err) end
+end
+
+function LY:DoPlaceMenus()
   pcall(self.SkinMenus, self)
   local bags = G("BagsBar") or G("MainMenuBarBackpackButton")
   local micro = G("MicroMenuContainer") or G("MicroMenu") or G("CharacterMicroButton")
   local below = rightBar
+  -- Screen position (UIParent) right above the info bar: the game's own bars
+  -- must not be anchored to addon frames (their layout runs in combat).
+  local k = (rightBar:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+  local barRight, barTop = rightBar:GetRight(), rightBar:GetTop()
+  if not (barRight and barTop) then
+    PSS:Soon("place-menus", function() LY:PlaceMenus() end, 1) -- not laid out yet
+    return
+  end
+  local nextTop = barTop * k + 4
   if bags then
     pcall(bags.ClearAllPoints, bags)
-    pcall(bags.SetPoint, bags, "BOTTOMRIGHT", rightBar, "TOPRIGHT", 0, 4)
+    pcall(bags.SetPoint, bags, "BOTTOMRIGHT", UIParent, "BOTTOMLEFT", barRight * k, nextTop)
+    local h = Plain(bags.GetHeight and bags:GetHeight())
+    local bk = (bags:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+    if type(h) == "number" then nextTop = nextTop + h * bk + 4 end
     below = bags
   end
   if micro then
@@ -954,7 +1615,11 @@ function LY:PlaceMenus()
       -- Classic: the first button leads a chain growing to the right.
       pcall(micro.SetPoint, micro, "BOTTOMLEFT", rightBar, "TOPLEFT", 0, (below ~= rightBar and 44 or 4))
     else
-      pcall(micro.SetPoint, micro, "BOTTOMRIGHT", below, "TOPRIGHT", 0, 4)
+      -- Modern micro menu: the game re-lays it out in combat (level up, new
+      -- spells). Anchored to our frames, that layout was blocked
+      -- (MicroMenuContainer:SetPointBase), so it gets a screen position on
+      -- UIParent instead, computed from the bag row / info bar.
+      pcall(micro.SetPoint, micro, "BOTTOMRIGHT", UIParent, "BOTTOMLEFT", barRight * k, nextTop)
     end
   end
 end
@@ -1043,12 +1708,25 @@ function LY:SkinMenus()
   for _, n in ipairs({"MicroMenuContainer", "BagsBar"}) do
     local f = G(n)
     if f and f.GetRegions then
-      if not menuSkinned[f] then BD(f, "panel", {-3, 3, 3, -3}); menuSkinned[f] = true end
-      local ours = {}
-      local bd = S.BackdropOf and S:BackdropOf(f)
-      if bd then for _, k in ipairs({"bg", "t", "b", "l", "r"}) do ours[bd[k]] = true end end
+      -- The strip is a separate frame behind the row. Nothing is created on the
+      -- game's frame itself: its Layout() runs in combat and would read our
+      -- textures, which makes the game block SetSize / SetPoint.
+      local strip = self.strips[n]
+      if not strip then
+        strip = CreateFrame("Frame", nil, UIParent)
+        strip:SetPoint("TOPLEFT", f, "TOPLEFT", -3, 3)
+        strip:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 3, -3)
+        BD(strip, "panel")
+        self.strips[n] = strip
+      end
+      pcall(strip.SetFrameStrata, strip, f:GetFrameStrata())
+      pcall(strip.SetFrameLevel, strip, math.max(0, (f:GetFrameLevel() or 1) - 1))
+      -- No backing in gamepad mode (GamepadTheme.lua) or when the bar is hidden.
+      local gp = PSS.GamepadTheme and PSS.GamepadTheme.active
+      local okV, vis = pcall(f.IsVisible, f)
+      strip:SetShown((not gp) and okV and vis and true or false)
       for _, r in ipairs({f:GetRegions()}) do
-        if r.GetObjectType and r:GetObjectType() == "Texture" and not ours[r] then S.Fade(r) end
+        if r.GetObjectType and r:GetObjectType() == "Texture" then S.Fade(r) end
       end
     end
   end
@@ -1057,6 +1735,22 @@ end
 local function TooltipAnchor(tt)
   if not (rightBar and LY.applied.chat) then return end
   pcall(tt.ClearAllPoints, tt)
+  -- Gamepad interface: under the pet's health bar (the player frame when
+  -- there is no pet), clear of the quest list at the right.
+  local GT = PSS.GamepadTheme
+  if GT and GT.Pad and GT.Pad() then
+    local f = (units.pet and units.pet:IsVisible() and units.pet) or (units.player and units.player:IsVisible() and units.player)
+    if f then
+      -- Smaller there, under the unit frames; normal size again when hidden.
+      pcall(tt.SetScale, tt, 0.8)
+      if not tt.pssScaleHook then
+        tt.pssScaleHook = true
+        tt:HookScript("OnHide", function(self) if self:GetScale() ~= 1 then pcall(self.SetScale, self, 1) end end)
+      end
+      pcall(tt.SetPoint, tt, "TOPLEFT", f, "BOTTOMLEFT", 0, -8 / 0.8)
+      return
+    end
+  end
   pcall(tt.SetPoint, tt, "BOTTOMRIGHT", rightBar, "TOPRIGHT", 0, 70)
 end
 
@@ -1078,15 +1772,15 @@ end
 
 local function BuildChatHooks()
   if type(GameTooltip_SetDefaultAnchor) == "function" then
-    hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tt) if LY.applied.chat then TooltipAnchor(tt) end end)
+    PSS.HookSecure("GameTooltip_SetDefaultAnchor", function(tt) if LY.applied.chat then TooltipAnchor(tt) end end)
   end
   if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
-    pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, function(tt) pcall(TooltipQuality, tt) end)
+    pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Item, PSS:Timed("item tooltip (theme)", function(tt) pcall(TooltipQuality, tt) end))
   elseif GameTooltip and GameTooltip.HookScript then
-    pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetItem", function(tt) pcall(TooltipQuality, tt) end)
+    pcall(PSS.HookScript, GameTooltip, "OnTooltipSetItem", function(tt) pcall(TooltipQuality, tt) end)
   end
   if GameTooltip and GameTooltip.HookScript then
-    GameTooltip:HookScript("OnTooltipCleared", function(tt)
+    PSS.HookScript(GameTooltip, "OnTooltipCleared", function(tt)
       local S = PSS.Skin
       local bd = S and S.BackdropOf and S:BackdropOf(tt)
       if bd and S.active then
@@ -1097,7 +1791,7 @@ local function BuildChatHooks()
   end
   for _, fn in ipairs({"MoveMicroButtons", "UpdateMicroButtonsParent", "UpdateMicroButtons"}) do
     if type(_G[fn]) == "function" then
-      hooksecurefunc(fn, function() if not InCombat() then pcall(LY.PlaceMenus, LY) end end)
+      PSS.HookSecure(fn, function() PSS:Soon("menus", function() if not InCombat() then pcall(LY.PlaceMenus, LY) end end) end)
     end
   end
 end
@@ -1216,7 +1910,7 @@ end
 -- our own). Map pins and the Blizzard tracking / mail buttons are not
 -- touched. More buttons than fit the minimap height wrap into a second
 -- column. Off (Settings > Interface): buttons follow the square edge.
-local BAR_BTN, BAR_GAP = 28, 3
+local BAR_BTN, BAR_GAP = 26, 4
 local barButtons = {}
 LY.barButtons = barButtons
 
@@ -1231,6 +1925,79 @@ local function IsAddonButton(c, lib)
   if name:find("^LibDBIcon") then return true end
   return name:find("[Mm]inimap") ~= nil and (name:find("[Bb]utton") ~= nil or name:find("Icon") ~= nil)
     and not name:find("^MiniMap") and not name:find("^Minimap")
+end
+
+-- One look for every addon button in the bar: round frames and dark discs
+-- hidden (by name, or as art larger than the button itself), the icon fills
+-- a flat square with a thin edge. Done once per button.
+local barSkinned = setmetatable({}, {__mode = "k"})
+local BAR_ART = {"border", "background", "ring", "backdrop", "trackingborder"}
+local function TexName(r)
+  local okA, atlas = pcall(r.GetAtlas, r)
+  local okP, path = pcall(r.GetTextureFilePath or r.GetTexture, r)
+  return ((okA and type(atlas) == "string" and atlas or "") .. " " .. (okP and type(path) == "string" and path or "")):lower()
+end
+local function SkinBarButton(b)
+  if barSkinned[b] or not b.GetRegions then return end
+  barSkinned[b] = true
+  local bw = Plain(Call(b.GetWidth, b)) or 31
+  local icon, area
+  for _, r in ipairs({b:GetRegions()}) do
+    local okT, kind = pcall(r.GetObjectType, r)
+    if okT and kind == "Texture" then
+      local okL, layer = pcall(r.GetDrawLayer, r)
+      local name = TexName(r)
+      local w, h = Plain(Call(r.GetWidth, r)) or 0, Plain(Call(r.GetHeight, r)) or 0
+      local art = w > bw * 1.3
+      for _, k in ipairs(BAR_ART) do if name:find(k, 1, true) then art = true end end
+      if layer ~= "HIGHLIGHT" then
+        if art then
+          pcall(r.SetAlpha, r, 0)
+          pcall(PSS.HookSecure, r, "SetAlpha", function(t, a) if a ~= 0 then t:SetAlpha(0) end end)
+        elseif w * h > (area or 0) then
+          icon, area = r, w * h
+        end
+      end
+    end
+  end
+  -- The button's own icon field when it has one (LibDBIcon: .icon), else the
+  -- largest picture. Kept for FitBarIcon, which runs on every arrange.
+  local own = rawget(b, "icon") or rawget(b, "Icon")
+  if type(own) == "table" and own.GetObjectType and own:GetObjectType() == "Texture" then icon = own end
+  b.pssIcon = icon
+  local edge = b:CreateTexture(nil, "BACKGROUND", nil, -8)
+  edge:SetTexture("Interface/Buttons/WHITE8X8"); edge:SetAllPoints(b)
+  edge:SetVertexColor(0.55, 0.47, 0.3, 0.9)
+  local bg = b:CreateTexture(nil, "BACKGROUND", nil, -7)
+  bg:SetTexture("Interface/Buttons/WHITE8X8")
+  bg:SetPoint("TOPLEFT", b, "TOPLEFT", 1, -1); bg:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+  bg:SetVertexColor(0.06, 0.07, 0.06, 1)
+  local hl = b.GetHighlightTexture and b:GetHighlightTexture()
+  if hl then
+    pcall(hl.ClearAllPoints, hl); pcall(hl.SetAllPoints, hl, b)
+    pcall(hl.SetTexture, hl, "Interface/Buttons/WHITE8X8"); pcall(hl.SetVertexColor, hl, 1, 1, 1, 0.15)
+  end
+end
+
+-- Icon filling the square the same way on every button. Run on every arrange
+-- and whenever the addon moves or resizes its icon again (sizes differed:
+-- some addons set their icon to 18 px after our pass).
+local fitting = false
+local function FitBarIcon(b)
+  local icon = b.pssIcon
+  if not icon or fitting then return end
+  fitting = true
+  pcall(icon.ClearAllPoints, icon)
+  pcall(icon.SetPoint, icon, "TOPLEFT", b, "TOPLEFT", 3, -3)
+  pcall(icon.SetPoint, icon, "BOTTOMRIGHT", b, "BOTTOMRIGHT", -3, 3)
+  pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+  fitting = false
+  if not b.pssIconHooked then
+    b.pssIconHooked = true
+    local function again() if not fitting and barButtons[b] then FitBarIcon(b) end end
+    pcall(PSS.HookSecure, icon, "SetSize", again)
+    pcall(PSS.HookSecure, icon, "SetPoint", again)
+  end
 end
 
 function LY:ButtonBar()
@@ -1258,19 +2025,45 @@ function LY:ArrangeButtonBar()
     end
   end
   table.sort(list, function(a, b) return (a:GetName() or "") < (b:GetName() or "") end)
-  local perCol = math.max(1, math.floor((self:MinimapSize() + BAR_GAP) / (BAR_BTN + BAR_GAP)))
+  -- One column the height of the minimap: when there are more buttons than
+  -- fit, they get smaller (down to 20 px) before a second column is started
+  -- (a lone button in a half-empty second column looked broken).
+  local H = self:MinimapSize()
+  local size = BAR_BTN
+  if #list > 0 and #list * (BAR_BTN + BAR_GAP) - BAR_GAP > H then
+    size = math.max(20, math.floor((H + BAR_GAP) / #list) - BAR_GAP)
+  end
+  local perCol = math.max(1, math.floor((H + BAR_GAP) / (size + BAR_GAP)))
   local cols = math.max(1, math.ceil(#list / perCol))
+  -- Columns filled evenly.
+  perCol = math.max(1, math.ceil(#list / cols))
   for i, b in ipairs(list) do
     local col, row = math.floor((i - 1) / perCol), (i - 1) % perCol
     if b:GetParent() ~= bar then pcall(b.SetParent, b, bar) end
+    pcall(SkinBarButton, b)
+    barButtons[b] = true
+    pcall(FitBarIcon, b)
+    -- Same size for all: square, from the button's own size.
+    local bw, bh = Plain(b:GetWidth()) or BAR_BTN, Plain(b:GetHeight()) or BAR_BTN
+    if bw ~= bh then pcall(b.SetHeight, b, bw) end
+    local sc = size / math.max(20, bw)
+    pcall(b.SetScale, b, sc)
+    -- Offsets of a scaled frame are in its own scale: divide, so the buttons
+    -- sit edge to edge with the bar and leave no empty space.
     pcall(b.ClearAllPoints, b)
-    pcall(b.SetPoint, b, "TOPRIGHT", bar, "TOPRIGHT", -col * (BAR_BTN + BAR_GAP), -row * (BAR_BTN + BAR_GAP))
-    pcall(b.SetScale, b, BAR_BTN / math.max(20, Plain(b:GetWidth()) or BAR_BTN))
+    pcall(b.SetPoint, b, "TOPRIGHT", bar, "TOPRIGHT", -col * (size + BAR_GAP) / sc, -row * (size + BAR_GAP) / sc)
+    if not b.pssBarHooked and b.HookScript then
+      -- A button shown or hidden later (an addon added, an icon toggled): re-pack.
+      b.pssBarHooked = true
+      local function again() if C_Timer then C_Timer.After(0.1, function() pcall(LY.ArrangeButtonBar, LY) end) end end
+      pcall(PSS.HookScript, b, "OnShow", again)
+      pcall(PSS.HookScript, b, "OnHide", again)
+    end
     barButtons[b] = true
   end
   if not self:Saved("buttons") then bar:ClearAllPoints() end
   if not self:Saved("buttons") then bar:SetPoint("TOPRIGHT", mmHolder, "TOPLEFT", -8, 0) end
-  bar:SetSize(cols * (BAR_BTN + BAR_GAP) - BAR_GAP, math.min(#list, perCol) * (BAR_BTN + BAR_GAP) - BAR_GAP)
+  bar:SetSize(cols * (size + BAR_GAP) - BAR_GAP, math.min(#list, perCol) * (size + BAR_GAP) - BAR_GAP)
   if #list > 0 then bar:Show() else bar:Hide() end
 end
 
@@ -1322,9 +2115,19 @@ function LY:PlaceMinimap()
   pcall(mm.SetPoint, mm, "CENTER", mmHolder, "CENTER", 0, 0)
   local size = self:MinimapSize()
   pcall(mmHolder.SetSize, mmHolder, size, size)
+  if self.movables and self.movables.minimap and self:Saved("minimap") then self:ApplyPosition("minimap") end
   pcall(mm.SetSize, mm, size, size)
   if zoneText then pcall(zoneText.SetWidth, zoneText, size - 10) end
   if mm.SetMaskTexture then pcall(mm.SetMaskTexture, mm, FLAT) end
+  -- The rings around quest / archaeology / task areas are drawn for a round
+  -- minimap; with the square mask they show as a stray oval. Hide only the
+  -- rings, the areas themselves stay.
+  for _, m in ipairs({"SetQuestBlobRingScalar", "SetArchBlobRingScalar", "SetTaskBlobRingScalar"}) do
+    if type(mm[m]) == "function" then pcall(mm[m], mm, 0) end
+  end
+  for _, m in ipairs({"SetQuestBlobRingAlpha", "SetArchBlobRingAlpha", "SetTaskBlobRingAlpha"}) do
+    if type(mm[m]) == "function" then pcall(mm[m], mm, 0) end
+  end
   -- The map picture keeps its old size until the zoom changes: nudge it.
   local function nudge()
     local z = Plain(Call(mm.GetZoom, mm)) or 0
@@ -1342,7 +2145,7 @@ local MM_KEEP = {
   {{"Tracking"}, {"MiniMapTrackingFrame", "MiniMapTracking", "MiniMapTrackingButton"}, "TOPLEFT", 2, -2},
   {{"IndicatorFrame"}, {"MiniMapMailFrame"}, "TOPRIGHT", -2, -2},
   {{"InstanceDifficulty"}, {"MiniMapInstanceDifficulty"}, "BOTTOMLEFT", 2, 2},
-  {{}, {"MiniMapBattlefieldFrame", "QueueStatusButton", "QueueStatusMinimapButton"}, "BOTTOMRIGHT", -2, 2},
+  {{}, {"MiniMapBattlefieldFrame"}, "BOTTOMRIGHT", -2, 2}, -- the group finder eye: PlaceEye
 }
 
 local function BuildMinimap()
@@ -1383,7 +2186,7 @@ local function BuildMinimap()
   end
   -- Blizzard re-lays out the cluster (edit mode, header option): put it back.
   if mc and type(mc.Layout) == "function" then
-    hooksecurefunc(mc, "Layout", function() if not InCombat() then pcall(LY.PlaceMinimap, LY) end end)
+    PSS.HookSecure(mc, "Layout", function() PSS:Soon("minimap", function() if not InCombat() then pcall(LY.PlaceMinimap, LY) end end) end)
   end
   if C_Timer and C_Timer.After then
     C_Timer.After(1, function() pcall(LY.RefreshMinimapButtons, LY) end)
@@ -1391,15 +2194,36 @@ local function BuildMinimap()
   end
   LY:RefreshMinimapButtons()
   local tick = 0
+  -- Group finder eye: small, inside the bottom left corner at any map size.
+  local function PlaceEye()
+    if InCombat() then return end
+    for _, n in ipairs({"QueueStatusButton", "QueueStatusMinimapButton", "MiniMapLFGFrame", "LFGMinimapFrame"}) do
+      local eye = G(n)
+      if eye then
+        if eye.GetScale and math.abs((eye:GetScale() or 1) - LY.EYE_SCALE) > 0.01 then pcall(eye.SetScale, eye, LY.EYE_SCALE) end
+        local p, rel = eye:GetPoint(1)
+        if p ~= "BOTTOMLEFT" or rel ~= mm then
+          pcall(eye.ClearAllPoints, eye)
+          pcall(eye.SetPoint, eye, "BOTTOMLEFT", mm, "BOTTOMLEFT", 2 / LY.EYE_SCALE, 2 / LY.EYE_SCALE)
+        end
+        if eye.SetFrameLevel and mm.GetFrameLevel then pcall(eye.SetFrameLevel, eye, mm:GetFrameLevel() + 20) end
+      end
+    end
+  end
+  LY.EYE_SCALE = 0.55
+  LY.PlaceEye = PlaceEye
   mmHolder:SetScript("OnUpdate", function(_, e)
+    pcall(PlaceEye)
     tick = tick + (e or 0)
-    if tick < 2 then return end
+    if tick < 4 then return end -- new addon buttons join the bar within seconds
     tick = 0
     pcall(LY.SquareMinimapButtons, LY)
   end)
+  mmHolder.pssKey = "minimap buttons"
+  PSS:Every(mmHolder, 2)
   if mm.EnableMouseWheel then
     mm:EnableMouseWheel(true)
-    mm:HookScript("OnMouseWheel", function(self, delta)
+    PSS.HookScript(mm, "OnMouseWheel", function(self, delta)
       local z = Plain(Call(self.GetZoom, self)) or 0
       local levels = Plain(Call(self.GetZoomLevels, self)) or 5
       if delta > 0 then z = math.min(levels - 1, z + 1) else z = math.max(0, z - 1) end
@@ -1506,6 +2330,82 @@ local function ApplyFonts()
     end
   end
   LY.fontsChanged = n
+  LY:ChatFonts()
+end
+
+-- Noto Sans looks bigger than the game's Friz Quadrata at the same size, so the
+-- chat windows get a slightly smaller size. The size picked in the game (chat tab
+-- menu > Font Size) stays the base; only what is drawn is scaled.
+local CHAT_FONT_SCALE = 0.72
+LY.CHAT_FONT_SCALE = CHAT_FONT_SCALE
+function LY:ChatFontSize(base)
+  base = tonumber(base) or 14
+  return math.max(8, math.floor(base * CHAT_FONT_SCALE + 0.5))
+end
+local chatFontHooked = false
+local chatFontBusy = false
+local chatFontFrames = setmetatable({}, {__mode = "k"})
+-- The game puts the saved chat font back a moment after login (and when the
+-- chat windows update); then the size looked wrong until it was picked again
+-- in the menu. Any font change on a chat window now re-applies ours.
+local function ChatFontAgain()
+  if chatFontBusy then return end
+  PSS:Soon("chatfonts", function() LY:ChatFonts() end, 0.1)
+end
+function LY:ChatFonts()
+  if not self.applied.fonts or InCombat() then return end
+  chatFontBusy = true
+  for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
+    local cf = _G["ChatFrame" .. i]
+    if cf and cf.SetFont then
+      local base
+      if FCF_GetChatWindowInfo then
+        local ok, _, size = pcall(FCF_GetChatWindowInfo, i)
+        if ok then base = size end
+      end
+      if (type(base) ~= "number" or base <= 0) and GetChatWindowInfo then
+        local ok, _, size = pcall(GetChatWindowInfo, i)
+        if ok then base = size end
+      end
+      if type(base) ~= "number" or base <= 0 then
+        -- Last resort: the current size, unless it is the one we drew
+        -- (scaling it again would shrink the text every time).
+        local ok, _, size = pcall(cf.GetFont, cf)
+        if ok and type(size) == "number" and cf.pssDrawn and math.abs(size - cf.pssDrawn) < 0.5 then
+          base = cf.pssBase or 14
+        else
+          base = ok and size or 14
+        end
+      end
+      cf.pssBase, cf.pssDrawn = base, self:ChatFontSize(base)
+      local _, _, flags = cf:GetFont()
+      pcall(cf.SetFont, cf, FONT, self:ChatFontSize(base), flags or "")
+      if not chatFontFrames[cf] then
+        chatFontFrames[cf] = true
+        for _, m in ipairs({"SetFont", "SetFontObject"}) do
+          if type(cf[m]) == "function" then pcall(PSS.HookSecure, cf, m, ChatFontAgain) end
+        end
+      end
+    end
+  end
+  chatFontBusy = false
+  if not self.chatFontEvents and CreateFrame then
+    local f = CreateFrame("Frame")
+    for _, e in ipairs({"UPDATE_CHAT_WINDOWS", "UPDATE_FLOATING_CHAT_WINDOWS", "PLAYER_ENTERING_WORLD"}) do
+      pcall(f.RegisterEvent, f, e)
+    end
+    f:SetScript("OnEvent", function()
+      PSS:Soon("chatfonts", function() LY:ChatFonts() end, 0.5)
+      if C_Timer and C_Timer.After then C_Timer.After(3, function() LY:ChatFonts() end) end
+    end)
+    self.chatFontEvents = f
+  end
+  if not chatFontHooked and hooksecurefunc and type(FCF_SetChatWindowFontSize) == "function" then
+    chatFontHooked = true
+    PSS.HookSecure("FCF_SetChatWindowFontSize", function()
+      if C_Timer and C_Timer.After then C_Timer.After(0, function() LY:ChatFonts() end) else LY:ChatFonts() end
+    end)
+  end
 end
 
 ---------------------------------------------------------------------------
@@ -1552,7 +2452,7 @@ function LY:Apply()
   end
   if self.applied.minimap then
     if G("PetSkillScoutMinimapHolder") then self:Movable("minimap", G("PetSkillScoutMinimapHolder"), "slot_minimap") end
-    if self.bar then self:Movable("buttons", self.bar, "slot_buttons") end
+    if self.bar and DB().mmButtonsFree then self:Movable("buttons", self.bar, "slot_buttons") end
   end
   if PSS.ShotTimer and PSS.ShotTimer:Enabled() then self:Movable("shot", PSS.ShotTimer:Build(), "slot_shot") end
   pcall(self.ApplyPositions, self)
@@ -1599,6 +2499,8 @@ LY.movables = {}
 local movers = {}
 
 function LY:Saved(key)
+  -- Addon buttons stick to the minimap (move with it) unless set free.
+  if key == "buttons" and not (PetSkillScoutDB and PetSkillScoutDB.mmButtonsFree) then return nil end
   local t = PetSkillScoutDB and PetSkillScoutDB.layoutPos
   return t and t[key]
 end
@@ -1611,6 +2513,40 @@ function LY:Movable(key, frame, label)
   for i = 1, (frame.GetNumPoints and frame:GetNumPoints() or 0) do pts[i] = {frame:GetPoint(i)} end
   self.movables[key] = {key = key, frame = frame, label = label, default = pts}
   if self:Saved(key) and not InCombat() then self:ApplyPosition(key) end
+  if not InCombat() then self:ApplyScale(key) end
+end
+
+-- Size of a movable part (Settings sliders): DB.layoutScale[key], 0.5-2.
+function LY:ApplyScale(key)
+  local m = self.movables[key]
+  if not m or InCombat() then return end
+  local t = DB().layoutScale
+  local v = t and tonumber(t[key]) or 1
+  if v < 0.5 or v > 2 then v = 1 end
+  -- The minimap is sized by pixels (skinMinimapSize): scaling it would
+  -- magnify the map picture and every pin, so it always stays at 1.
+  if key == "minimap" then v = 1 end
+  if m.frame.SetScale and math.abs((m.frame:GetScale() or 1) - v) > 0.001 then
+    -- SetScale also scales the frame's anchor offsets: keep its centre where
+    -- it was (the frame flew across the screen while the slider moved).
+    local cx, cy = m.frame:GetCenter()
+    local old = m.frame:GetEffectiveScale() or 1
+    pcall(m.frame.SetScale, m.frame, v)
+    if self:Saved(key) then
+      self:ApplyPosition(key)
+    elseif cx and cy then
+      local ns = m.frame:GetEffectiveScale() or 1
+      m.frame:ClearAllPoints()
+      m.frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cx * old / ns, cy * old / ns)
+      local ui = UIParent:GetEffectiveScale() or 1
+      PetSkillScoutDB = PetSkillScoutDB or {}
+      PetSkillScoutDB.layoutPos = PetSkillScoutDB.layoutPos or {}
+      PetSkillScoutDB.layoutPos[key] = {x = cx * old / ui, y = cy * old / ui}
+    end
+  end
+end
+function LY:ApplyScales()
+  for key in pairs(self.movables) do self:ApplyScale(key) end
 end
 
 function LY:ApplyPosition(key)
@@ -1784,7 +2720,8 @@ end
 LY.frame:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_REGEN_ENABLED" then
     if LY.pending then pcall(LY.Apply, LY) end
-    if LY.pendingLayout then LY.pendingLayout = false; pcall(LY.LayoutBars, LY); PlaceCastBar() end
+    if LY.pendingLayout then LY.pendingLayout = false; pcall(LY.LayoutBars, LY); PlaceCastBar(); pcall(LY.FitChatFrame, LY) end
+    if LY.pendingMenus then LY.pendingMenus = false; pcall(LY.PlaceMenus, LY) end
   elseif event == "UPDATE_CHAT_WINDOWS" then
     if LY.applied.chat then pcall(LY.PlaceChat, LY) end
   else

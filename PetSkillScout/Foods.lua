@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Pet food: item ID -> {food type, item level}. Types: 1 meat, 2 fish, 3 cheese, 4 bread,
 -- 5 fungus, 6 fruit. Source: AzerothCore item_template (FoodType, ItemLevel), classic items.
 local PSS = PetSkillScout

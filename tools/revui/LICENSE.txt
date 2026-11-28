@@ -1,0 +1,10 @@
+RevUI
+Copyright (c) 2026 DarthRev1. All rights reserved.
+
+You may download and use this addon for personal play. Redistribution,
+modification for redistribution, or reuse of its code or assets in other
+projects requires written permission from the author.
+
+Included third-party material:
+- Fonts/NotoSans-Regular.ttf - SIL Open Font License 1.1 (Fonts/FONT-LICENSE.txt).
+- BossDB.lua - boss list generated from AllTheThings (MIT, ATT-LICENSE.txt).

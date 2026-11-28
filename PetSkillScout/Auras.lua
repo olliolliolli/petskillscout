@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Buffs and debuffs in the interface theme (part of the "units" layout).
 --   * Player: the Blizzard buff and debuff frames are kept (right-click to
 --     cancel a buff stays a Blizzard action) but moved above the player
@@ -62,17 +63,23 @@ function A:StyleButton(b, debuff)
   local icon = F(b, "Icon") or F(b, "icon") or (name and G(name .. "Icon"))
   -- Modern aura buttons are taller than wide (room for the duration), so
   -- the icon gets its own square box at the top of the button.
-  if not b.pssSide then
-    local side = icon and icon.GetWidth and Plain(icon:GetWidth()) or 0
-    if type(side) ~= "number" or side < 8 then side = Plain(b:GetWidth()) or 30 end
-    b.pssSide = side
-  end
+  -- Player buffs: big squares, the time written on the icon.
+  b.pssSide = 40
   local side = b.pssSide
+  if not InCombat() then pcall(b.SetSize, b, side, side) end
+  -- The aura container sets the stock size again on every layout: kept.
+  if not b.pssSizeHook and hooksecurefunc then
+    b.pssSizeHook = true
+    local busy = false
+    pcall(PSS.HookSecure, b, "SetSize", function(self, w, h)
+      if busy or not self.pssSide or (w == self.pssSide and h == self.pssSide) or InCombat() then return end
+      busy = true; pcall(self.SetSize, self, self.pssSide, self.pssSide); busy = false
+    end)
+  end
   local box = b.pssBox
   if not box and not InCombat() then
     box = CreateFrame("Frame", nil, b)
-    box:SetSize(side, side)
-    box:SetPoint("TOP", b, "TOP", 0, 0)
+    box:SetPoint("TOPLEFT"); box:SetPoint("BOTTOMRIGHT")
     box:SetFrameLevel(b:GetFrameLevel())
     b.pssBox = box
   end
@@ -103,18 +110,20 @@ function A:StyleButton(b, debuff)
   if debuff then EdgeColour(bd, typeColour or DEBUFF_COLOURS.none) else EdgeColour(bd, Col("edge")) end
   local dur = F(b, "Duration") or (name and G(name .. "Duration"))
   if dur then
-    Font(dur, 9)
+    Font(dur, 12)
+    pcall(dur.SetDrawLayer, dur, "OVERLAY", 7)
+    if dur.GetParent and box and dur:GetParent() ~= box then pcall(dur.SetParent, dur, box) end
     if not InCombat() then
       pcall(dur.ClearAllPoints, dur)
-      pcall(dur.SetPoint, dur, "TOP", box or b, "BOTTOM", 0, -1)
+      pcall(dur.SetPoint, dur, "BOTTOM", box or b, "BOTTOM", 0, 2)
     end
   end
   local count = F(b, "Count") or (name and G(name .. "Count"))
   if count then
-    Font(count, 10)
+    Font(count, 12)
     if not InCombat() then
       pcall(count.ClearAllPoints, count)
-      pcall(count.SetPoint, count, "BOTTOMRIGHT", box or b, "BOTTOMRIGHT", -1, 2)
+      pcall(count.SetPoint, count, "TOPRIGHT", box or b, "TOPRIGHT", -1, -1)
     end
   end
   styled[b] = true
@@ -157,7 +166,7 @@ end
 -- rows grow upwards; debuffs start above the last buff row. Blizzard lays
 -- the buttons out top-down, so after each of its updates the shown buttons
 -- are re-anchored in Blizzard's order (layoutIndex, else screen position).
-local PER_ROW_PLAYER = 8
+local PER_ROW_PLAYER = 6
 
 local function Shown(b) return b and b.IsShown and b:IsShown() end
 
@@ -198,10 +207,19 @@ local function Stack(list, anchor, baseY)
     local ratio = ascale / scale -- anchor pixels -> button units
     local side = b.pssSide or Plain(b:GetWidth()) or 30
     local h = Plain(b:GetHeight()) or side
-    local step, rowH = side + 4, math.max(h, side + 12) + 2
+    -- Side by side, no gaps; rows straight on top of each other.
+    local step, rowH = side, side
     local col, row = (k - 1) % PER_ROW_PLAYER, math.floor((k - 1) / PER_ROW_PLAYER)
-    pcall(b.ClearAllPoints, b)
-    pcall(b.SetPoint, b, "BOTTOMRIGHT", anchor, "TOPRIGHT", -col * step, baseY * ratio + row * rowH)
+    -- Only move a button that is not already there: every move makes the
+    -- aura container lay itself out again, which calls our hook again.
+    local x, y = -col * step, baseY * ratio + row * rowH
+    local p, rel, rp, ox, oy = b:GetPoint(1)
+    local n = b.GetNumPoints and b:GetNumPoints() or 1
+    if not (n == 1 and p == "BOTTOMRIGHT" and rel == anchor and rp == "TOPRIGHT" and type(ox) == "number"
+        and type(oy) == "number" and math.abs(ox - x) < 0.5 and math.abs(oy - y) < 0.5) then
+      pcall(b.ClearAllPoints, b)
+      pcall(b.SetPoint, b, "BOTTOMRIGHT", anchor, "TOPRIGHT", x, y)
+    end
     used = math.max(used, (row + 1) * rowH / ratio)
   end
   return used
@@ -213,10 +231,15 @@ function A:Arrange()
   local player = LY and LY.units and LY.units.player
   if not player then return end
   -- Leave room for the XP bar when it sits on top of the player frame.
-  local xpShown = LY.xpBar and LY.xpBar:IsShown() and (LY.xpOffset or 0) or 0
-  local base = 6 + xpShown
-  local used = Stack(Collect(G("BuffFrame"), "BuffButton"), player, base)
-  Stack(Collect(G("DebuffFrame"), "DebuffButton"), player, base + used + (used > 0 and 4 or 0))
+  -- The first row stands right on top of the XP bar (anchored to the bar
+  -- itself), right aligned; debuffs above the buffs.
+  local xp = LY.xpBar
+  local anchor = (xp and xp:IsShown() and xp:IsVisible()) and xp or player
+  -- Buffs and debuffs (the Ghost / spirit one too) in the same rows, all
+  -- the same size: debuffs continue to the left of the buffs.
+  local list = Collect(G("BuffFrame"), "BuffButton")
+  for _, d in ipairs(Collect(G("DebuffFrame"), "DebuffButton")) do list[#list + 1] = d end
+  Stack(list, anchor, 0)
 end
 
 -- Above the player frame: buffs, then debuffs; right aligned with it.
@@ -250,7 +273,9 @@ end
 ---------------------------------------------------------------------------
 -- Target: own aura row
 ---------------------------------------------------------------------------
-local ICON, GAP, PER_ROW = 24, 3, 9
+-- Same look as your own buffs: bigger squares, the time written on the icon
+-- (the clock's own numbers ran into each other at 24 px: "25m27m").
+local ICON, GAP, PER_ROW = 32, 3, 7
 local row, icons = nil, {}
 
 local function AuraAt(unit, i, filter)
@@ -278,12 +303,18 @@ local function NewIcon(i)
   if ok and cd then
     cd:SetAllPoints(b.icon)
     if cd.SetDrawEdge then pcall(cd.SetDrawEdge, cd, false) end
-    if cd.SetHideCountdownNumbers then pcall(cd.SetHideCountdownNumbers, cd, false) end
+    if cd.SetHideCountdownNumbers then pcall(cd.SetHideCountdownNumbers, cd, true) end
     b.cd = cd
   end
-  b.count = b:CreateFontString(nil, "OVERLAY")
-  Font(b.count, 10)
-  b.count:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+  -- Texts above the clock's swipe.
+  b.top = CreateFrame("Frame", nil, b)
+  b.top:SetAllPoints(); b.top:SetFrameLevel((b.cd and b.cd:GetFrameLevel() or b:GetFrameLevel()) + 2)
+  b.count = b.top:CreateFontString(nil, "OVERLAY")
+  Font(b.count, 12)
+  b.count:SetPoint("TOPRIGHT", b, "TOPRIGHT", -1, -1)
+  b.dur = b.top:CreateFontString(nil, "OVERLAY")
+  Font(b.dur, 11)
+  b.dur:SetPoint("BOTTOM", b, "BOTTOM", 0, 2)
   local S = Skin()
   if S then
     b.bd = S:Backdrop(b, "slot", {0, 0, 0, 0}, "OVERLAY")
@@ -307,10 +338,19 @@ local function NewIcon(i)
   return b
 end
 
+local function TimeText(left)
+  if left >= 3600 then return string.format("%dh", math.floor(left / 3600 + 0.5)) end
+  if left >= 60 then return string.format("%dm", math.floor(left / 60 + 0.5)) end
+  return string.format("%d", math.floor(left + 0.5))
+end
 local function SetCooldown(b, duration, expires, auraID)
+  b.expires = nil
+  if b.dur then b.dur:SetText("") end
   if not b.cd then return end
   local d, e = Plain(duration), Plain(expires)
+  if b.cd.SetHideCountdownNumbers then pcall(b.cd.SetHideCountdownNumbers, b.cd, true) end
   if type(d) == "number" and type(e) == "number" and d > 0 then
+    b.expires = e
     pcall(b.cd.SetCooldown, b.cd, e - d, d)
     b.cd:Show()
     return
@@ -318,7 +358,11 @@ local function SetCooldown(b, duration, expires, auraID)
   -- Secret values: the client can drive the swipe itself.
   if auraID and C_UnitAuras and C_UnitAuras.GetAuraDuration and b.cd.SetCooldownFromDurationObject then
     local obj = Call(C_UnitAuras.GetAuraDuration, "target", auraID)
-    if obj and pcall(b.cd.SetCooldownFromDurationObject, b.cd, obj) then b.cd:Show(); return end
+    if obj and pcall(b.cd.SetCooldownFromDurationObject, b.cd, obj) then
+      -- Time unknown to us (secret): the clock writes it itself.
+      if b.cd.SetHideCountdownNumbers then pcall(b.cd.SetHideCountdownNumbers, b.cd, false) end
+      b.cd:Show(); return
+    end
   end
   if b.cd.Clear then pcall(b.cd.Clear, b.cd) end
   b.cd:Hide()
@@ -374,7 +418,7 @@ function A:PlaceTargetRow()
   if badge and badge:IsShown() then
     row:SetPoint("BOTTOMRIGHT", badge, "TOPRIGHT", 0, 4)
   else
-    row:SetPoint("BOTTOMRIGHT", target, "TOPRIGHT", 0, 20)
+    row:SetPoint("BOTTOMRIGHT", target, "TOPRIGHT", 0, 3) -- right on the health bar (no XP bar on a target)
   end
 end
 
@@ -383,6 +427,20 @@ local function BuildTargetRow()
   local target = LY and LY.units and LY.units.target
   if not target or row then return end
   row = CreateFrame("Frame", "PetSkillScoutTargetAuras", target)
+  -- Times on the icons, 5 times a second, only while the row is shown.
+  local t = 0
+  row:SetScript("OnUpdate", function(_, e)
+    t = t + (e or 0)
+    if t < 0.2 then return end
+    t = 0
+    local now = GetTime()
+    for _, b in ipairs(icons) do
+      if b:IsShown() and b.expires and b.dur then
+        local left = b.expires - now
+        b.dur:SetText(left > 0 and TimeText(left) or "")
+      end
+    end
+  end)
   row:SetSize(PER_ROW * (ICON + GAP) - GAP, ICON * 2 + GAP)
   A.row, A.icons = row, icons
 end
@@ -399,24 +457,24 @@ function A:Apply()
   self:Arrange()
   if not hooked and hooksecurefunc then
     hooked = true
-    local function restyle() pcall(A.StyleAll, A); pcall(A.Arrange, A) end
+    local function restyle() PSS:Soon("auras", function() pcall(A.StyleAll, A); pcall(A.Arrange, A) end) end
     for _, n in ipairs({"BuffFrame", "DebuffFrame"}) do
       local f = G(n)
       if f then
         for _, m in ipairs({"UpdateAuraButtons", "Update", "UpdateGridLayout"}) do
-          if type(f[m]) == "function" then pcall(hooksecurefunc, f, m, restyle) end
+          if type(f[m]) == "function" then pcall(PSS.HookSecure, f, m, restyle) end
         end
         -- The modern container lays itself out on its own (dirty flag).
         local c = F(f, "AuraContainer")
         if c then
           for _, m in ipairs({"Layout", "UpdateGridLayout"}) do
-            if type(c[m]) == "function" then pcall(hooksecurefunc, c, m, restyle) end
+            if type(c[m]) == "function" then pcall(PSS.HookSecure, c, m, restyle) end
           end
         end
       end
     end
     for _, fn in ipairs({"BuffFrame_Update", "AuraButton_Update", "BuffFrame_UpdateAllBuffAnchors"}) do
-      if type(_G[fn]) == "function" then hooksecurefunc(fn, restyle) end
+      if type(_G[fn]) == "function" then PSS.HookSecure(fn, restyle) end
     end
     if EventRegistry and EventRegistry.RegisterCallback then
       pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Exit", function() pcall(A.Place, A) end, A)
@@ -432,7 +490,7 @@ end
 A.frame:SetScript("OnEvent", function(_, event, unit)
   if not A.on then return end
   if event == "PLAYER_REGEN_ENABLED" then
-    pcall(A.Place, A); pcall(A.StyleAll, A); pcall(A.Arrange, A)
+    PSS:Soon("auras-regen", function() pcall(A.Place, A); pcall(A.StyleAll, A); pcall(A.Arrange, A) end, 0.5)
   elseif event == "PLAYER_TARGET_CHANGED" or unit == "target" then
     pcall(A.UpdateTarget, A)
   elseif unit == "player" then

@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: RevUI
+## Notes: Flat dark theme for the whole WoW: Forever interface: unit frames, bars, chat, minimap, nameplates, bags and game windows.
+## Author: DarthRev1
+## Version: @VERSION@
+## SavedVariables: RevUIDB
+## IconTexture: Interface\AddOns\RevUI\icon

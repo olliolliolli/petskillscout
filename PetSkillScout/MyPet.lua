@@ -1,3 +1,4 @@
+-- Copyright (c) 2025-2026 DarthRev1. All rights reserved. See LICENSE.txt.
 -- Active hunter pet inspection. Uses the pet spellbook; never guesses missing ranks.
 local PSS = PetSkillScout
 PSS.MyPet = { spells = {} }
@@ -107,6 +108,30 @@ function M:Scan()
     seen[id]=spell
     table.insert(self.spells,spell)
   end
+  -- Forever has the modern spellbook API only (C_SpellBook, pet bank = 1);
+  -- the old globals GetSpellName / GetSpellBookItemName do not exist there,
+  -- so without this the pet's book was never read.
+  local CSB=C_SpellBook
+  if CSB and CSB.GetSpellBookItemName then
+    local bank=(Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet) or 1
+    local n=safe(CSB.HasPetSpells)
+    n=(type(n)=='number' and n>0) and math.min(n,200) or 40
+    for index=1,n do
+      local nm,sub=safe(CSB.GetSpellBookItemName,index,bank)
+      if type(nm)=='string' and nm~='' then
+        local rank=parseRank(sub)
+        local info=CSB.GetSpellBookItemInfo and safe(CSB.GetSpellBookItemInfo,index,bank)
+        local sid=type(info)=='table' and (info.spellID or info.actionID) or nil
+        local mapped=type(sid)=='number' and PET_SPELL_RANKS[sid] or nil
+        if mapped then nm=mapped.name; rank=mapped.rank or rank end
+        if not rank and type(sid)=='number' then
+          local _,s2=safe(GetSpellInfo,sid); rank=parseRank(s2)
+          if not rank and C_Spell and C_Spell.GetSpellSubtext then rank=parseRank(safe(C_Spell.GetSpellSubtext,sid)) end
+        end
+        addSpell(nm,nil,rank)
+      end
+    end
+  end
   local count=safe(HasPetSpells)
   local maxIndex=(type(count)=='number' and count>0) and math.min(count,200) or 100
   local misses=0
@@ -142,6 +167,9 @@ function M:Scan()
     end
   end
   table.sort(self.spells,function(a,b) return a.name < b.name end)
+  -- Every scan also records the pet's look, so a pet kept only a few
+  -- minutes still counts in the collection.
+  if PSS.Collection and PSS.Collection.OnPet then pcall(PSS.Collection.OnPet, PSS.Collection) end
 end
 function M:AvailableSkills()
   if not self.active then return {},nil end
@@ -162,19 +190,6 @@ function M:AvailableSkills()
     end
   end
   return available,estimatedFree
-end
-function M:NextRank(spell)
-  if not spell.key or not spell.rank then return nil end
-  local available={}
-  for rank in pairs((PSS.Ranks and PSS.Ranks[spell.key]) or {}) do available[tonumber(rank)]=true end
-  for _,b in ipairs(PSS.Beasts or {}) do
-    if b.ability==spell.key and tonumber(b.rank) then available[tonumber(b.rank)]=true end
-  end
-  local nextRank
-  for rank in pairs(available) do
-    if rank>spell.rank and (not nextRank or rank<nextRank) then nextRank=rank end
-  end
-  return nextRank
 end
 M.events=CreateFrame('Frame')
 for _,event in ipairs({'PLAYER_ENTERING_WORLD','UNIT_PET','PET_BAR_UPDATE','PET_UI_UPDATE','SPELLS_CHANGED','UNIT_LEVEL'}) do
@@ -296,3 +311,36 @@ function M:Debug()
     end
   end
 end
+
+-- Beast Training: the hunter's own list of learned pet skills. In Forever it is
+-- the trainer window with C_Trainer.GetTrainerType() == Enum.TrainerType.Pet
+-- (Blizzard_TrainerUI.lua); every service in it is a skill rank the hunter
+-- knows, whatever the pet can learn ("available", "used" or "unavailable").
+-- Ranks are only ever raised in knownRanks (a filtered list just reads less).
+function M:ReadBeastTraining()
+  if not (C_Trainer and C_Trainer.GetTrainerType and Enum and Enum.TrainerType) then return 0 end
+  if PSS.Plain(safe(C_Trainer.GetTrainerType)) ~= Enum.TrainerType.Pet then return 0 end
+  local n = PSS.Plain(safe(GetNumTrainerServices)) or 0
+  local db = PetSkillScoutDB
+  if not db or n == 0 then return 0 end
+  db.knownRanks = db.knownRanks or {}
+  local added = 0
+  for i = 1, n do
+    -- Not safe(): it keeps 4 values and the rank text is the 5th.
+    local ok, name, _, _, _, sub = pcall(GetTrainerServiceInfo, i)
+    if not ok then name, sub = nil, nil end
+    name, sub = PSS.Plain(name), PSS.Plain(sub)
+    local key = type(name) == "string" and lookup(name)
+    local rank = parseRank(sub) or (key and 1)
+    if key and rank and rank > (tonumber(db.knownRanks[key]) or 0) then
+      db.knownRanks[key] = rank
+      added = added + 1
+    end
+  end
+  db.beastTrainingRead = time and time() or 0
+  if added > 0 and PSS.UI and PSS.UI.Refresh then pcall(PSS.UI.Refresh, PSS.UI) end
+  return added
+end
+local btEv = CreateFrame("Frame")
+for _, e in ipairs({"TRAINER_SHOW", "TRAINER_UPDATE"}) do pcall(btEv.RegisterEvent, btEv, e) end
+btEv:SetScript("OnEvent", function() pcall(M.ReadBeastTraining, M) end)
