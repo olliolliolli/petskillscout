@@ -1,7 +1,7 @@
 -- Quests of WoW Forever (generated, do not edit by hand).
 -- Data: AllTheThings by the ATT team (https://github.com/ATTWoWAddon/AllTheThings),
 -- Forever database, MIT licence - the licence text is in QuestDB-LICENSE.txt.
--- Source commit 789b0fe. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
+-- Source commit 14e61d4. Fields: g quest giver NPC, ob start object, x/y/m giver position (0-100, uiMapID),
 -- l minimum level, s faction, rc races, cl classes, p previous quests (pn: how many of them),
 -- a alternative quests, b breadcrumb, r repeatable, sk skill line needed, mr {faction, reputation}, d dungeon / raid,
 -- o objectives (n kill, i item, o object, x other), ox/oy/om first objective position, i rewards, hol holiday event ID (calendar; -1 unknown), n name.
@@ -1055,8 +1055,8 @@ PSS.QuestDB = {
 [1117]={g=773,x=27,y=77.2,m=1434,l=30,p={1116},n="Rumors for Kravel"},
 [1118]={g=4452,x=77.8,y=77.2,m=1441,l=35,p={1117},n="Back to Booty Bay"},
 [1119]={g=2498,x=27.1,y=77.2,m=1434,l=35,p={1118},n="Zanzil's Mixture and a Fool's Stout"},
-[1120]={g=4452,x=77.8,y=77.2,m=1441,l=35,p={1119},a={1121},n="Get the Gnomes Drunk"},
-[1121]={g=4452,x=77.8,y=77.2,m=1441,l=35,p={1119},a={1120},n="Get the Goblins Drunk"},
+[1120]={g=4452,x=77.8,y=77.2,m=1441,l=35,p={1119},n="Get the Gnomes Drunk"},
+[1121]={g=4452,x=77.8,y=77.2,m=1441,l=35,p={1119},n="Get the Goblins Drunk"},
 [1122]={g=4452,x=77.8,y=77.2,m=1441,l=35,p={1120,1121},n="Report Back to Fizzlebub"},
 [1123]={g=5769,x=78.4,y=28.4,m=1456,l=54,s="H",p={1000,1004,1018},n="Rabine Saturna [H]"},
 [1124]={g=11801,x=51.7,y=45.1,m=1450,l=54,p={1123,6762},n="Wasteland"},
